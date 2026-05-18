@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getApiBase, upstreamFetch } from "@/lib/server-api";
 
-const apiBase = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:4000";
 const cookieName = process.env.AUTH_COOKIE_NAME ?? "edisims_access";
 
 const forward = async (
@@ -9,8 +9,7 @@ const forward = async (
   method: string,
 ) => {
   const { path } = await params;
-  const targetPath = `/${path.join("/")}`;
-  const targetUrl = new URL(`${targetPath}${req.nextUrl.search}`, apiBase);
+  const targetPath = `/${path.join("/")}${req.nextUrl.search}`;
   const token = req.cookies.get(cookieName)?.value;
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
@@ -22,19 +21,27 @@ const forward = async (
   }
   const hasBody = !["GET", "HEAD"].includes(method);
   const body = hasBody ? await req.arrayBuffer() : undefined;
-  const upstream = await fetch(targetUrl, {
-    method,
-    headers,
-    body: body && body.byteLength > 0 ? body : undefined,
-    cache: "no-store",
-  });
-  const text = await upstream.text();
-  const res = new NextResponse(text, { status: upstream.status });
-  const ct = upstream.headers.get("content-type");
-  if (ct) {
-    res.headers.set("content-type", ct);
+
+  try {
+    const upstream = await upstreamFetch(targetPath, {
+      method,
+      headers,
+      body: body && body.byteLength > 0 ? body : undefined,
+    });
+    const text = await upstream.text();
+    const res = new NextResponse(text, { status: upstream.status });
+    const ct = upstream.headers.get("content-type");
+    if (ct) {
+      res.headers.set("content-type", ct);
+    }
+    return res;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "API request failed";
+    return NextResponse.json(
+      { message, apiBase: getApiBase() },
+      { status: message.includes("API_INTERNAL_URL") ? 503 : 502 },
+    );
   }
-  return res;
 };
 
 export const GET = (req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) =>
