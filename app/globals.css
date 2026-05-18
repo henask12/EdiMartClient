@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Edi's Collection — golden yellow + charcoal */
+:root {
+  --brand-yellow: oklch(0.84 0.17 95);
+  --brand-yellow-dim: oklch(0.72 0.14 95);
+  --brand-charcoal: oklch(0.34 0.012 260);
+  --brand-charcoal-deep: oklch(0.2 0.01 260);
+
+  --surface: oklch(0.26 0.012 260);
+  --surface-2: oklch(0.3 0.012 260);
+  --accent: var(--brand-yellow);
+  --accent-2: var(--brand-yellow-dim);
+  --text-on-accent: oklch(0.22 0.02 260);
+  --danger: oklch(0.58 0.2 25);
+}
+
+@layer base {
+  * {
+    @apply border-white/10;
+  }
+  a {
+    @apply text-[var(--accent)] underline-offset-4 hover:underline;
+  }
+}
+
+@layer utilities {
+  .tap {
+    @apply min-h-12 min-w-12;
+  }
+
+  .app-bg {
+    background-color: var(--brand-charcoal-deep);
+    background-image:
+      radial-gradient(1100px 520px at 12% -8%, oklch(0.55 0.14 95 / 0.28), transparent),
+      radial-gradient(800px 420px at 92% 0%, oklch(0.38 0.02 260 / 0.5), transparent);
+  }
+
+  .btn-primary {
+    @apply rounded-full bg-[color:var(--accent)] font-semibold text-[color:var(--text-on-accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .card-surface {
+    @apply rounded-2xl border border-white/10 bg-[color:var(--surface)]/90;
+  }
+}

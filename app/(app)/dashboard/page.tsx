@@ -1,0 +1,198 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+type RestockItem = {
+  id: string;
+  name: string;
+  quantityOnHand: string;
+  available: string;
+  reserved: string;
+  restockAt: number;
+  restockQty: number;
+  status: "OUT" | "LOW";
+};
+
+type Expiring = {
+  id: string;
+  productName: string;
+  qtyRemaining: string;
+  expiryDate: string | null;
+};
+
+type OpenReservation = {
+  id: string;
+  productName: string;
+  quantity: string;
+  customerName: string | null;
+};
+
+type Dashboard = {
+  today: { grandTotal: string; saleCount: number };
+  week: { grandTotal: string; saleCount: number };
+  month: { grandTotal: string; saleCount: number };
+  year: { grandTotal: string; saleCount: number };
+  needsRestock: RestockItem[];
+  expiringSoon: Expiring[];
+  openReservations: OpenReservation[];
+  productCount: number;
+};
+
+export default function DashboardPage() {
+  const [data, setData] = useState<Dashboard | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/proxy/reporting/dashboard", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("Failed to load");
+        }
+        setData((await res.json()) as Dashboard);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error");
+      }
+    };
+    void load();
+  }, []);
+
+  if (error) {
+    return <p className="text-sm text-rose-200">{error}</p>;
+  }
+  if (!data) {
+    return <p className="text-sm text-white/60">Loading…</p>;
+  }
+
+  const periods = [
+    { label: "Today", total: data.today.grandTotal, count: data.today.saleCount },
+    { label: "This week", total: data.week.grandTotal, count: data.week.saleCount },
+    { label: "This month", total: data.month.grandTotal, count: data.month.saleCount },
+    { label: "This year", total: data.year.grandTotal, count: data.year.saleCount },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
+          <p className="mt-2 text-sm text-white/60">
+            Sales, restock alerts, expiring batches, and reservations.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/sell"
+            className="btn-primary px-4 py-2 text-sm"
+          >
+            Record sale
+          </Link>
+          <Link
+            href="/add-stock"
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Add stock
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {periods.map((p) => (
+          <section
+            key={p.label}
+            className="rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5"
+          >
+            <div className="text-xs font-semibold uppercase tracking-wide text-white/45">
+              {p.label}
+            </div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums text-white">{p.total}</div>
+            <p className="mt-1 text-sm text-white/55">{p.count} sales</p>
+          </section>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-white/10 bg-[color:var(--surface-2)]/70 p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
+            Restock soon ({data.needsRestock.length})
+          </h2>
+          {data.needsRestock.length === 0 ? (
+            <p className="mt-4 text-sm text-white/50">All products above alert level.</p>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {data.needsRestock.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm"
+                >
+                  <div>
+                    <span className="font-medium text-white">{item.name}</span>
+                    <span
+                      className={`ml-2 text-xs uppercase ${
+                        item.status === "OUT" ? "text-rose-300" : "text-amber-300"
+                      }`}
+                    >
+                      {item.status === "OUT" ? "Out" : "Low"}
+                    </span>
+                  </div>
+                  <span className="text-white/55">
+                    {item.available} avail · reorder {item.restockQty}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-[color:var(--surface-2)]/70 p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
+            Expiring soon ({data.expiringSoon.length})
+          </h2>
+          {data.expiringSoon.length === 0 ? (
+            <p className="mt-4 text-sm text-white/50">No batches expiring soon.</p>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {data.expiringSoon.map((b) => (
+                <li
+                  key={b.id}
+                  className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/80"
+                >
+                  {b.productName} · {b.qtyRemaining} left · {b.expiryDate ?? "—"}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <section className="rounded-2xl border border-white/10 bg-[color:var(--surface-2)]/70 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
+            Open reservations ({data.openReservations.length})
+          </h2>
+          <Link href="/reservations" className="text-xs font-semibold text-[var(--accent-2)]">
+            View all
+          </Link>
+        </div>
+        {data.openReservations.length === 0 ? (
+          <p className="mt-4 text-sm text-white/50">No active reservations.</p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {data.openReservations.map((r) => (
+              <li
+                key={r.id}
+                className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white"
+              >
+                {r.productName} · qty {r.quantity}
+                {r.customerName ? ` · ${r.customerName}` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <p className="text-sm text-white/45">{data.productCount} products tracked</p>
+    </div>
+  );
+}
