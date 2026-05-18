@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-const apiUrl = process.env.PUBLIC_API_URL ?? "http://127.0.0.1:4000";
+const apiUrl =
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.PUBLIC_API_URL ??
+  "http://127.0.0.1:4000";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -16,6 +19,11 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "localhost",
         port: "4000",
+        pathname: "/uploads/**",
+      },
+      {
+        protocol: "https",
+        hostname: "edimartapi-production.up.railway.app",
         pathname: "/uploads/**",
       },
     ],
