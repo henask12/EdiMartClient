@@ -4,56 +4,65 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "./BrandLogo";
+import { hasPermission, type Permission } from "@/lib/permissions";
 
 type Me = {
   id: string;
   email: string;
   displayName: string | null;
   role: string;
+  permissions: string[];
 };
 
-const primaryNav = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon?: string;
+  permission?: Permission;
+  ownerOnly?: boolean;
+};
+
+const primaryNav: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: "⌂" },
-  { href: "/products", label: "Products", icon: "▦" },
-  { href: "/sell", label: "Sell", icon: "◎" },
-  { href: "/sales", label: "Sales", icon: "₿" },
+  { href: "/products", label: "Products", icon: "▦", permission: "PRODUCTS_VIEW" },
+  { href: "/sell", label: "Sell", icon: "◎", permission: "SALES_CREATE" },
+  { href: "/sales", label: "Sales", icon: "₿", permission: "SALES_VIEW" },
 ];
 
-const moreNav = [
-  { href: "/add-stock", label: "Add stock", staffOnly: true },
-  { href: "/reservations", label: "Reservations" },
-  { href: "/stock-history", label: "History", staffOnly: true },
-  { href: "/categories", label: "Categories", staffOnly: true },
-  { href: "/product-types", label: "Types", staffOnly: true },
+const moreNav: NavItem[] = [
+  { href: "/add-stock", label: "Add stock", permission: "STOCK_RECEIVE" },
+  { href: "/reservations", label: "Reservations", permission: "RESERVATIONS_MANAGE" },
+  { href: "/stock-history", label: "History", permission: "STOCK_HISTORY_VIEW" },
+  { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
+  { href: "/product-types", label: "Types", permission: "PRODUCT_TYPES_MANAGE" },
   { href: "/settings/account", label: "My account" },
-  { href: "/settings/users", label: "Users", ownerOnly: true },
-  { href: "/settings/emails", label: "Alert emails", ownerOnly: true },
+  { href: "/settings/users", label: "Users", permission: "USERS_MANAGE" },
+  { href: "/settings/emails", label: "Alert emails", permission: "SETTINGS_EMAILS" },
 ];
 
-const desktopNav = [
+const desktopNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/products", label: "Products" },
-  { href: "/add-stock", label: "Add stock", staffOnly: true },
-  { href: "/sell", label: "Sell" },
-  { href: "/sales", label: "Sales" },
-  { href: "/reservations", label: "Reservations" },
-  { href: "/stock-history", label: "History", staffOnly: true },
-  { href: "/categories", label: "Categories", staffOnly: true },
-  { href: "/product-types", label: "Types", staffOnly: true },
+  { href: "/products", label: "Products", permission: "PRODUCTS_VIEW" },
+  { href: "/add-stock", label: "Add stock", permission: "STOCK_RECEIVE" },
+  { href: "/sell", label: "Sell", permission: "SALES_CREATE" },
+  { href: "/sales", label: "Sales", permission: "SALES_VIEW" },
+  { href: "/reservations", label: "Reservations", permission: "RESERVATIONS_MANAGE" },
+  { href: "/stock-history", label: "History", permission: "STOCK_HISTORY_VIEW" },
+  { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
+  { href: "/product-types", label: "Types", permission: "PRODUCT_TYPES_MANAGE" },
   { href: "/settings/account", label: "Account" },
-  { href: "/settings/users", label: "Users", ownerOnly: true },
-  { href: "/settings/emails", label: "Emails", ownerOnly: true },
+  { href: "/settings/users", label: "Users", permission: "USERS_MANAGE" },
+  { href: "/settings/emails", label: "Emails", permission: "SETTINGS_EMAILS" },
 ];
 
-const canManageStock = (role: string) =>
-  role === "OWNER" || role === "STORE_STAFF";
+const canSeeNavItem = (item: NavItem, me: Me | null) => {
+  if (!item.permission) return true;
+  if (!me) return false;
+  return hasPermission(me.permissions, item.permission);
+};
 
-const filterNav = (items: typeof moreNav, me: Me | null) =>
-  items.filter((item) => {
-    if (item.ownerOnly && me?.role !== "OWNER") return false;
-    if (item.staffOnly && me && !canManageStock(me.role) && me.role !== "OWNER") return false;
-    return true;
-  });
+const filterNav = (items: NavItem[], me: Me | null) =>
+  items.filter((item) => canSeeNavItem(item, me));
 
 export const Shell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
@@ -70,7 +79,11 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           router.replace("/login");
           return;
         }
-        setMe((await res.json()) as Me);
+        const data = (await res.json()) as Me;
+        setMe({
+          ...data,
+          permissions: Array.isArray(data.permissions) ? data.permissions : [],
+        });
       } catch {
         setError("Could not load session");
       }
@@ -154,7 +167,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
         aria-label="Mobile"
       >
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
-          {primaryNav.map((item) => {
+          {filterNav(primaryNav, me).map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link

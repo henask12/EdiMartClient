@@ -33,7 +33,7 @@ export type MartProduct = {
 
 type Props = {
   product: MartProduct;
-  role: string;
+  permissions: string[];
   onSell: (product: MartProduct) => void;
   onReserve: (product: MartProduct) => void;
   onRestock?: (product: MartProduct) => void;
@@ -42,7 +42,7 @@ type Props = {
 
 export const ProductCard = ({
   product,
-  role,
+  permissions,
   onSell,
   onReserve,
   onRestock,
@@ -54,11 +54,11 @@ export const ProductCard = ({
   const low = available <= product.restockAt && available > 0;
   const out = available <= 0;
 
-  const showEdit = canEditProduct(role);
-  const showSell = canSellProduct(role);
-  const showReserve = canReserveProduct(role);
-  const showRestock = canRestockProduct(role) && Boolean(onRestock);
-  const showDeactivate = canDeactivateProduct(role) && Boolean(onDeactivate);
+  const showEdit = canEditProduct(permissions);
+  const showSell = canSellProduct(permissions);
+  const showReserve = canReserveProduct(permissions);
+  const showRestock = canRestockProduct(permissions) && Boolean(onRestock);
+  const showDeactivate = canDeactivateProduct(permissions) && Boolean(onDeactivate);
 
   return (
     <article

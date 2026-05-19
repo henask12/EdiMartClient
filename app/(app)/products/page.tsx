@@ -9,10 +9,11 @@ import { ProductCard, type MartProduct } from "@/components/ProductCard";
 import { ProductFilters } from "@/components/ProductFilters";
 import { RestockModal } from "@/components/RestockModal";
 import { dedupeCategories } from "@/lib/dedupe-categories";
+import { canCreateProduct, canDeactivateProduct, canReceiveStock } from "@/lib/product-permissions";
 
 type Category = { id: string; name: string };
 type ProductType = { id: string; name: string };
-type Me = { role: string };
+type Me = { role: string; permissions: string[] };
 
 export default function ProductsPage() {
   const [items, setItems] = useState<MartProduct[]>([]);
@@ -33,7 +34,10 @@ export default function ProductsPage() {
   );
   const [restockProduct, setRestockProduct] = useState<MartProduct | null>(null);
 
-  const canStock = me?.role === "OWNER" || me?.role === "STORE_STAFF";
+  const permissions = me?.permissions ?? [];
+  const canStock = canReceiveStock(permissions);
+  const canAddProduct = canCreateProduct(permissions);
+  const canDeactivate = canDeactivateProduct(permissions);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -114,9 +118,11 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/products/new" className="tap btn-primary px-5 py-2.5 text-sm">
-            Add product
-          </Link>
+          {canAddProduct ? (
+            <Link href="/products/new" className="tap btn-primary px-5 py-2.5 text-sm">
+              Add product
+            </Link>
+          ) : null}
           {canStock ? (
             <Link
               href="/add-stock"
@@ -166,11 +172,11 @@ export default function ProductsPage() {
           <ProductCard
             key={p.id}
             product={p}
-            role={me?.role ?? "CASHIER"}
+            permissions={permissions}
             onSell={(product) => setModal({ mode: "sell", product })}
             onReserve={(product) => setModal({ mode: "reserve", product })}
             onRestock={canStock ? setRestockProduct : undefined}
-            onDeactivate={me?.role === "OWNER" ? handleDeactivate : undefined}
+            onDeactivate={canDeactivate ? handleDeactivate : undefined}
           />
         ))}
       </div>

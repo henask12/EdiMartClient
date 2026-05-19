@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { RolePermissionsEditor } from "@/components/RolePermissionsEditor";
+import { hasPermission, isOwnerRole } from "@/lib/permissions";
 
 type UserRow = {
   id: string;
@@ -16,15 +18,15 @@ const ROLES = ["OWNER", "CASHIER", "STORE_STAFF", "ONLINE_MANAGER"] as const;
 const ROLE_GUIDE: { role: string; summary: string }[] = [
   {
     role: "OWNER",
-    summary: "Full access: users, alert emails, catalog, stock, sales, and settings.",
+    summary: "Full access. Protected — cannot be deactivated or demoted.",
   },
   {
     role: "STORE_STAFF",
-    summary: "Manage products, categories, types, and receive stock. Can sell and reserve.",
+    summary: "Default: catalog, stock, sales. Customize permissions below.",
   },
   {
     role: "CASHIER",
-    summary: "Sell at register and manage reservations. View products only.",
+    summary: "Default: sell, reserve, edit products. Customize permissions below.",
   },
   {
     role: "ONLINE_MANAGER",
@@ -43,6 +45,7 @@ export default function UsersAdminPage() {
   const [password, setPassword] = useState("");
   const [resetId, setResetId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [myPermissions, setMyPermissions] = useState<string[]>([]);
 
   const load = async () => {
     const res = await fetch("/api/proxy/users", { cache: "no-store" });
@@ -58,6 +61,13 @@ export default function UsersAdminPage() {
 
   useEffect(() => {
     void load();
+    void fetch("/api/proxy/auth/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.permissions)) {
+          setMyPermissions(data.permissions as string[]);
+        }
+      });
   }, []);
 
   const handleCreate = async (e: FormEvent) => {
@@ -80,7 +90,11 @@ export default function UsersAdminPage() {
     await load();
   };
 
-  const handleToggle = async (id: string, isActive: boolean) => {
+  const handleToggle = async (id: string, isActive: boolean, userRole: string) => {
+    if (isOwnerRole(userRole) && isActive) {
+      setError("Owner accounts cannot be deactivated");
+      return;
+    }
     await fetch(`/api/proxy/users/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -89,12 +103,21 @@ export default function UsersAdminPage() {
     await load();
   };
 
-  const handleRole = async (id: string, newRole: string) => {
-    await fetch(`/api/proxy/users/${id}`, {
+  const handleRole = async (id: string, newRole: string, currentRole: string) => {
+    if (isOwnerRole(currentRole)) {
+      setError("Owner role cannot be changed");
+      return;
+    }
+    const res = await fetch(`/api/proxy/users/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ role: newRole }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(typeof data.message === "string" ? data.message : "Could not update role");
+      return;
+    }
     await load();
   };
 
@@ -127,20 +150,23 @@ export default function UsersAdminPage() {
     {
       key: "role",
       header: "Role",
-      render: (u) => (
-        <select
-          value={u.role.name}
-          onChange={(e) => void handleRole(u.id, e.target.value)}
-          className="rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white"
-          aria-label={`Role for ${u.email}`}
-        >
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      ),
+      render: (u) =>
+        isOwnerRole(u.role.name) ? (
+          <span className="text-xs font-semibold text-[var(--accent-2)]">OWNER</span>
+        ) : (
+          <select
+            value={u.role.name}
+            onChange={(e) => void handleRole(u.id, e.target.value, u.role.name)}
+            className="rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white"
+            aria-label={`Role for ${u.email}`}
+          >
+            {ROLES.filter((r) => r !== "OWNER").map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        ),
     },
     {
       key: "status",
@@ -161,13 +187,17 @@ export default function UsersAdminPage() {
       className: "text-right",
       render: (u) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => void handleToggle(u.id, u.isActive)}
-            className="tap rounded-lg border border-white/15 px-2 py-1 text-xs text-white/80"
-          >
-            {u.isActive ? "Deactivate" : "Activate"}
-          </button>
+          {!isOwnerRole(u.role.name) ? (
+            <button
+              type="button"
+              onClick={() => void handleToggle(u.id, u.isActive, u.role.name)}
+              className="tap rounded-lg border border-white/15 px-2 py-1 text-xs text-white/80"
+            >
+              {u.isActive ? "Deactivate" : "Activate"}
+            </button>
+          ) : (
+            <span className="text-[10px] text-white/40">Protected</span>
+          )}
           <button
             type="button"
             onClick={() => setResetId(u.id)}
@@ -185,8 +215,8 @@ export default function UsersAdminPage() {
       <div className="mx-auto max-w-lg space-y-4 text-center">
         <h1 className="text-2xl font-semibold text-white">User management</h1>
         <p className="text-sm text-white/60">
-          Only the <strong className="text-white">OWNER</strong> role can manage users. Log in as
-          the shop owner or ask them to change your role.
+          You need the <strong className="text-white">Manage users</strong> permission. Ask the shop
+          owner to grant it to your role.
         </p>
       </div>
     );
@@ -222,6 +252,8 @@ export default function UsersAdminPage() {
         </ul>
       </section>
 
+      {hasPermission(myPermissions, "ROLES_MANAGE") ? <RolePermissionsEditor /> : null}
+
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
 
       <DataTable
@@ -237,24 +269,30 @@ export default function UsersAdminPage() {
               {u.role.name} · {u.isActive ? "Active" : "Inactive"}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <select
-                value={u.role.name}
-                onChange={(e) => void handleRole(u.id, e.target.value)}
-                className="rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white"
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => void handleToggle(u.id, u.isActive)}
-                className="tap rounded-lg border border-white/15 px-2 py-1 text-xs"
-              >
-                {u.isActive ? "Deactivate" : "Activate"}
-              </button>
+              {isOwnerRole(u.role.name) ? (
+                <span className="text-xs text-[var(--accent-2)]">OWNER (protected)</span>
+              ) : (
+                <select
+                  value={u.role.name}
+                  onChange={(e) => void handleRole(u.id, e.target.value, u.role.name)}
+                  className="rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white"
+                >
+                  {ROLES.filter((r) => r !== "OWNER").map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {!isOwnerRole(u.role.name) ? (
+                <button
+                  type="button"
+                  onClick={() => void handleToggle(u.id, u.isActive, u.role.name)}
+                  className="tap rounded-lg border border-white/15 px-2 py-1 text-xs"
+                >
+                  {u.isActive ? "Deactivate" : "Activate"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setResetId(u.id)}
@@ -291,7 +329,7 @@ export default function UsersAdminPage() {
                 onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}
                 className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
               >
-                {ROLES.map((r) => (
+                {ROLES.filter((r) => r !== "OWNER").map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>

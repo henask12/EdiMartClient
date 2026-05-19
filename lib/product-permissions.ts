@@ -1,15 +1,22 @@
-export type AppRole = "OWNER" | "CASHIER" | "STORE_STAFF" | "ONLINE_MANAGER";
+import { hasPermission, type Permission } from "@/lib/permissions";
 
-export const canEditProduct = (role: string) =>
-  role === "OWNER" || role === "STORE_STAFF" || role === "CASHIER";
+export const canEditProduct = (permissions: string[]) =>
+  hasPermission(permissions, "PRODUCTS_EDIT");
 
-export const canSellProduct = (role: string) =>
-  role === "OWNER" || role === "CASHIER" || role === "STORE_STAFF";
+export const canSellProduct = (permissions: string[]) =>
+  hasPermission(permissions, "PRODUCTS_SELL");
 
-export const canReserveProduct = (role: string) =>
-  role === "OWNER" || role === "CASHIER" || role === "STORE_STAFF";
+export const canReserveProduct = (permissions: string[]) =>
+  hasPermission(permissions, "PRODUCTS_RESERVE");
 
-export const canRestockProduct = (role: string) =>
-  role === "OWNER" || role === "STORE_STAFF";
+export const canRestockProduct = (permissions: string[]) =>
+  hasPermission(permissions, "PRODUCTS_RESTOCK");
 
-export const canDeactivateProduct = (role: string) => role === "OWNER";
+export const canDeactivateProduct = (permissions: string[]) =>
+  hasPermission(permissions, "PRODUCTS_DEACTIVATE");
+
+export const canCreateProduct = (permissions: string[]) =>
+  hasPermission(permissions, "PRODUCTS_CREATE");
+
+export const canReceiveStock = (permissions: string[]) =>
+  hasPermission(permissions, "STOCK_RECEIVE");
