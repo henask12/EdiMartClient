@@ -2,24 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ExportMenu } from "@/components/ExportMenu";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { ProductActionModal } from "@/components/ProductActionModal";
 import { ProductCard, type MartProduct } from "@/components/ProductCard";
+import { ProductFilters } from "@/components/ProductFilters";
 import { RestockModal } from "@/components/RestockModal";
 import { dedupeCategories } from "@/lib/dedupe-categories";
 
 type Category = { id: string; name: string };
 type ProductType = { id: string; name: string };
 type Me = { role: string };
-
-const STOCK_FILTERS = [
-  { value: "", label: "All stock" },
-  { value: "in_stock", label: "In stock" },
-  { value: "low", label: "Low" },
-  { value: "out", label: "OUT of Stock" },
-] as const;
 
 export default function ProductsPage() {
   const [items, setItems] = useState<MartProduct[]>([]);
@@ -109,21 +102,25 @@ export default function ProductsPage() {
     stockStatus: stockStatus || undefined,
   };
 
+  const resetPage = () => setPage(1);
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-white">Products</h1>
-          <p className="mt-1 text-sm text-white/60">Search, sell, restock, and export.</p>
+          <p className="mt-1 text-sm text-white/60">
+            Tap a card for details and actions. Use filters to narrow the list.
+          </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Link href="/products/new" className="tap btn-primary justify-center px-5 py-3 text-sm">
+        <div className="flex flex-wrap gap-2">
+          <Link href="/products/new" className="tap btn-primary px-5 py-2.5 text-sm">
             Add product
           </Link>
           {canStock ? (
             <Link
               href="/add-stock"
-              className="tap justify-center rounded-full border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 px-5 py-3 text-center text-sm font-semibold text-[var(--accent)]"
+              className="tap rounded-full border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 px-5 py-2.5 text-sm font-semibold text-[var(--accent)]"
             >
               Add stock
             </Link>
@@ -131,99 +128,38 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <input
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
+      <ProductFilters
+        q={q}
+        onQChange={(value) => {
+          setQ(value);
+          resetPage();
         }}
-        placeholder="Search name or SKU…"
-        className="w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
+        categories={categories}
+        categoryId={categoryId}
+        onCategoryChange={(id) => {
+          setCategoryId(id);
+          resetPage();
+        }}
+        productTypes={productTypes}
+        productTypeId={productTypeId}
+        onProductTypeChange={(id) => {
+          setProductTypeId(id);
+          resetPage();
+        }}
+        stockStatus={stockStatus}
+        onStockStatusChange={(value) => {
+          setStockStatus(value);
+          resetPage();
+        }}
+        exportBasePath="products/export"
+        exportParams={exportParams}
       />
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setCategoryId("");
-            setPage(1);
-          }}
-          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-            !categoryId ? "bg-[var(--brand-yellow)]/20 text-[var(--accent)]" : "bg-white/5 text-white/60"
-          }`}
-        >
-          All categories
-        </button>
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => {
-              setCategoryId(c.id);
-              setPage(1);
-            }}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              categoryId === c.id
-                ? "bg-[var(--brand-yellow)]/20 text-[var(--accent)]"
-                : "bg-white/5 text-white/60"
-            }`}
-          >
-            {c.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setProductTypeId("");
-            setPage(1);
-          }}
-          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-            !productTypeId ? "bg-white/10 text-white" : "bg-white/5 text-white/60"
-          }`}
-        >
-          All types
-        </button>
-        {productTypes.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => {
-              setProductTypeId(t.id);
-              setPage(1);
-            }}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              productTypeId === t.id ? "bg-white/10 text-white" : "bg-white/5 text-white/60"
-            }`}
-          >
-            {t.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {STOCK_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => {
-              setStockStatus(f.value);
-              setPage(1);
-            }}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              stockStatus === f.value ? "bg-rose-500/20 text-rose-100" : "bg-white/5 text-white/60"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      <ExportMenu basePath="products/export" queryParams={exportParams} />
-
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
+
+      <p className="text-xs text-white/45">
+        {total} product{total === 1 ? "" : "s"}
+      </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((p) => (
@@ -267,4 +203,4 @@ export default function ProductsPage() {
       />
     </div>
   );
-};
+}
