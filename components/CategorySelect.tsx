@@ -23,7 +23,7 @@ export const CategorySelect = ({
   value,
   onChange,
   label = "Category",
-  allowCreate = true,
+  allowCreate = false,
   compact = false,
   required = true,
 }: Props) => {

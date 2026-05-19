@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CategorySelect } from "@/components/CategorySelect";
 import { formatBirr } from "@/lib/format-price";
 
 export type MartProduct = {
@@ -30,7 +29,6 @@ type Props = {
   onSell: (product: MartProduct) => void;
   onReserve: (product: MartProduct) => void;
   onRestock?: (product: MartProduct) => void;
-  onCategoryChange?: (productId: string, categoryId: string) => void;
 };
 
 export const ProductCard = ({
@@ -39,7 +37,6 @@ export const ProductCard = ({
   onSell,
   onReserve,
   onRestock,
-  onCategoryChange,
 }: Props) => {
   const onHand = Number(product.onHand);
   const available = Number(product.available);
@@ -110,15 +107,6 @@ export const ProductCard = ({
         </p>
 
         <div className="mt-4 space-y-2">
-          {canEdit && onCategoryChange ? (
-            <CategorySelect
-              compact
-              allowCreate
-              label="Category"
-              value={product.category.id}
-              onChange={(categoryId) => onCategoryChange(product.id, categoryId)}
-            />
-          ) : null}
           {canEdit ? (
             <Link
               href={`/products/${product.id}/edit`}

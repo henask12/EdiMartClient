@@ -88,20 +88,6 @@ export default function ProductsPage() {
     void load();
   }, [load]);
 
-  const handleCategoryChange = async (productId: string, newCategoryId: string) => {
-    const res = await fetch(`/api/proxy/products/${productId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ categoryId: newCategoryId }),
-    });
-    if (res.ok) {
-      void load();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setError(typeof data.message === "string" ? data.message : "Could not change category");
-    }
-  };
-
   const exportParams = {
     q: debouncedQ || undefined,
     categoryId: categoryId || undefined,
@@ -234,7 +220,6 @@ export default function ProductsPage() {
             onSell={(product) => setModal({ mode: "sell", product })}
             onReserve={(product) => setModal({ mode: "reserve", product })}
             onRestock={canStock ? setRestockProduct : undefined}
-            onCategoryChange={canEdit ? handleCategoryChange : undefined}
           />
         ))}
       </div>
