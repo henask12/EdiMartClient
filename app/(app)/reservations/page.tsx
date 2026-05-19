@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
 
 const PAGE_SIZE = 15;
@@ -67,6 +68,70 @@ export default function ReservationsPage() {
     setLoadingId(null);
   };
 
+  const columns: DataTableColumn<Reservation>[] = [
+    {
+      key: "product",
+      header: "Product",
+      render: (r) => (
+        <div>
+          <p className="font-medium text-white">{r.product.name}</p>
+          <p className="text-xs text-white/45">{r.product.category.name}</p>
+        </div>
+      ),
+    },
+    {
+      key: "qty",
+      header: "Qty",
+      className: "tabular-nums",
+      render: (r) => r.quantity,
+    },
+    {
+      key: "customer",
+      header: "Customer",
+      render: (r) => r.customerName ?? "—",
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (r) => (
+        <span className="text-xs uppercase text-white/60">{r.status}</span>
+      ),
+    },
+    {
+      key: "date",
+      header: "Date",
+      render: (r) => new Date(r.createdAt).toLocaleString(),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (r) =>
+        r.status === "RESERVED" ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              disabled={loadingId === r.id}
+              onClick={() => void handleComplete(r.id)}
+              className="tap btn-primary px-2 py-1 text-xs disabled:opacity-50"
+            >
+              {loadingId === r.id ? "…" : "Complete"}
+            </button>
+            <button
+              type="button"
+              disabled={loadingId === r.id}
+              onClick={() => void handleCancel(r.id)}
+              className="rounded-lg border border-white/15 px-2 py-1 text-xs text-white"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <span className="text-xs text-white/40">—</span>
+        ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -100,50 +165,41 @@ export default function ReservationsPage() {
         </p>
       ) : null}
 
-      <ul className="space-y-3">
-        {items.map((r) => (
-          <li
-            key={r.id}
-            className="rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-4"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-medium text-white">{r.product.name}</p>
-                <p className="text-xs text-white/50">
-                  {r.product.category.name} · qty {r.quantity}
-                  {r.customerName ? ` · ${r.customerName}` : ""}
-                </p>
-                <p className="text-xs text-white/40">{new Date(r.createdAt).toLocaleString()}</p>
+      <DataTable
+        columns={columns}
+        rows={items}
+        rowKey={(r) => r.id}
+        emptyMessage="No reservations."
+        mobileCard={(r) => (
+          <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/80 p-4 text-sm">
+            <p className="font-medium text-white">{r.product.name}</p>
+            <p className="text-xs text-white/50">
+              Qty {r.quantity} · {r.status}
+              {r.customerName ? ` · ${r.customerName}` : ""}
+            </p>
+            {r.status === "RESERVED" ? (
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  disabled={loadingId === r.id}
+                  onClick={() => void handleComplete(r.id)}
+                  className="tap btn-primary flex-1 py-2 text-xs"
+                >
+                  Complete
+                </button>
+                <button
+                  type="button"
+                  disabled={loadingId === r.id}
+                  onClick={() => void handleCancel(r.id)}
+                  className="flex-1 rounded-lg border border-white/15 py-2 text-xs"
+                >
+                  Cancel
+                </button>
               </div>
-              {r.status === "RESERVED" ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={loadingId === r.id}
-                    onClick={() => handleComplete(r.id)}
-                    className="tap btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
-                  >
-                    {loadingId === r.id ? "…" : "Complete sale"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loadingId === r.id}
-                    onClick={() => handleCancel(r.id)}
-                    className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <span className="text-xs uppercase text-white/45">{r.status}</span>
-              )}
-            </div>
-          </li>
-        ))}
-        {items.length === 0 ? (
-          <li className="text-center text-sm text-white/50">No reservations.</li>
-        ) : null}
-      </ul>
+            ) : null}
+          </div>
+        )}
+      />
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
     </div>

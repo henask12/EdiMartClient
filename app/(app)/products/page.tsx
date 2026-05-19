@@ -40,8 +40,7 @@ export default function ProductsPage() {
   );
   const [restockProduct, setRestockProduct] = useState<MartProduct | null>(null);
 
-  const canEdit = me?.role === "OWNER" || me?.role === "STORE_STAFF";
-  const canStock = canEdit;
+  const canStock = me?.role === "OWNER" || me?.role === "STORE_STAFF";
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -87,6 +86,21 @@ export default function ProductsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleDeactivate = async (productId: string) => {
+    if (!confirm("Deactivate this product? It will be hidden from the catalog.")) return;
+    const res = await fetch(`/api/proxy/products/${productId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ isActive: false }),
+    });
+    if (res.ok) {
+      void load();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(typeof data.message === "string" ? data.message : "Could not deactivate");
+    }
+  };
 
   const exportParams = {
     q: debouncedQ || undefined,
@@ -216,10 +230,11 @@ export default function ProductsPage() {
           <ProductCard
             key={p.id}
             product={p}
-            canEdit={canEdit}
+            role={me?.role ?? "CASHIER"}
             onSell={(product) => setModal({ mode: "sell", product })}
             onReserve={(product) => setModal({ mode: "reserve", product })}
             onRestock={canStock ? setRestockProduct : undefined}
+            onDeactivate={me?.role === "OWNER" ? handleDeactivate : undefined}
           />
         ))}
       </div>
