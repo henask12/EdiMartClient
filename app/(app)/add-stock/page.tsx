@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AddStockFilters } from "@/components/AddStockFilters";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
@@ -47,6 +48,7 @@ export default function AddStockPage() {
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [historyProduct, setHistoryProduct] = useState<{ id: string; name: string } | null>(null);
+  const [deactivateRow, setDeactivateRow] = useState<StockRow | null>(null);
 
   const canDeactivate = canDeactivateProduct(permissions);
 
@@ -93,7 +95,6 @@ export default function AddStockPage() {
   }, [load]);
 
   const handleDeactivate = async (row: StockRow) => {
-    if (!confirm(`Deactivate "${row.name}"?`)) return;
     const res = await fetch(`/api/proxy/products/${row.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -173,7 +174,7 @@ export default function AddStockPage() {
           {canDeactivate ? (
             <button
               type="button"
-              onClick={() => void handleDeactivate(row)}
+              onClick={() => setDeactivateRow(row)}
               className="tap rounded-lg border border-rose-500/30 px-2 py-1 text-xs font-semibold text-rose-200"
             >
               Deactivate
@@ -251,7 +252,7 @@ export default function AddStockPage() {
               {canDeactivate ? (
                 <button
                   type="button"
-                  onClick={() => void handleDeactivate(row)}
+                  onClick={() => setDeactivateRow(row)}
                   className="tap rounded-lg border border-rose-500/30 px-2 py-2 text-xs text-rose-200"
                 >
                   Deactivate
@@ -291,6 +292,25 @@ export default function AddStockPage() {
         productId={historyProduct?.id ?? null}
         productName={historyProduct?.name ?? ""}
         onClose={() => setHistoryProduct(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deactivateRow)}
+        title="Deactivate product"
+        message={
+          deactivateRow
+            ? `"${deactivateRow.name}" will be hidden from the catalog.`
+            : ""
+        }
+        confirmLabel="Deactivate"
+        variant="danger"
+        onConfirm={async () => {
+          if (deactivateRow) {
+            await handleDeactivate(deactivateRow);
+            setDeactivateRow(null);
+          }
+        }}
+        onCancel={() => setDeactivateRow(null)}
       />
     </div>
   );

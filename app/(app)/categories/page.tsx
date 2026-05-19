@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CategoryProductsModal } from "@/components/CategoryProductsModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
@@ -22,6 +23,7 @@ export default function CategoriesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [viewCategory, setViewCategory] = useState<Category | null>(null);
+  const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
 
   const total = items.length;
   const pagedItems = useMemo(
@@ -81,7 +83,6 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this category?")) return;
     const res = await fetch(`/api/proxy/categories/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -167,7 +168,7 @@ export default function CategoriesPage() {
               </button>
               <button
                 type="button"
-                onClick={() => void handleDelete(c.id)}
+                onClick={() => setDeleteCategory(c)}
                 className="text-xs font-semibold text-rose-300"
               >
                 Delete
@@ -223,6 +224,25 @@ export default function CategoriesPage() {
         filterParam="categoryId"
         filterId={viewCategory?.id ?? null}
         onClose={() => setViewCategory(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteCategory)}
+        title="Delete category"
+        message={
+          deleteCategory
+            ? `Delete "${deleteCategory.name}"? Products in this category may need to be reassigned.`
+            : ""
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={async () => {
+          if (deleteCategory) {
+            await handleDelete(deleteCategory.id);
+            setDeleteCategory(null);
+          }
+        }}
+        onCancel={() => setDeleteCategory(null)}
       />
     </div>
   );

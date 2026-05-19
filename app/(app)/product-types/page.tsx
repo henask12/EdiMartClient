@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CategoryProductsModal } from "@/components/CategoryProductsModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
@@ -22,6 +23,7 @@ export default function ProductTypesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [viewType, setViewType] = useState<ProductType | null>(null);
+  const [deleteType, setDeleteType] = useState<ProductType | null>(null);
 
   const total = items.length;
   const pagedItems = useMemo(
@@ -70,7 +72,6 @@ export default function ProductTypesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this type?")) return;
     const res = await fetch(`/api/proxy/product-types/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -152,7 +153,7 @@ export default function ProductTypesPage() {
               </button>
               <button
                 type="button"
-                onClick={() => void handleDelete(t.id)}
+                onClick={() => setDeleteType(t)}
                 className="text-xs font-semibold text-rose-300"
               >
                 Delete
@@ -208,6 +209,23 @@ export default function ProductTypesPage() {
         filterParam="productTypeId"
         filterId={viewType?.id ?? null}
         onClose={() => setViewType(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteType)}
+        title="Delete product type"
+        message={
+          deleteType ? `Delete "${deleteType.name}"? Products using this type will need updating.` : ""
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={async () => {
+          if (deleteType) {
+            await handleDelete(deleteType.id);
+            setDeleteType(null);
+          }
+        }}
+        onCancel={() => setDeleteType(null)}
       />
     </div>
   );

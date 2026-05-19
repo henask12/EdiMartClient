@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
@@ -28,6 +29,7 @@ export default function RolesPage() {
   const [usersTotal, setUsersTotal] = useState(0);
   const [rolesPage, setRolesPage] = useState(1);
   const [rolesPageSize] = useState(10);
+  const [deleteRole, setDeleteRole] = useState<RoleRow | null>(null);
 
   const loadRoles = useCallback(async () => {
     const res = await fetch("/api/proxy/roles", { cache: "no-store" });
@@ -97,7 +99,6 @@ export default function RolesPage() {
       setError("This role cannot be deleted");
       return;
     }
-    if (!confirm(`Delete role "${role.name}"?`)) return;
     const res = await fetch(`/api/proxy/roles/${role.id}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -139,7 +140,7 @@ export default function RolesPage() {
         !r.isProtected && !isOwnerRole(r.name) ? (
           <button
             type="button"
-            onClick={() => void handleDelete(r)}
+            onClick={() => setDeleteRole(r)}
             className="text-xs font-semibold text-rose-300"
           >
             Delete
@@ -275,6 +276,25 @@ export default function RolesPage() {
           </div>
         </section>
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(deleteRole)}
+        title="Delete role"
+        message={
+          deleteRole
+            ? `Delete role "${deleteRole.name}"? Users with this role must be reassigned first.`
+            : ""
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={async () => {
+          if (deleteRole) {
+            await handleDelete(deleteRole);
+            setDeleteRole(null);
+          }
+        }}
+        onCancel={() => setDeleteRole(null)}
+      />
     </div>
   );
 };
