@@ -56,7 +56,7 @@ export const ProductCard = ({
 
   return (
     <article
-      className={`flex flex-col overflow-hidden rounded-2xl border bg-[color:var(--surface)]/90 transition hover:border-white/20 ${
+      className={`flex flex-col rounded-2xl border bg-[color:var(--surface)]/90 transition hover:border-white/20 ${
         out ? "border-rose-500/30" : low ? "border-amber-500/25" : "border-white/10"
       }`}
     >
@@ -66,7 +66,7 @@ export const ProductCard = ({
         className="tap flex flex-col text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         aria-label={`View details for ${product.name}`}
       >
-        <div className="relative aspect-[4/3] shrink-0 bg-black/40">
+        <div className="relative aspect-[4/3] shrink-0 overflow-hidden rounded-t-2xl bg-black/40">
           {product.imageUrl ? (
             <Image
               src={product.imageUrl}
@@ -110,7 +110,7 @@ export const ProductCard = ({
         </div>
       </button>
 
-      <div className="flex items-center gap-2 border-t border-white/10 p-3">
+      <div className="relative z-10 flex items-center gap-2 border-t border-white/10 p-3">
         {showSell ? (
           <button
             type="button"

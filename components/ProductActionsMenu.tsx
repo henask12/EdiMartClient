@@ -63,7 +63,7 @@ export const ProductActionsMenu = ({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1 min-w-[10rem] rounded-xl border border-white/10 bg-[color:var(--surface)] py-1 shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-1 min-w-[10rem] rounded-xl border border-white/10 bg-[color:var(--surface)] py-1 shadow-xl"
         >
           {showEdit ? (
             <Link
