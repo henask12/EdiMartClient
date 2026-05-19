@@ -7,47 +7,75 @@ type Props = {
   onPageChange: (page: number) => void;
 };
 
+const getPageItems = (page: number, totalPages: number): (number | "ellipsis")[] => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const items: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, page - 1);
+  const end = Math.min(totalPages - 1, page + 1);
+  if (start > 2) items.push("ellipsis");
+  for (let p = start; p <= end; p += 1) items.push(p);
+  if (end < totalPages - 1) items.push("ellipsis");
+  items.push(totalPages);
+  return items;
+};
+
 export const Pagination = ({ page, pageSize, total, onPageChange }: Props) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
-
-  if (totalPages <= 1 && total <= pageSize) {
-    return (
-      <p className="text-center text-xs text-white/45">
-        {total === 0 ? "No results" : `Showing ${total} item${total === 1 ? "" : "s"}`}
-      </p>
-    );
-  }
+  const pageItems = getPageItems(page, totalPages);
 
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
       <p className="text-xs text-white/50">
-        Showing {from}–{to} of {total}
+        {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
       </p>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-          className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-          aria-label="Previous page"
-        >
-          Prev
-        </button>
-        <span className="min-w-[5rem] text-center text-sm tabular-nums text-white/70">
-          {page} / {totalPages}
-        </span>
-        <button
-          type="button"
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-          className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-          aria-label="Next page"
-        >
-          Next
-        </button>
-      </div>
+      {totalPages > 1 ? (
+        <nav className="flex flex-wrap items-center justify-center gap-1" aria-label="Pagination">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+            aria-label="Previous page"
+          >
+            Prev
+          </button>
+          {pageItems.map((item, idx) =>
+            item === "ellipsis" ? (
+              <span key={`e-${idx}`} className="px-1 text-xs text-white/40">
+                …
+              </span>
+            ) : (
+              <button
+                key={item}
+                type="button"
+                onClick={() => onPageChange(item)}
+                className={`min-w-[2rem] rounded-lg border px-2 py-1.5 text-xs font-semibold tabular-nums ${
+                  item === page
+                    ? "border-[var(--brand-yellow)]/40 bg-[var(--brand-yellow)]/15 text-[var(--accent)]"
+                    : "border-white/15 text-white/70 hover:bg-white/5"
+                }`}
+                aria-label={`Page ${item}`}
+                aria-current={item === page ? "page" : undefined}
+              >
+                {item}
+              </button>
+            ),
+          )}
+          <button
+            type="button"
+            disabled={page >= totalPages}
+            onClick={() => onPageChange(page + 1)}
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+            aria-label="Next page"
+          >
+            Next
+          </button>
+        </nav>
+      ) : null}
     </div>
   );
 };

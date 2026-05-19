@@ -1,0 +1,105 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import {
+  canDeactivateProduct,
+  canEditProduct,
+  canRestockProduct,
+} from "@/lib/product-permissions";
+import type { MartProduct } from "@/components/ProductCard";
+
+type Props = {
+  product: MartProduct;
+  permissions: string[];
+  onRestock?: (product: MartProduct) => void;
+  onDeactivate?: (productId: string) => void;
+};
+
+export const ProductActionsMenu = ({
+  product,
+  permissions,
+  onRestock,
+  onDeactivate,
+}: Props) => {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const showEdit = canEditProduct(permissions);
+  const showRestock = canRestockProduct(permissions) && Boolean(onRestock);
+  const showDeactivate = canDeactivateProduct(permissions) && Boolean(onDeactivate);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  if (!showEdit && !showRestock && !showDeactivate) return null;
+
+  const handleDeactivate = () => {
+    setOpen(false);
+    if (!window.confirm(`Deactivate "${product.name}"?`)) return;
+    onDeactivate?.(product.id);
+  };
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="tap rounded-xl border border-white/15 bg-white/5 px-2.5 py-2 text-sm font-semibold text-white/80"
+        aria-label="More actions"
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        ⋮
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-20 mt-1 min-w-[10rem] rounded-xl border border-white/10 bg-[color:var(--surface)] py-1 shadow-lg"
+        >
+          {showEdit ? (
+            <Link
+              href={`/products/${product.id}/edit`}
+              role="menuitem"
+              className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5"
+              onClick={() => setOpen(false)}
+            >
+              Edit
+            </Link>
+          ) : null}
+          {showRestock ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="block w-full px-4 py-2 text-left text-sm text-[var(--accent)] hover:bg-white/5"
+              onClick={() => {
+                setOpen(false);
+                onRestock?.(product);
+              }}
+            >
+              Restock
+            </button>
+          ) : null}
+          {showDeactivate ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="block w-full px-4 py-2 text-left text-sm text-rose-200 hover:bg-white/5"
+              onClick={handleDeactivate}
+            >
+              Deactivate
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+};

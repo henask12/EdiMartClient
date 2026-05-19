@@ -1,8 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { CategoryProductsModal } from "@/components/CategoryProductsModal";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { Pagination } from "@/components/Pagination";
 
 type ProductType = {
   id: string;
@@ -16,6 +19,15 @@ export default function ProductTypesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [viewType, setViewType] = useState<ProductType | null>(null);
+
+  const total = items.length;
+  const pagedItems = useMemo(
+    () => items.slice((page - 1) * pageSize, page * pageSize),
+    [items, page, pageSize],
+  );
 
   const load = async () => {
     const res = await fetch("/api/proxy/product-types", { cache: "no-store" });
@@ -87,7 +99,16 @@ export default function ProductTypesPage() {
       key: "count",
       header: "Products",
       className: "tabular-nums",
-      render: (t) => t._count.products,
+      render: (t) => (
+        <button
+          type="button"
+          onClick={() => setViewType(t)}
+          className="tap text-[var(--accent-2)] underline-offset-2 hover:underline"
+          disabled={t._count.products === 0}
+        >
+          {t._count.products}
+        </button>
+      ),
     },
     {
       key: "actions",
@@ -95,6 +116,15 @@ export default function ProductTypesPage() {
       className: "text-right",
       render: (t) => (
         <div className="flex justify-end gap-2">
+          {t._count.products > 0 ? (
+            <button
+              type="button"
+              onClick={() => setViewType(t)}
+              className="text-xs font-semibold text-[var(--accent-2)]"
+            >
+              View
+            </button>
+          ) : null}
           {editingId === t.id ? (
             <>
               <button
@@ -159,7 +189,26 @@ export default function ProductTypesPage() {
 
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
 
-      <DataTable columns={columns} rows={items} rowKey={(t) => t.id} />
+      <DataTable columns={columns} rows={pagedItems} rowKey={(t) => t.id} />
+
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+        <PageSizeSelect
+          value={pageSize}
+          options={[10, 15, 25, 50]}
+          onChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+      </div>
+
+      <CategoryProductsModal
+        title={viewType?.name ?? ""}
+        filterParam="productTypeId"
+        filterId={viewType?.id ?? null}
+        onClose={() => setViewType(null)}
+      />
     </div>
   );
-}
+};

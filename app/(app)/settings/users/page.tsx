@@ -2,8 +2,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
-import { RolePermissionsEditor } from "@/components/RolePermissionsEditor";
-import { hasPermission, isOwnerRole } from "@/lib/permissions";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { Pagination } from "@/components/Pagination";
+import { isOwnerRole } from "@/lib/permissions";
 
 type UserRow = {
   id: string;
@@ -13,62 +14,57 @@ type UserRow = {
   role: { name: string };
 };
 
-const ROLES = ["OWNER", "CASHIER", "STORE_STAFF", "ONLINE_MANAGER"] as const;
-
-const ROLE_GUIDE: { role: string; summary: string }[] = [
-  {
-    role: "OWNER",
-    summary: "Full access. Protected — cannot be deactivated or demoted.",
-  },
-  {
-    role: "STORE_STAFF",
-    summary: "Default: catalog, stock, sales. Customize permissions below.",
-  },
-  {
-    role: "CASHIER",
-    summary: "Default: sell, reserve, edit products. Customize permissions below.",
-  },
-  {
-    role: "ONLINE_MANAGER",
-    summary: "Reserved for future online channel features.",
-  },
-];
+type RoleOption = { id: string; name: string; isProtected: boolean };
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState<(typeof ROLES)[number]>("CASHIER");
+  const [role, setRole] = useState("CASHIER");
   const [password, setPassword] = useState("");
   const [resetId, setResetId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
-  const [myPermissions, setMyPermissions] = useState<string[]>([]);
+  const assignableRoles = roles.filter((r) => !r.isProtected && !isOwnerRole(r.name));
 
   const load = async () => {
-    const res = await fetch("/api/proxy/users", { cache: "no-store" });
+    const params = new URLSearchParams({
+      skip: String((page - 1) * pageSize),
+      take: String(pageSize),
+    });
+    const res = await fetch(`/api/proxy/users?${params}`, { cache: "no-store" });
     if (res.status === 403) {
       setForbidden(true);
       return;
     }
     if (res.ok) {
-      setUsers((await res.json()) as UserRow[]);
+      const data = (await res.json()) as { items: UserRow[]; total: number };
+      setUsers(data.items);
+      setTotal(data.total);
       setForbidden(false);
     }
   };
 
   useEffect(() => {
-    void load();
-    void fetch("/api/proxy/auth/me", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data && Array.isArray(data.permissions)) {
-          setMyPermissions(data.permissions as string[]);
-        }
-      });
+    void fetch("/api/proxy/roles", { cache: "no-store" }).then(async (res) => {
+      if (res.ok) {
+        const data = (await res.json()) as RoleOption[];
+        setRoles(data);
+        const first = data.find((r) => !r.isProtected && r.name !== "OWNER");
+        if (first) setRole(first.name);
+      }
+    });
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [page, pageSize]);
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -160,9 +156,9 @@ export default function UsersAdminPage() {
             className="rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white"
             aria-label={`Role for ${u.email}`}
           >
-            {ROLES.filter((r) => r !== "OWNER").map((r) => (
-              <option key={r} value={r}>
-                {r}
+            {assignableRoles.map((r) => (
+              <option key={r.id} value={r.name}>
+                {r.name}
               </option>
             ))}
           </select>
@@ -240,20 +236,6 @@ export default function UsersAdminPage() {
         </button>
       </div>
 
-      <section className="rounded-2xl border border-white/10 bg-[color:var(--surface)]/60 p-5">
-        <h2 className="text-sm font-semibold text-white/80">Role guide</h2>
-        <ul className="mt-3 space-y-2">
-          {ROLE_GUIDE.map((g) => (
-            <li key={g.role} className="text-sm">
-              <span className="font-semibold text-[var(--accent-2)]">{g.role}</span>
-              <span className="text-white/60"> — {g.summary}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {hasPermission(myPermissions, "ROLES_MANAGE") ? <RolePermissionsEditor /> : null}
-
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
 
       <DataTable
@@ -277,9 +259,9 @@ export default function UsersAdminPage() {
                   onChange={(e) => void handleRole(u.id, e.target.value, u.role.name)}
                   className="rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white"
                 >
-                  {ROLES.filter((r) => r !== "OWNER").map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                  {assignableRoles.map((r) => (
+                    <option key={r.id} value={r.name}>
+                      {r.name}
                     </option>
                   ))}
                 </select>
@@ -305,6 +287,18 @@ export default function UsersAdminPage() {
         )}
       />
 
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+        <PageSizeSelect
+          value={pageSize}
+          options={[10, 15, 25, 50]}
+          onChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+      </div>
+
       {addOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
           <div className="w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)] p-5">
@@ -326,12 +320,12 @@ export default function UsersAdminPage() {
               />
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}
+                onChange={(e) => setRole(e.target.value)}
                 className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
               >
-                {ROLES.filter((r) => r !== "OWNER").map((r) => (
-                  <option key={r} value={r}>
-                    {r}
+                {assignableRoles.map((r) => (
+                  <option key={r.id} value={r.name}>
+                    {r.name}
                   </option>
                 ))}
               </select>

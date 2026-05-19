@@ -6,6 +6,7 @@ import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { ProductActionModal } from "@/components/ProductActionModal";
 import { ProductCard, type MartProduct } from "@/components/ProductCard";
+import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { ProductFilters } from "@/components/ProductFilters";
 import { RestockModal } from "@/components/RestockModal";
 import { dedupeCategories } from "@/lib/dedupe-categories";
@@ -33,6 +34,7 @@ export default function ProductsPage() {
     null,
   );
   const [restockProduct, setRestockProduct] = useState<MartProduct | null>(null);
+  const [detailProduct, setDetailProduct] = useState<MartProduct | null>(null);
 
   const permissions = me?.permissions ?? [];
   const canStock = canReceiveStock(permissions);
@@ -173,6 +175,7 @@ export default function ProductsPage() {
             key={p.id}
             product={p}
             permissions={permissions}
+            onOpenDetail={setDetailProduct}
             onSell={(product) => setModal({ mode: "sell", product })}
             onReserve={(product) => setModal({ mode: "reserve", product })}
             onRestock={canStock ? setRestockProduct : undefined}
@@ -207,6 +210,7 @@ export default function ProductsPage() {
         onClose={() => setRestockProduct(null)}
         onSuccess={load}
       />
+      <ProductDetailModal product={detailProduct} onClose={() => setDetailProduct(null)} />
     </div>
   );
 }

@@ -1,7 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { CategoryProductsModal } from "@/components/CategoryProductsModal";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
+import { Pagination } from "@/components/Pagination";
 import { categoryNamesConflict, dedupeCategories, normalizeCategoryName } from "@/lib/dedupe-categories";
 
 type Category = {
@@ -16,6 +19,15 @@ export default function CategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [viewCategory, setViewCategory] = useState<Category | null>(null);
+
+  const total = items.length;
+  const pagedItems = useMemo(
+    () => items.slice((page - 1) * pageSize, page * pageSize),
+    [items, page, pageSize],
+  );
 
   const load = async () => {
     const res = await fetch("/api/proxy/categories", { cache: "no-store" });
@@ -98,7 +110,16 @@ export default function CategoriesPage() {
       key: "count",
       header: "Products",
       className: "tabular-nums",
-      render: (c) => c._count.products,
+      render: (c) => (
+        <button
+          type="button"
+          onClick={() => setViewCategory(c)}
+          className="tap text-[var(--accent-2)] underline-offset-2 hover:underline"
+          disabled={c._count.products === 0}
+        >
+          {c._count.products}
+        </button>
+      ),
     },
     {
       key: "actions",
@@ -106,6 +127,15 @@ export default function CategoriesPage() {
       className: "text-right",
       render: (c) => (
         <div className="flex justify-end gap-2">
+          {c._count.products > 0 ? (
+            <button
+              type="button"
+              onClick={() => setViewCategory(c)}
+              className="text-xs font-semibold text-[var(--accent-2)]"
+            >
+              View
+            </button>
+          ) : null}
           {editingId === c.id ? (
             <>
               <button
@@ -174,7 +204,26 @@ export default function CategoriesPage() {
 
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
 
-      <DataTable columns={columns} rows={items} rowKey={(c) => c.id} />
+      <DataTable columns={columns} rows={pagedItems} rowKey={(c) => c.id} />
+
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+        <PageSizeSelect
+          value={pageSize}
+          options={[10, 15, 25, 50]}
+          onChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+      </div>
+
+      <CategoryProductsModal
+        title={viewCategory?.name ?? ""}
+        filterParam="categoryId"
+        filterId={viewCategory?.id ?? null}
+        onClose={() => setViewCategory(null)}
+      />
     </div>
   );
-}
+};

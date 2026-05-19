@@ -1,11 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { AddStockFilters } from "@/components/AddStockFilters";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
-import { ReceiveStockModal, type ReceiveStockProduct } from "@/components/ReceiveStockModal";
+import { ReceiveStockPickerModal } from "@/components/ReceiveStockPickerModal";
+import { StockHistoryModal } from "@/components/StockHistoryModal";
 import { dedupeCategories } from "@/lib/dedupe-categories";
+import { canDeactivateProduct } from "@/lib/product-permissions";
 import { formatBirr } from "@/lib/format-price";
 
 type Category = { id: string; name: string };
@@ -32,6 +36,7 @@ const stockLabel = (row: StockRow) => {
 export default function AddStockPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<StockRow[]>([]);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [q, setQ] = useState("");
@@ -40,11 +45,10 @@ export default function AddStockPage() {
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [receiveProduct, setReceiveProduct] = useState<ReceiveStockProduct | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [batches, setBatches] = useState<
-    { id: string; qtyReceived: string; unitCost: string; expiryDate: string | null; receivedAt: string }[]
-  >([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [historyProduct, setHistoryProduct] = useState<{ id: string; name: string } | null>(null);
+
+  const canDeactivate = canDeactivateProduct(permissions);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -55,9 +59,13 @@ export default function AddStockPage() {
     void fetch("/api/proxy/categories", { cache: "no-store" }).then(async (res) => {
       if (res.ok) setCategories(dedupeCategories((await res.json()) as Category[]));
     });
-    const params = new URLSearchParams(window.location.search);
-    const preselect = params.get("productId");
-    if (preselect) setExpandedId(preselect);
+    void fetch("/api/proxy/auth/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.permissions)) {
+          setPermissions(data.permissions as string[]);
+        }
+      });
   }, []);
 
   const load = useCallback(async () => {
@@ -84,22 +92,19 @@ export default function AddStockPage() {
     void load();
   }, [load]);
 
-  const loadBatches = async (productId: string) => {
-    const res = await fetch(`/api/proxy/stock/batches?productId=${productId}&take=20`, {
-      cache: "no-store",
+  const handleDeactivate = async (row: StockRow) => {
+    if (!confirm(`Deactivate "${row.name}"?`)) return;
+    const res = await fetch(`/api/proxy/products/${row.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ isActive: false }),
     });
-    if (res.ok) setBatches(await res.json());
-    else setBatches([]);
-  };
-
-  const handleExpand = (row: StockRow) => {
-    if (expandedId === row.id) {
-      setExpandedId(null);
-      setBatches([]);
-      return;
+    if (res.ok) {
+      void load();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(typeof data.message === "string" ? data.message : "Could not deactivate");
     }
-    setExpandedId(row.id);
-    void loadBatches(row.id);
   };
 
   const columns: DataTableColumn<StockRow>[] = [
@@ -159,27 +164,27 @@ export default function AddStockPage() {
       className: "text-right",
       render: (row) => (
         <div className="flex flex-wrap justify-end gap-2">
+          <Link
+            href={`/products/${row.id}/edit`}
+            className="tap rounded-lg border border-white/15 px-2 py-1 text-xs text-white/80"
+          >
+            Edit
+          </Link>
+          {canDeactivate ? (
+            <button
+              type="button"
+              onClick={() => void handleDeactivate(row)}
+              className="tap rounded-lg border border-rose-500/30 px-2 py-1 text-xs font-semibold text-rose-200"
+            >
+              Deactivate
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => handleExpand(row)}
+            onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
             className="tap rounded-lg border border-white/15 px-2 py-1 text-xs text-white/70"
           >
-            {expandedId === row.id ? "Hide" : "History"}
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setReceiveProduct({
-                id: row.id,
-                name: row.name,
-                costPrice: row.costPrice,
-                sellingPrice: row.sellingPrice,
-                onHand: row.onHand,
-              })
-            }
-            className="tap rounded-lg border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 px-2 py-1 text-xs font-semibold text-[var(--accent)]"
-          >
-            Add stock
+            History
           </button>
         </div>
       ),
@@ -188,77 +193,40 @@ export default function AddStockPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">Add stock</h1>
-        <p className="mt-2 text-sm text-white/60">
-          View inventory levels and receive stock into any product.
-        </p>
-      </header>
-
-      <input
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Search name or SKU…"
-        className="w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-white outline-none focus:border-[var(--accent)]"
-      />
-
-      <div className="flex flex-wrap gap-2">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Add stock</h1>
+          <p className="mt-2 text-sm text-white/60">
+            Receive inventory and manage product stock levels.
+          </p>
+        </div>
         <button
           type="button"
-          onClick={() => {
-            setCategoryId("");
-            setPage(1);
-          }}
-          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-            !categoryId ? "bg-[var(--brand-yellow)]/20 text-[var(--accent)]" : "bg-white/5 text-white/60"
-          }`}
+          onClick={() => setPickerOpen(true)}
+          className="tap btn-primary shrink-0 px-5 py-2.5 text-sm"
         >
-          All categories
+          Add stock
         </button>
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => {
-              setCategoryId(c.id);
-              setPage(1);
-            }}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              categoryId === c.id
-                ? "bg-[var(--brand-yellow)]/20 text-[var(--accent)]"
-                : "bg-white/5 text-white/60"
-            }`}
-          >
-            {c.name}
-          </button>
-        ))}
-      </div>
+      </header>
 
-      <div className="flex flex-wrap gap-2">
-        {[
-          { value: "", label: "All stock" },
-          { value: "in_stock", label: "In stock" },
-          { value: "low", label: "Low" },
-          { value: "out", label: "OUT of Stock" },
-        ].map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => {
-              setStockStatus(f.value);
-              setPage(1);
-            }}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-              stockStatus === f.value ? "bg-white/10 text-white" : "bg-white/5 text-white/60"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <AddStockFilters
+        q={q}
+        onQChange={(value) => {
+          setQ(value);
+          setPage(1);
+        }}
+        categories={categories}
+        categoryId={categoryId}
+        onCategoryChange={(id) => {
+          setCategoryId(id);
+          setPage(1);
+        }}
+        stockStatus={stockStatus}
+        onStockStatusChange={(value) => {
+          setStockStatus(value);
+          setPage(1);
+        }}
+      />
 
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
 
@@ -273,50 +241,33 @@ export default function AddStockPage() {
             <p className="text-xs text-white/50">
               {row.category.name} · On hand {row.onHand} · {stockLabel(row)}
             </p>
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                href={`/products/${row.id}/edit`}
+                className="tap rounded-lg border border-white/15 px-2 py-2 text-xs text-white/80"
+              >
+                Edit
+              </Link>
+              {canDeactivate ? (
+                <button
+                  type="button"
+                  onClick={() => void handleDeactivate(row)}
+                  className="tap rounded-lg border border-rose-500/30 px-2 py-2 text-xs text-rose-200"
+                >
+                  Deactivate
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={() => handleExpand(row)}
-                className="tap flex-1 rounded-lg border border-white/15 py-2 text-xs text-white/70"
+                onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
+                className="tap rounded-lg border border-white/15 px-2 py-2 text-xs text-white/70"
               >
                 History
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setReceiveProduct({
-                    id: row.id,
-                    name: row.name,
-                    costPrice: row.costPrice,
-                    sellingPrice: row.sellingPrice,
-                    onHand: row.onHand,
-                  })
-                }
-                className="tap flex-1 rounded-lg border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 py-2 text-xs font-semibold text-[var(--accent)]"
-              >
-                Add stock
               </button>
             </div>
           </div>
         )}
       />
-
-      {expandedId && batches.length > 0 ? (
-        <section className="rounded-xl border border-white/10 bg-black/20 p-4">
-          <h2 className="text-sm font-semibold text-white/70">Recent receipts</h2>
-          <ul className="mt-3 space-y-2 text-xs text-white/70">
-            {batches.map((b) => (
-              <li key={b.id} className="flex justify-between border-b border-white/5 py-2">
-                <span>{b.receivedAt.slice(0, 10)}</span>
-                <span className="tabular-nums">
-                  +{b.qtyReceived} @ {b.unitCost}
-                </span>
-                <span>{b.expiryDate?.slice(0, 10) ?? "—"}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
         <PageSizeSelect
@@ -330,11 +281,17 @@ export default function AddStockPage() {
         <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
       </div>
 
-      <ReceiveStockModal
-        product={receiveProduct}
-        onClose={() => setReceiveProduct(null)}
+      <ReceiveStockPickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
         onSuccess={() => void load()}
+      />
+
+      <StockHistoryModal
+        productId={historyProduct?.id ?? null}
+        productName={historyProduct?.name ?? ""}
+        onClose={() => setHistoryProduct(null)}
       />
     </div>
   );
-}
+};
