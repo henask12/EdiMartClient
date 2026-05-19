@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { DateInput } from "@/components/DateInput";
 import type { MartProduct } from "./ProductCard";
 
 type Props = {
@@ -102,15 +103,12 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
               className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
             />
           </label>
-          <label className="block text-sm text-white/70">
-            Expiry (optional)
-            <input
-              type="date"
-              value={expiryDate}
-              onChange={(e) => setExpiryDate(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-            />
-          </label>
+          <DateInput
+            label="Expiry (optional)"
+            value={expiryDate}
+            onChange={setExpiryDate}
+            required={false}
+          />
           {status ? <p className="text-sm text-rose-200">{status}</p> : null}
           <div className="flex gap-2">
             <button

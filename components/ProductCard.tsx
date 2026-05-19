@@ -1,11 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import { CategorySelect } from "@/components/CategorySelect";
 import { formatBirr } from "@/lib/format-price";
 
 export type MartProduct = {
   id: string;
   name: string;
+  sku?: string | null;
   sellingPrice: string;
   costPrice?: string;
   description?: string | null;
@@ -15,30 +18,41 @@ export type MartProduct = {
   reserved: string;
   restockAt: number;
   restockQty?: number;
+  stockStatus?: string;
   imageUrl: string | null;
   category: { id: string; name: string };
+  productType?: { id: string; name: string } | null;
 };
 
 type Props = {
   product: MartProduct;
+  canEdit?: boolean;
   onSell: (product: MartProduct) => void;
   onReserve: (product: MartProduct) => void;
   onRestock?: (product: MartProduct) => void;
+  onCategoryChange?: (productId: string, categoryId: string) => void;
 };
 
-export const ProductCard = ({ product, onSell, onReserve, onRestock }: Props) => {
+export const ProductCard = ({
+  product,
+  canEdit = false,
+  onSell,
+  onReserve,
+  onRestock,
+  onCategoryChange,
+}: Props) => {
   const onHand = Number(product.onHand);
   const available = Number(product.available);
-  const low = available <= product.restockAt;
+  const low = available <= product.restockAt && available > 0;
   const out = available <= 0;
 
   return (
     <article
-      className={`flex flex-col overflow-hidden rounded-2xl border bg-[color:var(--surface)]/90 transition hover:border-white/20 ${
+      className={`flex min-h-[420px] flex-col overflow-hidden rounded-2xl border bg-[color:var(--surface)]/90 transition hover:border-white/20 ${
         out ? "border-rose-500/30" : low ? "border-amber-500/25" : "border-white/10"
       }`}
     >
-      <div className="relative aspect-[4/3] bg-black/40">
+      <div className="relative aspect-[4/3] shrink-0 bg-black/40">
         {product.imageUrl ? (
           <Image
             src={product.imageUrl}
@@ -55,7 +69,7 @@ export const ProductCard = ({ product, onSell, onReserve, onRestock }: Props) =>
         )}
         {out ? (
           <span className="absolute left-2 top-2 rounded-full bg-rose-500/90 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-            Out
+            OUT of Stock
           </span>
         ) : low ? (
           <span className="absolute left-2 top-2 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase text-black">
@@ -64,22 +78,27 @@ export const ProductCard = ({ product, onSell, onReserve, onRestock }: Props) =>
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex min-h-0 flex-1 flex-col p-4">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent-2)]">
-          {product.category.name}
+          {product.productType?.name ?? "—"} · {product.category.name}
         </p>
         <h3 className="mt-1 line-clamp-2 text-base font-semibold text-white">{product.name}</h3>
+        {product.sku ? (
+          <p className="mt-0.5 text-[10px] text-white/40">SKU: {product.sku}</p>
+        ) : null}
         {product.originCountry ? (
           <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-white/45">
             {product.originCountry}
           </p>
         ) : null}
         {product.description ? (
-          <p className="mt-2 line-clamp-3 whitespace-pre-line text-xs leading-relaxed text-white/55">
+          <p className="mt-2 line-clamp-2 whitespace-pre-line text-xs leading-relaxed text-white/55">
             {product.description}
           </p>
-        ) : null}
-        <p className="mt-2 text-lg font-semibold tabular-nums text-[var(--accent)]">
+        ) : (
+          <div className="mt-2 flex-1" />
+        )}
+        <p className="mt-auto pt-2 text-lg font-semibold tabular-nums text-[var(--accent)]">
           {formatBirr(product.sellingPrice)}
         </p>
         <p className="mt-1 text-xs text-white/55">
@@ -91,6 +110,23 @@ export const ProductCard = ({ product, onSell, onReserve, onRestock }: Props) =>
         </p>
 
         <div className="mt-4 space-y-2">
+          {canEdit && onCategoryChange ? (
+            <CategorySelect
+              compact
+              allowCreate
+              label="Category"
+              value={product.category.id}
+              onChange={(categoryId) => onCategoryChange(product.id, categoryId)}
+            />
+          ) : null}
+          {canEdit ? (
+            <Link
+              href={`/products/${product.id}/edit`}
+              className="tap block w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-center text-sm font-semibold text-white"
+            >
+              Edit details
+            </Link>
+          ) : null}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -116,7 +152,7 @@ export const ProductCard = ({ product, onSell, onReserve, onRestock }: Props) =>
               className="tap w-full rounded-xl border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 px-3 py-2.5 text-sm font-semibold text-[var(--accent)]"
             >
               Restock
-              {product.restockQty ? ` (+${product.restockQty} suggested)` : ""}
+              {product.restockQty ? ` (+${product.restockQty})` : ""}
             </button>
           ) : null}
         </div>

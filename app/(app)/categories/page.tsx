@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { categoryNamesConflict, dedupeCategories, normalizeCategoryName } from "@/lib/dedupe-categories";
 
 type Category = {
   id: string;
@@ -18,7 +19,7 @@ export default function CategoriesPage() {
   const load = async () => {
     const res = await fetch("/api/proxy/categories", { cache: "no-store" });
     if (res.ok) {
-      setItems((await res.json()) as Category[]);
+      setItems(dedupeCategories((await res.json()) as Category[]));
     }
   };
 
@@ -29,10 +30,15 @@ export default function CategoriesPage() {
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    const trimmed = normalizeCategoryName(name);
+    if (items.some((c) => categoryNamesConflict(c.name, trimmed))) {
+      setError("A category with this name already exists");
+      return;
+    }
     const res = await fetch("/api/proxy/categories", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name: trimmed }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -45,6 +51,13 @@ export default function CategoriesPage() {
 
   const handleUpdate = async (id: string) => {
     setError(null);
+    const trimmed = normalizeCategoryName(editName);
+    if (
+      items.some((c) => c.id !== id && categoryNamesConflict(c.name, trimmed))
+    ) {
+      setError("A category with this name already exists");
+      return;
+    }
     const res = await fetch(`/api/proxy/categories/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },

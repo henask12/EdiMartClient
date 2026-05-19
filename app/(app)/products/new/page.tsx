@@ -2,16 +2,19 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CategorySelect } from "@/components/CategorySelect";
+import { DateInput } from "@/components/DateInput";
 
-type Category = { id: string; name: string };
+type ProductType = { id: string; name: string };
 
 export default function NewProductPage() {
   const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [productTypeId, setProductTypeId] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [restockAt, setRestockAt] = useState("5");
@@ -24,14 +27,8 @@ export default function NewProductPage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch("/api/proxy/categories", { cache: "no-store" });
-      if (res.ok) {
-        const cats = (await res.json()) as Category[];
-        setCategories(cats);
-        if (cats[0]) {
-          setCategoryId(cats[0].id);
-        }
-      }
+      const typeRes = await fetch("/api/proxy/product-types", { cache: "no-store" });
+      if (typeRes.ok) setProductTypes((await typeRes.json()) as ProductType[]);
     };
     void load();
   }, []);
@@ -63,6 +60,7 @@ export default function NewProductPage() {
         body: JSON.stringify({
           name,
           categoryId,
+          productTypeId: productTypeId || undefined,
           sellingPrice,
           costPrice: costPrice || "0",
           restockAt: Number(restockAt),
@@ -104,23 +102,20 @@ export default function NewProductPage() {
         onSubmit={handleSubmit}
         className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-6"
       >
+        <CategorySelect value={categoryId} onChange={setCategoryId} allowCreate />
         <label className="block text-sm text-white/70">
-          Category
+          Product type
           <select
-            required
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
+            value={productTypeId}
+            onChange={(e) => setProductTypeId(e.target.value)}
             className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
           >
-            {categories.length === 0 ? (
-              <option value="">Create a category first</option>
-            ) : (
-              categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))
-            )}
+            <option value="">None</option>
+            {productTypes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
           </select>
         </label>
         <label className="block text-sm text-white/70">
@@ -197,15 +192,12 @@ export default function NewProductPage() {
                 className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
               />
             </label>
-            <label className="block text-sm text-white/70">
-              Expiry (optional)
-              <input
-                type="date"
-                value={initialExpiryDate}
-                onChange={(e) => setInitialExpiryDate(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-              />
-            </label>
+            <DateInput
+              label="Expiry (optional)"
+              value={initialExpiryDate}
+              onChange={setInitialExpiryDate}
+              required={false}
+            />
           </div>
         </section>
 

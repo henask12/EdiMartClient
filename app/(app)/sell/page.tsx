@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { ProductSelect, type ProductOption } from "@/components/ProductSelect";
 
@@ -17,11 +18,38 @@ export default function SellPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [products, setProducts] = useState<ProductOption[]>([]);
+  const [proofPaths, setProofPaths] = useState<string[]>([]);
+  const [proofPreviews, setProofPreviews] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const total = useMemo(
     () => lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
     [lines],
   );
+
+  const handleProofUpload = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading(true);
+    setStatus(null);
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/proxy/uploads/sale-proof", { method: "POST", body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setStatus("Proof upload failed");
+          return;
+        }
+        const path = data.path as string;
+        const url = data.url as string;
+        setProofPaths((prev) => [...prev, path]);
+        setProofPreviews((prev) => [...prev, url]);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleAddLine = async () => {
     setStatus(null);
@@ -78,6 +106,7 @@ export default function SellPage() {
           productId: l.productId,
           quantity: String(l.quantity),
         })),
+        proofImagePaths: proofPaths.length ? proofPaths : undefined,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -87,16 +116,16 @@ export default function SellPage() {
     }
     setReceipt((data.digitalReceipt as string) ?? "Sale recorded");
     setLines([]);
+    setProofPaths([]);
+    setProofPreviews([]);
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div>
+    <section className="mx-auto max-w-2xl space-y-8">
+      <header>
         <h1 className="text-2xl font-semibold text-white">Sell</h1>
-        <p className="mt-2 text-sm text-white/60">
-          Pick a product, enter how many you sold. Stock updates automatically.
-        </p>
-      </div>
+        <p className="mt-2 text-sm text-white/60">Record a sale and attach payment proof screenshots.</p>
+      </header>
 
       <section className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
         <ProductSelect value={productId} onChange={setProductId} />
@@ -121,24 +150,39 @@ export default function SellPage() {
         {status ? <p className="text-sm text-rose-200">{status}</p> : null}
       </section>
 
+      <section className="space-y-3 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
+        <h2 className="text-sm font-semibold text-white/80">Payment proof (optional)</h2>
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          disabled={uploading}
+          onChange={(e) => void handleProofUpload(e.target.files)}
+          className="w-full text-sm text-white/70"
+        />
+        {proofPreviews.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {proofPreviews.map((url) => (
+              <li key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/10">
+                <Image src={url} alt="Payment proof" fill className="object-cover" unoptimized />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
       {lines.length > 0 ? (
         <form onSubmit={handleSubmit} className="space-y-4">
           <section className="rounded-2xl border border-white/10 bg-[color:var(--surface-2)]/70 p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
-              This sale
-            </h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">This sale</h2>
             <ul className="mt-4 space-y-3">
               {lines.map((l) => (
-                <li
-                  key={l.productId}
-                  className="flex items-center justify-between text-sm text-white"
-                >
+                <li key={l.productId} className="flex items-center justify-between text-sm text-white">
                   <span>
                     {l.name} × {l.quantity}
                   </span>
-                  <span className="tabular-nums font-medium">
-                    {(l.unitPrice * l.quantity).toFixed(2)}
-                  </span>
+                  <span className="tabular-nums font-medium">{(l.unitPrice * l.quantity).toFixed(2)}</span>
                 </li>
               ))}
             </ul>
@@ -147,10 +191,7 @@ export default function SellPage() {
               <span className="tabular-nums">{total.toFixed(2)}</span>
             </div>
           </section>
-          <button
-            type="submit"
-            className="tap btn-primary w-full px-4 py-4 text-base"
-          >
+          <button type="submit" className="tap btn-primary w-full px-4 py-4 text-base">
             Record sale
           </button>
         </form>
@@ -158,12 +199,10 @@ export default function SellPage() {
 
       {receipt ? (
         <section className="rounded-2xl border border-white/10 bg-black/40 p-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-white/45">
-            Receipt
-          </h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-white/45">Receipt</h2>
           <pre className="mt-3 whitespace-pre-wrap text-xs text-white/80">{receipt}</pre>
         </section>
       ) : null}
-    </div>
+    </section>
   );
 }

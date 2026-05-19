@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getApiBase, upstreamFetch } from "@/lib/server-api";
+import { upstreamFetch } from "@/lib/server-api";
 
 const cookieName = process.env.AUTH_COOKIE_NAME ?? "edisims_access";
 
@@ -28,18 +28,32 @@ const forward = async (
       headers,
       body: body && body.byteLength > 0 ? body : undefined,
     });
+
+    const ct = upstream.headers.get("content-type") ?? "";
+    const disposition = upstream.headers.get("content-disposition");
+    const isAttachment =
+      disposition?.includes("attachment") ||
+      ct.includes("application/pdf") ||
+      ct.includes("spreadsheet") ||
+      ct.includes("text/csv");
+
+    if (isAttachment) {
+      const buffer = await upstream.arrayBuffer();
+      const res = new NextResponse(buffer, { status: upstream.status });
+      if (ct) res.headers.set("content-type", ct);
+      if (disposition) res.headers.set("content-disposition", disposition);
+      return res;
+    }
+
     const text = await upstream.text();
     const res = new NextResponse(text, { status: upstream.status });
-    const ct = upstream.headers.get("content-type");
-    if (ct) {
-      res.headers.set("content-type", ct);
-    }
+    if (ct) res.headers.set("content-type", ct);
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : "API request failed";
     return NextResponse.json(
-      { message, apiBase: getApiBase() },
-      { status: message.includes("API_INTERNAL_URL") ? 503 : 502 },
+      { message },
+      { status: 502 },
     );
   }
 };

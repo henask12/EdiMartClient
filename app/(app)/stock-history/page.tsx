@@ -1,9 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { ExportMenu } from "@/components/ExportMenu";
+import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 
-const PAGE_SIZE = 25;
+const MOVEMENT_TYPES = [
+  "",
+  "RECEIPT",
+  "SALE",
+  "RETURN",
+  "ADJUSTMENT",
+  "TRANSFER",
+  "RESERVE",
+  "RELEASE_RESERVE",
+  "DAMAGE",
+] as const;
 
 type Movement = {
   id: string;
@@ -25,34 +39,40 @@ export default function StockHistoryPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productId, setProductId] = useState("");
+  const [type, setType] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
+    setLoading(true);
     const params = new URLSearchParams({
-      take: String(PAGE_SIZE),
-      skip: String((page - 1) * PAGE_SIZE),
+      take: String(pageSize),
+      skip: String((page - 1) * pageSize),
     });
-    if (productId) {
-      params.set("productId", productId);
-    }
+    if (productId) params.set("productId", productId);
+    if (type) params.set("type", type);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     const res = await fetch(`/api/proxy/stock/history?${params}`, { cache: "no-store" });
     if (res.ok) {
       const data = (await res.json()) as { items: Movement[]; total: number };
       setMovements(data.items);
       setTotal(data.total);
     }
-  }, [productId, page]);
+    setLoading(false);
+  }, [productId, type, from, to, page, pageSize]);
 
   useEffect(() => {
-    const loadProducts = async () => {
-      const res = await fetch("/api/proxy/products?take=200", { cache: "no-store" });
+    void fetch("/api/proxy/products?take=200", { cache: "no-store" }).then(async (res) => {
       if (res.ok) {
         const data = (await res.json()) as { items: Product[] };
         setProducts(data.items);
       }
-    };
-    void loadProducts();
+    });
   }, []);
 
   useEffect(() => {
@@ -60,32 +80,77 @@ export default function StockHistoryPage() {
   }, [load]);
 
   return (
-    <div className="space-y-6">
-      <div>
+    <section className="space-y-6">
+      <header>
         <h1 className="text-2xl font-semibold text-white">Stock history</h1>
         <p className="mt-2 text-sm text-white/60">
-          Full ledger — receipts, sales, reserves, adjustments.
+          Paginated ledger — tap a row for full movement detail.
         </p>
+      </header>
+
+      <DateRangeFilter
+        from={from}
+        to={to}
+        onFromChange={(v) => {
+          setFrom(v);
+          setPage(1);
+        }}
+        onToChange={(v) => {
+          setTo(v);
+          setPage(1);
+        }}
+        onApply={() => void load()}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm text-white/70">
+          Product
+          <select
+            value={productId}
+            onChange={(e) => {
+              setProductId(e.target.value);
+              setPage(1);
+            }}
+            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          >
+            <option value="">All products</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm text-white/70">
+          Movement type
+          <select
+            value={type}
+            onChange={(e) => {
+              setType(e.target.value);
+              setPage(1);
+            }}
+            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          >
+            {MOVEMENT_TYPES.map((t) => (
+              <option key={t || "all"} value={t}>
+                {t || "All types"}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      <label className="block max-w-md text-sm text-white/70">
-        Filter by product
-        <select
-          value={productId}
-          onChange={(e) => {
-            setProductId(e.target.value);
-            setPage(1);
-          }}
-          className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-        >
-          <option value="">All products</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <ExportMenu
+        basePath="stock/history/export"
+        queryParams={{
+          productId: productId || undefined,
+          type: type || undefined,
+          from: from || undefined,
+          to: to || undefined,
+        }}
+      />
+
+      {loading ? <p className="text-sm text-white/50">Loading…</p> : null}
 
       <ul className="space-y-2">
         {movements.map((m) => {
@@ -93,47 +158,59 @@ export default function StockHistoryPage() {
           const after = m.afterOnHand ?? "—";
           const positive = Number(m.qtyDelta) >= 0;
           return (
-            <li
-              key={m.id}
-              className="rounded-xl border border-white/10 bg-[color:var(--surface)]/70 px-4 py-3 text-sm"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-medium text-white">
-                    {m.inventoryItem.product.name}
-                    <span className="ml-2 text-xs font-normal text-white/45">
-                      {m.inventoryItem.product.category.name}
-                    </span>
-                  </p>
-                  <p className="text-xs text-white/50">
-                    {new Date(m.createdAt).toLocaleString()} · {m.type}
-                  </p>
+            <li key={m.id}>
+              <Link
+                href={`/stock-history/${m.id}`}
+                className="block rounded-xl border border-white/10 bg-[color:var(--surface)]/70 px-4 py-3 text-sm transition hover:border-[var(--brand-yellow)]/30"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-white">
+                      {m.inventoryItem.product.name}
+                      <span className="ml-2 text-xs font-normal text-white/45">
+                        {m.inventoryItem.product.category.name}
+                      </span>
+                    </p>
+                    <p className="text-xs text-white/50">
+                      {new Date(m.createdAt).toLocaleString()} · {m.type}
+                    </p>
+                  </div>
+                  <span
+                    className={`tabular-nums font-semibold ${
+                      positive ? "text-[var(--accent)]" : "text-rose-300"
+                    }`}
+                  >
+                    {positive ? "+" : ""}
+                    {m.qtyDelta}
+                  </span>
                 </div>
-                <span
-                  className={`tabular-nums font-semibold ${
-                    positive ? "text-[var(--accent)]" : "text-rose-300"
-                  }`}
-                >
-                  {positive ? "+" : ""}
-                  {m.qtyDelta}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-white/45">
-                On hand: {before} → {after}
-                {m.stockBatch?.expiryDate
-                  ? ` · expires ${m.stockBatch.expiryDate.slice(0, 10)}`
-                  : ""}
-                {m.notes ? ` · ${m.notes}` : ""}
-              </p>
+                <p className="mt-1 text-xs text-white/45">
+                  On hand: {before} → {after}
+                  {m.stockBatch?.expiryDate
+                    ? ` · expires ${m.stockBatch.expiryDate.slice(0, 10)}`
+                    : ""}
+                </p>
+                <p className="mt-2 text-xs font-semibold text-[var(--accent-2)]">View details →</p>
+              </Link>
             </li>
           );
         })}
-        {movements.length === 0 ? (
-          <li className="text-center text-sm text-white/50">No movements yet.</li>
+        {!loading && movements.length === 0 ? (
+          <li className="text-center text-sm text-white/50">No movements match filters.</li>
         ) : null}
       </ul>
 
-      <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
-    </div>
+      <footer className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+        <PageSizeSelect
+          value={pageSize}
+          options={[15, 25, 50, 100]}
+          onChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+      </footer>
+    </section>
   );
 }

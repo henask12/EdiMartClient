@@ -133,7 +133,7 @@ export default function DashboardPage() {
                         item.status === "OUT" ? "text-rose-300" : "text-amber-300"
                       }`}
                     >
-                      {item.status === "OUT" ? "Out" : "Low"}
+                      {item.status === "OUT" ? "OUT of Stock" : "Low"}
                     </span>
                   </div>
                   <span className="text-white/55">

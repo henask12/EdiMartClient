@@ -43,4 +43,8 @@
   .card-surface {
     @apply rounded-2xl border border-white/10 bg-[color:var(--surface)]/90;
   }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
