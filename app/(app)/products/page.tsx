@@ -13,16 +13,13 @@ import { dedupeCategories } from "@/lib/dedupe-categories";
 import { canCreateProduct, canDeactivateProduct, canReceiveStock } from "@/lib/product-permissions";
 
 type Category = { id: string; name: string };
-type ProductType = { id: string; name: string };
 type Me = { role: string; permissions: string[] };
 
 export default function ProductsPage() {
   const [items, setItems] = useState<MartProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [categoryId, setCategoryId] = useState("");
-  const [productTypeId, setProductTypeId] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -60,13 +57,11 @@ export default function ProductsPage() {
       });
       if (debouncedQ) params.set("q", debouncedQ);
       if (categoryId) params.set("categoryId", categoryId);
-      if (productTypeId) params.set("productTypeId", productTypeId);
       if (stockStatus) params.set("stockStatus", stockStatus);
 
-      const [prodRes, catRes, typeRes] = await Promise.all([
+      const [prodRes, catRes] = await Promise.all([
         fetch(`/api/proxy/products?${params}`, { cache: "no-store" }),
         fetch("/api/proxy/categories", { cache: "no-store" }),
-        fetch("/api/proxy/product-types", { cache: "no-store" }),
       ]);
       if (!prodRes.ok) throw new Error("Failed to load products");
       const data = (await prodRes.json()) as { items: MartProduct[]; total: number };
@@ -75,19 +70,17 @@ export default function ProductsPage() {
       if (catRes.ok) {
         setCategories(dedupeCategories((await catRes.json()) as Category[]));
       }
-      if (typeRes.ok) setProductTypes((await typeRes.json()) as ProductType[]);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     }
-  }, [debouncedQ, categoryId, productTypeId, stockStatus, page, pageSize]);
+  }, [debouncedQ, categoryId, stockStatus, page, pageSize]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const handleDeactivate = async (productId: string) => {
-    if (!confirm("Deactivate this product? It will be hidden from the catalog.")) return;
     const res = await fetch(`/api/proxy/products/${productId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -104,7 +97,6 @@ export default function ProductsPage() {
   const exportParams = {
     q: debouncedQ || undefined,
     categoryId: categoryId || undefined,
-    productTypeId: productTypeId || undefined,
     stockStatus: stockStatus || undefined,
   };
 
@@ -130,7 +122,7 @@ export default function ProductsPage() {
               href="/add-stock"
               className="tap rounded-full border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 px-5 py-2.5 text-sm font-semibold text-[var(--accent)]"
             >
-              Add stock
+              Stocks
             </Link>
           ) : null}
         </div>
@@ -146,12 +138,6 @@ export default function ProductsPage() {
         categoryId={categoryId}
         onCategoryChange={(id) => {
           setCategoryId(id);
-          resetPage();
-        }}
-        productTypes={productTypes}
-        productTypeId={productTypeId}
-        onProductTypeChange={(id) => {
-          setProductTypeId(id);
           resetPage();
         }}
         stockStatus={stockStatus}

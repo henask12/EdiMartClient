@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SalesPeriodModal } from "@/components/SalesPeriodModal";
+import { formatBirr } from "@/lib/format-price";
+import type { PeriodKey } from "@/lib/period-bounds";
 
 type RestockItem = {
   id: string;
@@ -39,9 +42,21 @@ type Dashboard = {
   productCount: number;
 };
 
+const PERIOD_CARDS: { key: PeriodKey; label: string; dataKey: keyof Pick<Dashboard, "today" | "week" | "month" | "year"> }[] = [
+  { key: "today", label: "Today", dataKey: "today" },
+  { key: "week", label: "This week", dataKey: "week" },
+  { key: "month", label: "This month", dataKey: "month" },
+  { key: "year", label: "This year", dataKey: "year" },
+];
+
 export default function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [periodModal, setPeriodModal] = useState<{
+    period: PeriodKey;
+    total: string;
+    count: number;
+  } | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -65,13 +80,6 @@ export default function DashboardPage() {
     return <p className="text-sm text-white/60">Loading…</p>;
   }
 
-  const periods = [
-    { label: "Today", total: data.today.grandTotal, count: data.today.saleCount },
-    { label: "This week", total: data.week.grandTotal, count: data.week.saleCount },
-    { label: "This month", total: data.month.grandTotal, count: data.month.saleCount },
-    { label: "This year", total: data.year.grandTotal, count: data.year.saleCount },
-  ];
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -82,34 +90,46 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/sell"
-            className="btn-primary px-4 py-2 text-sm"
-          >
+          <Link href="/sell" className="btn-primary px-4 py-2 text-sm">
             Record sale
           </Link>
           <Link
             href="/add-stock"
             className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white"
           >
-            Add stock
+            Stocks
           </Link>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {periods.map((p) => (
-          <section
-            key={p.label}
-            className="rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5"
-          >
-            <div className="text-xs font-semibold uppercase tracking-wide text-white/45">
-              {p.label}
-            </div>
-            <div className="mt-2 text-2xl font-semibold tabular-nums text-white">{p.total}</div>
-            <p className="mt-1 text-sm text-white/55">{p.count} sales</p>
-          </section>
-        ))}
+        {PERIOD_CARDS.map((p) => {
+          const summary = data[p.dataKey];
+          return (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() =>
+                setPeriodModal({
+                  period: p.key,
+                  total: summary.grandTotal,
+                  count: summary.saleCount,
+                })
+              }
+              className="tap rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5 text-left transition hover:border-[var(--brand-yellow)]/30 hover:bg-[color:var(--surface)]"
+              aria-label={`View ${p.label} sales details`}
+            >
+              <div className="text-xs font-semibold uppercase tracking-wide text-white/45">
+                {p.label}
+              </div>
+              <div className="mt-2 text-2xl font-semibold tabular-nums text-white">
+                {formatBirr(summary.grandTotal)}
+              </div>
+              <p className="mt-1 text-sm text-white/55">{summary.saleCount} sales</p>
+              <p className="mt-2 text-xs text-[var(--accent-2)]">View details →</p>
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -146,9 +166,14 @@ export default function DashboardPage() {
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-[color:var(--surface-2)]/70 p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
-            Expiring soon ({data.expiringSoon.length})
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
+              Expiring soon ({data.expiringSoon.length})
+            </h2>
+            <Link href="/expiry" className="text-xs font-semibold text-[var(--accent-2)]">
+              View all
+            </Link>
+          </div>
           {data.expiringSoon.length === 0 ? (
             <p className="mt-4 text-sm text-white/50">No batches expiring soon.</p>
           ) : (
@@ -193,6 +218,15 @@ export default function DashboardPage() {
       </section>
 
       <p className="text-sm text-white/45">{data.productCount} products tracked</p>
+
+      {periodModal ? (
+        <SalesPeriodModal
+          period={periodModal.period}
+          summaryTotal={periodModal.total}
+          summaryCount={periodModal.count}
+          onClose={() => setPeriodModal(null)}
+        />
+      ) : null}
     </div>
   );
 }

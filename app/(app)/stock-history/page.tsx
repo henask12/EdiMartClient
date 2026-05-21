@@ -43,6 +43,9 @@ export default function StockHistoryPage() {
   const [type, setType] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [draftFrom, setDraftFrom] = useState("");
+  const [draftTo, setDraftTo] = useState("");
+  const [dateError, setDateError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
@@ -142,18 +145,22 @@ export default function StockHistoryPage() {
       </header>
 
       <DateRangeFilter
-        from={from}
-        to={to}
-        onFromChange={(v) => {
-          setFrom(v);
+        from={draftFrom}
+        to={draftTo}
+        onFromChange={setDraftFrom}
+        onToChange={setDraftTo}
+        onApply={() => {
+          if (draftFrom && draftTo && draftFrom > draftTo) {
+            setDateError("“From” must be on or before “To”.");
+            return;
+          }
+          setDateError(null);
+          setFrom(draftFrom);
+          setTo(draftTo);
           setPage(1);
         }}
-        onToChange={(v) => {
-          setTo(v);
-          setPage(1);
-        }}
-        onApply={() => void load()}
       />
+      {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm text-white/70">

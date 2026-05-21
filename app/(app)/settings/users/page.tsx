@@ -29,8 +29,10 @@ export default function UsersAdminPage() {
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState("CASHIER");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [resetId, setResetId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
   const assignableRoles = roles.filter((r) => !r.isProtected && !isOwnerRole(r.name));
 
   const load = async () => {
@@ -69,6 +71,14 @@ export default function UsersAdminPage() {
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
     const res = await fetch("/api/proxy/users", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -82,6 +92,7 @@ export default function UsersAdminPage() {
     setEmail("");
     setDisplayName("");
     setPassword("");
+    setConfirmPassword("");
     setAddOpen(false);
     await load();
   };
@@ -119,6 +130,15 @@ export default function UsersAdminPage() {
 
   const handleReset = async () => {
     if (!resetId || !resetPassword) return;
+    setError(null);
+    if (resetPassword.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (resetPassword !== resetConfirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
     const res = await fetch(`/api/proxy/users/${resetId}/reset-password`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -127,6 +147,7 @@ export default function UsersAdminPage() {
     if (res.ok) {
       setResetId(null);
       setResetPassword("");
+      setResetConfirmPassword("");
     } else {
       setError("Reset failed");
     }
@@ -336,6 +357,18 @@ export default function UsersAdminPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+                minLength={8}
+                autoComplete="new-password"
+              />
+              <input
+                required
+                type="password"
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+                minLength={8}
+                autoComplete="new-password"
               />
               <div className="flex gap-2 pt-2">
                 <button type="submit" className="btn-primary flex-1 py-2 text-sm">
@@ -364,6 +397,17 @@ export default function UsersAdminPage() {
               onChange={(e) => setResetPassword(e.target.value)}
               placeholder="New password"
               className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+              minLength={8}
+              autoComplete="new-password"
+            />
+            <input
+              type="password"
+              value={resetConfirmPassword}
+              onChange={(e) => setResetConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              className="w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+              minLength={8}
+              autoComplete="new-password"
             />
             <div className="flex gap-2">
               <button type="button" onClick={() => void handleReset()} className="btn-primary flex-1 py-2 text-sm">

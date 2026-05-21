@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
@@ -13,8 +14,9 @@ type Attachment = { id: string; imageUrl: string };
 type SaleLine = {
   id: string;
   quantity: string;
+  unitPrice: string;
   lineTotal: string;
-  product: { name: string };
+  product: { name: string; category?: { name: string } };
 };
 type Sale = {
   id: string;
@@ -26,15 +28,45 @@ type Sale = {
   createdBy: { displayName: string | null; email: string };
 };
 
+type Category = { id: string; name: string };
+type Product = { id: string; name: string };
+
+const formatItems = (lines: SaleLine[]) =>
+  lines.map((l) => `${l.product.name} ×${l.quantity}`).join(", ") || "—";
+
 export default function SalesPage() {
+  const searchParams = useSearchParams();
+  const urlFrom = searchParams.get("from") ?? "";
+  const urlTo = searchParams.get("to") ?? "";
+
   const [items, setItems] = useState<Sale[]>([]);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(urlFrom);
+  const [to, setTo] = useState(urlTo);
+  const [draftFrom, setDraftFrom] = useState(urlFrom);
+  const [draftTo, setDraftTo] = useState(urlTo);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState("");
+  const [productId, setProductId] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [viewSale, setViewSale] = useState<Sale | null>(null);
+
+  useEffect(() => {
+    void Promise.all([
+      fetch("/api/proxy/categories", { cache: "no-store" }),
+      fetch("/api/proxy/products?take=300", { cache: "no-store" }),
+    ]).then(async ([catRes, prodRes]) => {
+      if (catRes.ok) setCategories((await catRes.json()) as Category[]);
+      if (prodRes.ok) {
+        const data = (await prodRes.json()) as { items: Product[] };
+        setProducts(data.items);
+      }
+    });
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +76,8 @@ export default function SalesPage() {
       });
       if (from) params.set("from", from);
       if (to) params.set("to", to);
+      if (productId) params.set("productId", productId);
+      if (categoryId) params.set("categoryId", categoryId);
       const res = await fetch(`/api/proxy/sales?${params}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load sales");
       const data = (await res.json()) as { items: Sale[]; total: number };
@@ -53,17 +87,33 @@ export default function SalesPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     }
-  }, [from, to, page, pageSize]);
+  }, [from, to, productId, categoryId, page, pageSize]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  const handleApplyDates = () => {
+    if (draftFrom && draftTo && draftFrom > draftTo) {
+      setDateError("“From” must be on or before “To”.");
+      return;
+    }
+    setDateError(null);
+    setFrom(draftFrom);
+    setTo(draftTo);
+    setPage(1);
+  };
+
   const columns: DataTableColumn<Sale>[] = [
     {
-      key: "saleNumber",
-      header: "Sale #",
-      render: (s) => <span className="font-medium text-white">{s.saleNumber}</span>,
+      key: "items",
+      header: "Items",
+      render: (s) => (
+        <div>
+          <p className="font-medium text-white">{formatItems(s.lines)}</p>
+          <p className="text-xs text-white/45">{s.saleNumber}</p>
+        </div>
+      ),
     },
     {
       key: "date",
@@ -111,24 +161,66 @@ export default function SalesPage() {
     <section className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold text-white">Sales history</h1>
-        <p className="mt-2 text-sm text-white/60">Filter by date, export, view payment proofs.</p>
+        <p className="mt-2 text-sm text-white/60">Filter by date, product, category, export, view proofs.</p>
       </header>
 
       <DateRangeFilter
-        from={from}
-        to={to}
-        onFromChange={(v) => {
-          setFrom(v);
-          setPage(1);
-        }}
-        onToChange={(v) => {
-          setTo(v);
-          setPage(1);
-        }}
-        onApply={() => void load()}
+        from={draftFrom}
+        to={draftTo}
+        onFromChange={setDraftFrom}
+        onToChange={setDraftTo}
+        onApply={handleApplyDates}
       />
+      {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
 
-      <ExportMenu basePath="sales/export" queryParams={{ from: from || undefined, to: to || undefined }} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm text-white/70">
+          Category
+          <select
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              setPage(1);
+            }}
+            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm text-white/70">
+          Product
+          <select
+            value={productId}
+            onChange={(e) => {
+              setProductId(e.target.value);
+              setPage(1);
+            }}
+            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          >
+            <option value="">All products</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <ExportMenu
+        basePath="sales/export"
+        queryParams={{
+          from: from || undefined,
+          to: to || undefined,
+          productId: productId || undefined,
+          categoryId: categoryId || undefined,
+        }}
+      />
 
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
 
@@ -140,11 +232,11 @@ export default function SalesPage() {
         mobileCard={(sale) => (
           <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/80 p-4 text-sm">
             <div className="flex justify-between gap-2">
-              <p className="font-semibold text-white">{sale.saleNumber}</p>
+              <p className="font-medium text-white">{formatItems(sale.lines)}</p>
               <p className="font-semibold text-[var(--accent)]">{formatBirr(sale.grandTotal)}</p>
             </div>
             <p className="mt-1 text-xs text-white/50">
-              {new Date(sale.createdAt).toLocaleString()}
+              {sale.saleNumber} · {new Date(sale.createdAt).toLocaleString()}
             </p>
             <button
               type="button"
@@ -193,11 +285,13 @@ export default function SalesPage() {
             </p>
             <ul className="mt-4 space-y-2 border-t border-white/10 pt-4 text-sm">
               {viewSale.lines.map((line) => (
-                <li key={line.id} className="flex justify-between text-white/80">
+                <li key={line.id} className="flex justify-between gap-2 text-white/80">
                   <span>
                     {line.product.name} × {line.quantity}
                   </span>
-                  <span className="tabular-nums">{formatBirr(line.lineTotal)}</span>
+                  <span className="shrink-0 tabular-nums text-white/55">
+                    {formatBirr(line.unitPrice)} · {formatBirr(line.lineTotal)}
+                  </span>
                 </li>
               ))}
             </ul>

@@ -30,12 +30,11 @@ const primaryNav: NavItem[] = [
 ];
 
 const moreNav: NavItem[] = [
-  { href: "/add-stock", label: "Add stock", permission: "STOCK_RECEIVE" },
+  { href: "/add-stock", label: "Stocks", permission: "STOCK_RECEIVE" },
+  { href: "/expiry", label: "Expiry", permission: "STOCK_HISTORY_VIEW" },
   { href: "/reservations", label: "Reservations", permission: "RESERVATIONS_MANAGE" },
   { href: "/stock-history", label: "History", permission: "STOCK_HISTORY_VIEW" },
   { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
-  { href: "/product-types", label: "Types", permission: "PRODUCT_TYPES_MANAGE" },
-  { href: "/settings/account", label: "My account" },
   { href: "/settings/users", label: "Users", permission: "USERS_MANAGE" },
   { href: "/settings/roles", label: "Roles", permission: "ROLES_MANAGE" },
   { href: "/settings/emails", label: "Alert emails", permission: "SETTINGS_EMAILS" },
@@ -44,14 +43,13 @@ const moreNav: NavItem[] = [
 const desktopNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/products", label: "Products", permission: "PRODUCTS_VIEW" },
-  { href: "/add-stock", label: "Add stock", permission: "STOCK_RECEIVE" },
+  { href: "/add-stock", label: "Stocks", permission: "STOCK_RECEIVE" },
+  { href: "/expiry", label: "Expiry", permission: "STOCK_HISTORY_VIEW" },
   { href: "/sell", label: "Sell", permission: "SALES_CREATE" },
   { href: "/sales", label: "Sales", permission: "SALES_VIEW" },
   { href: "/reservations", label: "Reservations", permission: "RESERVATIONS_MANAGE" },
   { href: "/stock-history", label: "History", permission: "STOCK_HISTORY_VIEW" },
   { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
-  { href: "/product-types", label: "Types", permission: "PRODUCT_TYPES_MANAGE" },
-  { href: "/settings/account", label: "Account" },
   { href: "/settings/users", label: "Users", permission: "USERS_MANAGE" },
   { href: "/settings/roles", label: "Roles", permission: "ROLES_MANAGE" },
   { href: "/settings/emails", label: "Emails", permission: "SETTINGS_EMAILS" },

@@ -21,6 +21,7 @@ export default function NewProductPage() {
   const [restockQty, setRestockQty] = useState("10");
   const [initialQuantity, setInitialQuantity] = useState("");
   const [initialExpiryDate, setInitialExpiryDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [description, setDescription] = useState("");
   const [originCountry, setOriginCountry] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -70,6 +71,7 @@ export default function NewProductPage() {
           originCountry: originCountry.trim() || undefined,
           initialQuantity: initialQuantity || undefined,
           initialExpiryDate: initialExpiryDate || undefined,
+          expiryDate: expiryDate || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -200,6 +202,16 @@ export default function NewProductPage() {
             />
           </div>
         </section>
+
+        <DateInput
+          label="Product expiry date (optional)"
+          value={expiryDate}
+          onChange={setExpiryDate}
+          className="block"
+        />
+        <p className="-mt-2 text-xs text-white/45">
+          Default for new stock batches when batch expiry is not set.
+        </p>
 
         <section className="rounded-xl border border-white/10 bg-black/20 p-4">
           <h2 className="text-sm font-semibold text-white/80">Restock alerts</h2>

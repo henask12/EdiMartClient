@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CategorySelect } from "@/components/CategorySelect";
+import { DateInput } from "@/components/DateInput";
 
 type ProductType = { id: string; name: string };
 
@@ -23,6 +24,7 @@ export default function EditProductPage() {
   const [description, setDescription] = useState("");
   const [originCountry, setOriginCountry] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [expiryDate, setExpiryDate] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -45,6 +47,7 @@ export default function EditProductPage() {
         restockQty: number;
         description?: string | null;
         originCountry?: string | null;
+        expiryDate?: string | null;
       };
       setName(p.name);
       setCategoryId(p.categoryId);
@@ -55,6 +58,9 @@ export default function EditProductPage() {
       setRestockQty(String(p.restockQty));
       setDescription(p.description ?? "");
       setOriginCountry(p.originCountry ?? "");
+      setExpiryDate(
+        p.expiryDate ? new Date(p.expiryDate).toISOString().slice(0, 10) : "",
+      );
     };
     void load();
   }, [id]);
@@ -90,6 +96,7 @@ export default function EditProductPage() {
           imagePath,
           description: description.trim() || null,
           originCountry: originCountry.trim() || null,
+          expiryDate: expiryDate || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -165,6 +172,12 @@ export default function EditProductPage() {
             className="mt-2 w-full text-sm text-white/70"
           />
         </label>
+        <DateInput
+          label="Product expiry date (optional)"
+          value={expiryDate}
+          onChange={setExpiryDate}
+        />
+
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-white/70">
             Sell price
