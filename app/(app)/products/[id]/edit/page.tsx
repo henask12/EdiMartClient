@@ -6,17 +6,13 @@ import Link from "next/link";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
 
-type ProductType = { id: string; name: string };
-
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [productTypeId, setProductTypeId] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [restockAt, setRestockAt] = useState("0");
@@ -28,11 +24,7 @@ export default function EditProductPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [typeRes, prodRes] = await Promise.all([
-        fetch("/api/proxy/product-types", { cache: "no-store" }),
-        fetch(`/api/proxy/products/${id}`, { cache: "no-store" }),
-      ]);
-      if (typeRes.ok) setProductTypes((await typeRes.json()) as ProductType[]);
+      const prodRes = await fetch(`/api/proxy/products/${id}`, { cache: "no-store" });
       if (!prodRes.ok) {
         setError("Product not found");
         return;
@@ -40,7 +32,6 @@ export default function EditProductPage() {
       const p = (await prodRes.json()) as {
         name: string;
         categoryId: string;
-        productTypeId?: string | null;
         sellingPrice: string;
         costPrice: string;
         restockAt: number;
@@ -51,7 +42,6 @@ export default function EditProductPage() {
       };
       setName(p.name);
       setCategoryId(p.categoryId);
-      setProductTypeId(p.productTypeId ?? "");
       setSellingPrice(p.sellingPrice);
       setCostPrice(p.costPrice);
       setRestockAt(String(p.restockAt));
@@ -88,7 +78,6 @@ export default function EditProductPage() {
         body: JSON.stringify({
           name,
           categoryId,
-          productTypeId: productTypeId || null,
           sellingPrice,
           costPrice: costPrice || "0",
           restockAt: Number(restockAt),
@@ -122,21 +111,6 @@ export default function EditProductPage() {
       </div>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-6">
         <CategorySelect value={categoryId} onChange={setCategoryId} allowCreate />
-        <label className="block text-sm text-white/70">
-          Product type
-          <select
-            value={productTypeId}
-            onChange={(e) => setProductTypeId(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            <option value="">None</option>
-            {productTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
         <label className="block text-sm text-white/70">
           Name
           <input
@@ -173,7 +147,7 @@ export default function EditProductPage() {
           />
         </label>
         <DateInput
-          label="Product expiry date (optional)"
+          label="Expiry (optional)"
           value={expiryDate}
           onChange={setExpiryDate}
         />

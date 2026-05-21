@@ -45,7 +45,7 @@ export const ProductDetailModal = ({ product, onClose }: Props) => {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--accent-2)]">
-                {product.productType?.name ?? "—"} · {product.category.name}
+                {product.category.name}
               </p>
               <h2 id="product-detail-title" className="mt-1 text-xl font-semibold text-white">
                 {product.name}
@@ -66,34 +66,14 @@ export const ProductDetailModal = ({ product, onClose }: Props) => {
           </p>
 
           <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-white/70">
-            {product.sku ? (
-              <>
-                <dt className="text-white/45">SKU</dt>
-                <dd>{product.sku}</dd>
-              </>
-            ) : null}
             {product.originCountry ? (
               <>
                 <dt className="text-white/45">Origin</dt>
                 <dd>{product.originCountry}</dd>
               </>
             ) : null}
-            <dt className="text-white/45">Cost</dt>
-            <dd className="tabular-nums">{formatBirr(product.costPrice ?? "0")}</dd>
-            <dt className="text-white/45">On hand</dt>
-            <dd className="tabular-nums">{product.onHand}</dd>
             <dt className="text-white/45">Available</dt>
             <dd className="tabular-nums">{product.available}</dd>
-            <dt className="text-white/45">Reserved</dt>
-            <dd className="tabular-nums">{product.reserved}</dd>
-            <dt className="text-white/45">Restock at</dt>
-            <dd className="tabular-nums">{product.restockAt}</dd>
-            {product.restockQty ? (
-              <>
-                <dt className="text-white/45">Restock qty</dt>
-                <dd className="tabular-nums">{product.restockQty}</dd>
-              </>
-            ) : null}
           </dl>
 
           {product.description ? (

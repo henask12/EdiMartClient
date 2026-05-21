@@ -1,38 +1,25 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
 
-type ProductType = { id: string; name: string };
-
 export default function NewProductPage() {
   const router = useRouter();
-  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [productTypeId, setProductTypeId] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [restockAt, setRestockAt] = useState("5");
   const [restockQty, setRestockQty] = useState("10");
   const [initialQuantity, setInitialQuantity] = useState("");
-  const [initialExpiryDate, setInitialExpiryDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [description, setDescription] = useState("");
   const [originCountry, setOriginCountry] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      const typeRes = await fetch("/api/proxy/product-types", { cache: "no-store" });
-      if (typeRes.ok) setProductTypes((await typeRes.json()) as ProductType[]);
-    };
-    void load();
-  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -55,13 +42,14 @@ export default function NewProductPage() {
         imagePath = upData.path as string;
       }
 
+      const hasOpeningStock = initialQuantity && Number(initialQuantity) > 0;
+
       const res = await fetch("/api/proxy/products", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           name,
           categoryId,
-          productTypeId: productTypeId || undefined,
           sellingPrice,
           costPrice: costPrice || "0",
           restockAt: Number(restockAt),
@@ -69,8 +57,8 @@ export default function NewProductPage() {
           imagePath,
           description: description.trim() || undefined,
           originCountry: originCountry.trim() || undefined,
-          initialQuantity: initialQuantity || undefined,
-          initialExpiryDate: initialExpiryDate || undefined,
+          initialQuantity: hasOpeningStock ? initialQuantity : undefined,
+          initialExpiryDate: hasOpeningStock && expiryDate ? expiryDate : undefined,
           expiryDate: expiryDate || undefined,
         }),
       });
@@ -105,21 +93,6 @@ export default function NewProductPage() {
         className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-6"
       >
         <CategorySelect value={categoryId} onChange={setCategoryId} allowCreate />
-        <label className="block text-sm text-white/70">
-          Product type
-          <select
-            value={productTypeId}
-            onChange={(e) => setProductTypeId(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            <option value="">None</option>
-            {productTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
         <label className="block text-sm text-white/70">
           Product name
           <input
@@ -196,22 +169,12 @@ export default function NewProductPage() {
             </label>
             <DateInput
               label="Expiry (optional)"
-              value={initialExpiryDate}
-              onChange={setInitialExpiryDate}
+              value={expiryDate}
+              onChange={setExpiryDate}
               required={false}
             />
           </div>
         </section>
-
-        <DateInput
-          label="Product expiry date (optional)"
-          value={expiryDate}
-          onChange={setExpiryDate}
-          className="block"
-        />
-        <p className="-mt-2 text-xs text-white/45">
-          Default for new stock batches when batch expiry is not set.
-        </p>
 
         <section className="rounded-xl border border-white/10 bg-black/20 p-4">
           <h2 className="text-sm font-semibold text-white/80">Restock alerts</h2>

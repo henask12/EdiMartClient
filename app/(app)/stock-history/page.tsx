@@ -20,6 +20,13 @@ const MOVEMENT_TYPES = [
   "DAMAGE",
 ] as const;
 
+type ReservationMeta = {
+  reservedQty?: string;
+  availableBefore?: string;
+  availableAfter?: string;
+  customerName?: string | null;
+};
+
 type Movement = {
   id: string;
   type: string;
@@ -28,6 +35,7 @@ type Movement = {
   afterOnHand: string | null;
   createdAt: string;
   notes: string | null;
+  reservationMeta: ReservationMeta | null;
   stockBatch: { expiryDate: string | null } | null;
   inventoryItem: {
     product: { id: string; name: string; category: { name: string } };
@@ -35,6 +43,29 @@ type Movement = {
 };
 
 type Product = { id: string; name: string };
+
+const formatOnHand = (m: Movement) => {
+  if (m.beforeOnHand != null && m.afterOnHand != null) {
+    return `${m.beforeOnHand} → ${m.afterOnHand}`;
+  }
+  return "— → —";
+};
+
+const formatReserveContext = (m: Movement): string | null => {
+  const meta = m.reservationMeta;
+  if (!meta?.availableBefore || !meta?.availableAfter) return null;
+
+  if (m.type === "RESERVE") {
+    const delta = meta.reservedQty ?? m.qtyDelta;
+    const sign = Number(delta) >= 0 ? "+" : "";
+    return `Reserved ${sign}${delta} · Avail ${meta.availableBefore} → ${meta.availableAfter}`;
+  }
+  if (m.type === "RELEASE_RESERVE") {
+    const delta = meta.reservedQty ?? m.qtyDelta;
+    return `Released ${delta} · Avail ${meta.availableBefore} → ${meta.availableAfter}`;
+  }
+  return null;
+};
 
 export default function StockHistoryPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
@@ -105,23 +136,35 @@ export default function StockHistoryPage() {
       render: (m) => m.type,
     },
     {
-      key: "qty",
-      header: "Qty Δ",
-      className: "tabular-nums",
+      key: "onHand",
+      header: "On hand",
+      render: (m) => formatOnHand(m),
+    },
+    {
+      key: "reserve",
+      header: "Reservation",
       render: (m) => {
+        const ctx = formatReserveContext(m);
+        if (ctx) {
+          return <span className="text-xs text-white/70">{ctx}</span>;
+        }
+        if (m.type === "RESERVE" || m.type === "RELEASE_RESERVE") {
+          const positive = Number(m.qtyDelta) >= 0;
+          return (
+            <span className={`text-xs tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
+              Qty {positive ? "+" : ""}
+              {m.qtyDelta}
+            </span>
+          );
+        }
         const positive = Number(m.qtyDelta) >= 0;
         return (
-          <span className={positive ? "text-[var(--accent)]" : "text-rose-300"}>
+          <span className={`tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
             {positive ? "+" : ""}
             {m.qtyDelta}
           </span>
         );
       },
-    },
-    {
-      key: "onHand",
-      header: "On hand",
-      render: (m) => `${m.beforeOnHand ?? "—"} → ${m.afterOnHand ?? "—"}`,
     },
     {
       key: "actions",
@@ -140,7 +183,7 @@ export default function StockHistoryPage() {
       <header>
         <h1 className="text-2xl font-semibold text-white">Stock history</h1>
         <p className="mt-2 text-sm text-white/60">
-          Paginated ledger — tap View for full movement detail.
+          Paginated ledger — reserves show on-hand and available changes.
         </p>
       </header>
 
@@ -218,7 +261,7 @@ export default function StockHistoryPage() {
         rowKey={(m) => m.id}
         emptyMessage="No movements match filters."
         mobileCard={(m) => {
-          const positive = Number(m.qtyDelta) >= 0;
+          const ctx = formatReserveContext(m);
           return (
             <Link
               href={`/stock-history/${m.id}`}
@@ -228,14 +271,8 @@ export default function StockHistoryPage() {
               <p className="text-xs text-white/50">
                 {new Date(m.createdAt).toLocaleString()} · {m.type}
               </p>
-              <p
-                className={`mt-1 tabular-nums font-semibold ${
-                  positive ? "text-[var(--accent)]" : "text-rose-300"
-                }`}
-              >
-                {positive ? "+" : ""}
-                {m.qtyDelta}
-              </p>
+              <p className="mt-1 tabular-nums text-white/70">{formatOnHand(m)}</p>
+              {ctx ? <p className="mt-1 text-xs text-white/55">{ctx}</p> : null}
             </Link>
           );
         }}

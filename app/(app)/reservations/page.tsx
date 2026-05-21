@@ -22,6 +22,10 @@ export default function ReservationsPage() {
   const [total, setTotal] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<Reservation | null>(null);
+  const [editQty, setEditQty] = useState("");
+  const [editCustomer, setEditCustomer] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({
@@ -40,6 +44,36 @@ export default function ReservationsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleOpenEdit = (r: Reservation) => {
+    setEditTarget(r);
+    setEditQty(r.quantity);
+    setEditCustomer(r.customerName ?? "");
+    setMessage(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTarget) return;
+    setEditSaving(true);
+    setMessage(null);
+    const res = await fetch(`/api/proxy/reservations/${editTarget.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        quantity: editQty,
+        customerName: editCustomer,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(typeof data.message === "string" ? data.message : "Update failed");
+    } else {
+      setEditTarget(null);
+      setMessage("Reservation updated");
+      await load();
+    }
+    setEditSaving(false);
+  };
 
   const handleCancel = async (id: string) => {
     setMessage(null);
@@ -112,6 +146,14 @@ export default function ReservationsPage() {
             <button
               type="button"
               disabled={loadingId === r.id}
+              onClick={() => handleOpenEdit(r)}
+              className="rounded-lg border border-white/15 px-2 py-1 text-xs text-white"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              disabled={loadingId === r.id}
               onClick={() => void handleComplete(r.id)}
               className="tap btn-primary px-2 py-1 text-xs disabled:opacity-50"
             >
@@ -159,7 +201,11 @@ export default function ReservationsPage() {
 
       {message ? (
         <p
-          className={`text-sm ${message === "Sale recorded" ? "text-[var(--accent)]" : "text-rose-200"}`}
+          className={`text-sm ${
+            message === "Sale recorded" || message === "Reservation updated"
+              ? "text-[var(--accent)]"
+              : "text-rose-200"
+          }`}
         >
           {message}
         </p>
@@ -178,7 +224,14 @@ export default function ReservationsPage() {
               {r.customerName ? ` · ${r.customerName}` : ""}
             </p>
             {r.status === "RESERVED" ? (
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEdit(r)}
+                  className="rounded-lg border border-white/15 px-3 py-2 text-xs"
+                >
+                  Edit
+                </button>
                 <button
                   type="button"
                   disabled={loadingId === r.id}
@@ -202,6 +255,63 @@ export default function ReservationsPage() {
       />
 
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+
+      {editTarget ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-[color:var(--surface)] p-5"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-reservation-title"
+          >
+            <h2 id="edit-reservation-title" className="text-lg font-semibold text-white">
+              Edit reservation
+            </h2>
+            <p className="mt-1 text-sm text-white/55">{editTarget.product.name}</p>
+
+            <label className="mt-4 block text-sm text-white/70">
+              Quantity
+              <input
+                type="number"
+                min="0.01"
+                step="any"
+                value={editQty}
+                onChange={(e) => setEditQty(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+              />
+            </label>
+
+            <label className="mt-3 block text-sm text-white/70">
+              Customer name
+              <input
+                type="text"
+                value={editCustomer}
+                onChange={(e) => setEditCustomer(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+                placeholder="Optional"
+              />
+            </label>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                disabled={editSaving}
+                onClick={() => void handleSaveEdit()}
+                className="tap btn-primary flex-1 py-2 text-sm disabled:opacity-50"
+              >
+                {editSaving ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTarget(null)}
+                className="flex-1 rounded-xl border border-white/15 py-2 text-sm text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
