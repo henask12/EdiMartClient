@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { parseApiMessage, toastError } from "@/lib/toast";
 
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -26,7 +26,7 @@ export default function EditProductPage() {
     const load = async () => {
       const prodRes = await fetch(`/api/proxy/products/${id}`, { cache: "no-store" });
       if (!prodRes.ok) {
-        setError("Product not found");
+        toastError("Product not found");
         return;
       }
       const p = (await prodRes.json()) as {
@@ -58,7 +58,6 @@ export default function EditProductPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       let imagePath: string | undefined;
       if (imageFile) {
@@ -67,7 +66,7 @@ export default function EditProductPage() {
         const up = await fetch("/api/proxy/uploads/product-image", { method: "POST", body: fd });
         const upData = await up.json().catch(() => ({}));
         if (!up.ok) {
-          setError(upData.message ?? "Image upload failed");
+          toastError(parseApiMessage(upData, "Image upload failed"));
           return;
         }
         imagePath = upData.path as string;
@@ -90,12 +89,12 @@ export default function EditProductPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(Array.isArray(data.message) ? data.message.join(", ") : data.message ?? "Could not save");
+        toastError(parseApiMessage(data, "Could not save"));
         return;
       }
       router.push("/products");
     } catch {
-      setError("Network error");
+      toastError("Network error");
     } finally {
       setLoading(false);
     }
@@ -193,7 +192,6 @@ export default function EditProductPage() {
             />
           </label>
         </div>
-        {error ? <p className="text-sm text-rose-200">{error}</p> : null}
         <button type="submit" disabled={loading} className="tap btn-primary w-full py-3 text-sm">
           {loading ? "Saving…" : "Save changes"}
         </button>

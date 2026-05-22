@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { isOwnerRole } from "@/lib/permissions";
+import { parseApiMessage, toastError, toastSuccess } from "@/lib/toast";
 
 type UserRow = {
   id: string;
@@ -22,7 +23,6 @@ export default function UsersAdminPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [total, setTotal] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -70,13 +70,12 @@ export default function UsersAdminPage() {
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      toastError("Password must be at least 8 characters");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      toastError("Passwords do not match");
       return;
     }
     const res = await fetch("/api/proxy/users", {
@@ -86,9 +85,10 @@ export default function UsersAdminPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(typeof data.message === "string" ? data.message : "Could not create user");
+      toastError(parseApiMessage(data, "Could not create user"));
       return;
     }
+    toastSuccess("User created");
     setEmail("");
     setDisplayName("");
     setPassword("");
@@ -99,7 +99,7 @@ export default function UsersAdminPage() {
 
   const handleToggle = async (id: string, isActive: boolean, userRole: string) => {
     if (isOwnerRole(userRole) && isActive) {
-      setError("Owner accounts cannot be deactivated");
+      toastError("Owner accounts cannot be deactivated");
       return;
     }
     await fetch(`/api/proxy/users/${id}`, {
@@ -112,7 +112,7 @@ export default function UsersAdminPage() {
 
   const handleRole = async (id: string, newRole: string, currentRole: string) => {
     if (isOwnerRole(currentRole)) {
-      setError("Owner role cannot be changed");
+      toastError("Owner role cannot be changed");
       return;
     }
     const res = await fetch(`/api/proxy/users/${id}`, {
@@ -122,7 +122,7 @@ export default function UsersAdminPage() {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(typeof data.message === "string" ? data.message : "Could not update role");
+      toastError(parseApiMessage(data, "Could not update role"));
       return;
     }
     await load();
@@ -130,13 +130,12 @@ export default function UsersAdminPage() {
 
   const handleReset = async () => {
     if (!resetId || !resetPassword) return;
-    setError(null);
     if (resetPassword.length < 8) {
-      setError("Password must be at least 8 characters");
+      toastError("Password must be at least 8 characters");
       return;
     }
     if (resetPassword !== resetConfirmPassword) {
-      setError("Passwords do not match");
+      toastError("Passwords do not match");
       return;
     }
     const res = await fetch(`/api/proxy/users/${resetId}/reset-password`, {
@@ -145,11 +144,12 @@ export default function UsersAdminPage() {
       body: JSON.stringify({ password: resetPassword }),
     });
     if (res.ok) {
+      toastSuccess("Password reset");
       setResetId(null);
       setResetPassword("");
       setResetConfirmPassword("");
     } else {
-      setError("Reset failed");
+      toastError("Reset failed");
     }
   };
 
@@ -257,12 +257,14 @@ export default function UsersAdminPage() {
         </button>
       </div>
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
-
       <DataTable
         columns={columns}
         rows={users}
         rowKey={(u) => u.id}
+        footer={{
+          label: "Page subtotal",
+          cells: { email: `${users.length} on this page` },
+        }}
         emptyMessage="No users yet. Add your first team member."
         mobileCard={(u) => (
           <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/70 p-4 text-sm">

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { ProductSelect, type ProductOption } from "@/components/ProductSelect";
+import { parseApiMessage, toastError, toastSuccess } from "@/lib/toast";
 
 type CartLine = {
   productId: string;
@@ -30,7 +31,6 @@ export default function SellPage() {
   const handleProofUpload = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
-    setStatus(null);
     try {
       for (const file of Array.from(files)) {
         const fd = new FormData();
@@ -38,7 +38,7 @@ export default function SellPage() {
         const res = await fetch("/api/proxy/uploads/sale-proof", { method: "POST", body: fd });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setStatus("Proof upload failed");
+          toastError(parseApiMessage(data, "Proof upload failed"));
           return;
         }
         const path = data.path as string;
@@ -73,7 +73,7 @@ export default function SellPage() {
     }
     const product = list.find((p) => p.id === productId);
     if (!product) {
-      setStatus("Product not found");
+      toastError("Product not found");
       return;
     }
     const price = Number(product.sellingPrice);
@@ -92,10 +92,9 @@ export default function SellPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setStatus(null);
     setReceipt(null);
     if (!lines.length) {
-      setStatus("Add items to sell");
+      toastError("Add items to sell");
       return;
     }
     const res = await fetch("/api/proxy/sales/checkout", {
@@ -111,9 +110,10 @@ export default function SellPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setStatus(typeof data.message === "string" ? data.message : "Could not record sale");
+      toastError(parseApiMessage(data, "Could not record sale"));
       return;
     }
+    toastSuccess("Sale recorded");
     setReceipt((data.digitalReceipt as string) ?? "Sale recorded");
     setLines([]);
     setProofPaths([]);
@@ -147,7 +147,6 @@ export default function SellPage() {
         >
           Add to sale
         </button>
-        {status ? <p className="text-sm text-rose-200">{status}</p> : null}
       </section>
 
       <section className="space-y-3 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">

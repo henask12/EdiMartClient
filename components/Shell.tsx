@@ -68,7 +68,6 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
@@ -85,7 +84,8 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           permissions: Array.isArray(data.permissions) ? data.permissions : [],
         });
       } catch {
-        setError("Could not load session");
+        const { toastError } = await import("@/lib/toast");
+        toastError("Could not load session");
       }
     };
     void load();
@@ -96,14 +96,6 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     router.replace("/login");
     router.refresh();
   };
-
-  if (error) {
-    return (
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-        <p className="text-sm text-rose-200">{error}</p>
-      </div>
-    );
-  }
 
   if (!me) {
     return (

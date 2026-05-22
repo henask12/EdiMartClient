@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { categoryNamesConflict, dedupeCategories, normalizeCategoryName } from "@/lib/dedupe-categories";
+import { parseApiMessage, toastError } from "@/lib/toast";
 
 type Category = {
   id: string;
@@ -19,7 +20,6 @@ export default function CategoriesPage() {
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [viewCategory, setViewCategory] = useState<Category | null>(null);
@@ -42,10 +42,9 @@ export default function CategoriesPage() {
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     const trimmed = normalizeCategoryName(name);
     if (items.some((c) => categoryNamesConflict(c.name, trimmed))) {
-      setError("A category with this name already exists");
+      toastError("A category with this name already exists");
       return;
     }
     const res = await fetch("/api/proxy/categories", {
@@ -55,7 +54,7 @@ export default function CategoriesPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(typeof data.message === "string" ? data.message : "Could not create");
+      toastError(parseApiMessage(data, "Could not create"));
       return;
     }
     setName("");
@@ -63,10 +62,9 @@ export default function CategoriesPage() {
   };
 
   const handleUpdate = async (id: string) => {
-    setError(null);
     const trimmed = normalizeCategoryName(editName);
     if (items.some((c) => c.id !== id && categoryNamesConflict(c.name, trimmed))) {
-      setError("A category with this name already exists");
+      toastError("A category with this name already exists");
       return;
     }
     const res = await fetch(`/api/proxy/categories/${id}`, {
@@ -75,7 +73,7 @@ export default function CategoriesPage() {
       body: JSON.stringify({ name: editName }),
     });
     if (!res.ok) {
-      setError("Could not update");
+      toastError("Could not update");
       return;
     }
     setEditingId(null);
@@ -86,7 +84,7 @@ export default function CategoriesPage() {
     const res = await fetch(`/api/proxy/categories/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(typeof data.message === "string" ? data.message : "Could not delete");
+      toastError(parseApiMessage(data, "Could not delete"));
       return;
     }
     await load();
@@ -203,9 +201,15 @@ export default function CategoriesPage() {
         </button>
       </form>
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
-
-      <DataTable columns={columns} rows={pagedItems} rowKey={(c) => c.id} />
+      <DataTable
+        columns={columns}
+        rows={pagedItems}
+        rowKey={(c) => c.id}
+        footer={{
+          label: "Page subtotal",
+          cells: { name: `${pagedItems.length} on this page` },
+        }}
+      />
 
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
         <PageSizeSelect

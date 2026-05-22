@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toastError } from "@/lib/toast";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 
 type ExpiryRow = {
@@ -22,11 +23,13 @@ export default function ExpiryPage() {
   const [status, setStatus] = useState<StatusFilter>("expiring");
   const [items, setItems] = useState<ExpiryRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const qtySubtotal = useMemo(
+    () => items.reduce((sum, r) => sum + Number(r.qtyRemaining), 0),
+    [items],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const params = new URLSearchParams({ status, days: "7" });
       const res = await fetch(`/api/proxy/inventory/expiry?${params}`, { cache: "no-store" });
@@ -34,7 +37,7 @@ export default function ExpiryPage() {
       const data = (await res.json()) as { items: ExpiryRow[] };
       setItems(data.items);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      toastError(e instanceof Error ? e.message : "Failed to load expiry data");
     } finally {
       setLoading(false);
     }
@@ -140,7 +143,6 @@ export default function ExpiryPage() {
         ))}
       </div>
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
       {loading ? <p className="text-sm text-white/50">Loading…</p> : null}
 
       {!loading ? (
@@ -148,6 +150,10 @@ export default function ExpiryPage() {
           columns={columns}
           rows={items}
           rowKey={(r) => r.id}
+          footer={{
+            label: "Page subtotal",
+            cells: { qty: qtySubtotal.toString() },
+          }}
           emptyMessage="No items match this filter."
           mobileCard={(r) => (
             <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/80 p-4 text-sm">

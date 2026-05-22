@@ -9,6 +9,7 @@ import { ExportMenu } from "@/components/ExportMenu";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { formatBirr } from "@/lib/format-price";
+import { toastError } from "@/lib/toast";
 
 type Attachment = { id: string; imageUrl: string };
 type SaleLine = {
@@ -79,9 +80,14 @@ export default function SalesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [total, setTotal] = useState(0);
-  const [error, setError] = useState<string | null>(null);
 
   const lineRows = useMemo(() => flattenSales(items), [items]);
+
+  const pageSubtotals = useMemo(() => {
+    const lineTotal = lineRows.reduce((sum, r) => sum + Number(r.lineTotal), 0);
+    const netProfit = lineRows.reduce((sum, r) => sum + Number(r.netProfit), 0);
+    return { lineTotal, netProfit };
+  }, [lineRows]);
 
   useEffect(() => {
     void Promise.all([
@@ -111,9 +117,8 @@ export default function SalesPage() {
       const data = (await res.json()) as { items: Sale[]; total: number };
       setItems(data.items);
       setTotal(data.total);
-      setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      toastError(e instanceof Error ? e.message : "Failed to load sales");
     }
   }, [from, to, productId, categoryId, page, pageSize]);
 
@@ -272,12 +277,17 @@ export default function SalesPage() {
         }}
       />
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
-
       <DataTable
         columns={columns}
         rows={lineRows}
         rowKey={(r) => r.rowKey}
+        footer={{
+          label: "Page subtotal",
+          cells: {
+            lineTotal: formatBirr(String(pageSubtotals.lineTotal)),
+            netProfit: formatBirr(String(pageSubtotals.netProfit)),
+          },
+        }}
         emptyMessage="No sales in this range."
         mobileCard={(r) => {
           const profit = Number(r.netProfit);

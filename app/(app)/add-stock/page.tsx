@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { parseApiMessage, toastError } from "@/lib/toast";
 import { AddStockFilters } from "@/components/AddStockFilters";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
@@ -45,12 +46,17 @@ export default function AddStockPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
-  const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [historyProduct, setHistoryProduct] = useState<{ id: string; name: string } | null>(null);
   const [deactivateRow, setDeactivateRow] = useState<StockRow | null>(null);
 
   const canDeactivate = canDeactivateProduct(permissions);
+
+  const pageSubtotals = useMemo(() => {
+    const onHand = items.reduce((sum, r) => sum + Number(r.onHand), 0);
+    const available = items.reduce((sum, r) => sum + Number(r.available), 0);
+    return { onHand, available };
+  }, [items]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -84,9 +90,8 @@ export default function AddStockPage() {
       const data = (await res.json()) as { items: StockRow[]; total: number };
       setItems(data.items);
       setTotal(data.total);
-      setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      toastError(e instanceof Error ? e.message : "Failed to load products");
     }
   }, [debouncedQ, categoryId, stockStatus, page, pageSize]);
 
@@ -104,7 +109,7 @@ export default function AddStockPage() {
       void load();
     } else {
       const data = await res.json().catch(() => ({}));
-      setError(typeof data.message === "string" ? data.message : "Could not deactivate");
+      toastError(parseApiMessage(data, "Could not deactivate"));
     }
   };
 
@@ -229,12 +234,17 @@ export default function AddStockPage() {
         }}
       />
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
-
       <DataTable
         columns={columns}
         rows={items}
         rowKey={(r) => r.id}
+        footer={{
+          label: "Page subtotal",
+          cells: {
+            onHand: pageSubtotals.onHand.toString(),
+            available: pageSubtotals.available.toString(),
+          },
+        }}
         emptyMessage="No products match your filters."
         mobileCard={(row) => (
           <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/70 p-4 text-sm">

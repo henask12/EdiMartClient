@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toastError } from "@/lib/toast";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { ExportMenu } from "@/components/ExportMenu";
@@ -82,6 +83,11 @@ export default function StockHistoryPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const qtyDeltaSubtotal = useMemo(
+    () => movements.reduce((sum, m) => sum + Number(m.qtyDelta), 0),
+    [movements],
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({
@@ -97,6 +103,8 @@ export default function StockHistoryPage() {
       const data = (await res.json()) as { items: Movement[]; total: number };
       setMovements(data.items);
       setTotal(data.total);
+    } else {
+      toastError("Failed to load stock history");
     }
     setLoading(false);
   }, [productId, type, from, to, page, pageSize]);
@@ -259,6 +267,17 @@ export default function StockHistoryPage() {
         columns={columns}
         rows={movements}
         rowKey={(m) => m.id}
+        footer={{
+          label: "Page subtotal",
+          cells: {
+            reserve: (
+              <span className="tabular-nums">
+                {qtyDeltaSubtotal >= 0 ? "+" : ""}
+                {qtyDeltaSubtotal}
+              </span>
+            ),
+          },
+        }}
         emptyMessage="No movements match filters."
         mobileCard={(m) => {
           const ctx = formatReserveContext(m);

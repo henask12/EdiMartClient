@@ -4,10 +4,10 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { parseApiMessage, toastError } from "@/lib/toast";
 
 export default function NewProductPage() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -24,7 +24,6 @@ export default function NewProductPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       let imagePath: string | undefined;
       if (imageFile) {
@@ -36,7 +35,7 @@ export default function NewProductPage() {
         });
         const upData = await up.json().catch(() => ({}));
         if (!up.ok) {
-          setError(upData.message ?? "Image upload failed");
+          toastError(parseApiMessage(upData, "Image upload failed"));
           return;
         }
         imagePath = upData.path as string;
@@ -64,17 +63,13 @@ export default function NewProductPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(
-          Array.isArray(data.message)
-            ? data.message.join(", ")
-            : data.message ?? "Could not save",
-        );
+        toastError(parseApiMessage(data, "Could not save"));
         return;
       }
       router.push("/products");
       router.refresh();
     } catch {
-      setError("Network error");
+      toastError("Network error");
     } finally {
       setLoading(false);
     }
@@ -204,7 +199,6 @@ export default function NewProductPage() {
           </div>
         </section>
 
-        {error ? <p className="text-sm text-rose-200">{error}</p> : null}
         <button
           type="submit"
           disabled={loading || !categoryId}
