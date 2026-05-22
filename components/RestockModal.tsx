@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import { DateInput } from "@/components/DateInput";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import type { MartProduct } from "./ProductCard";
 
 type Props = {
@@ -59,7 +61,7 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-[var(--brand-yellow)]/20 bg-[color:var(--surface)] p-6 shadow-xl"
+        className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--brand-yellow)]/20 bg-[color:var(--surface)] p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-white">Restock — {product.name}</h2>
@@ -69,19 +71,16 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <label className="block text-sm text-white/70">
-            Quantity to add
-            <input
-              required
-              type="number"
-              min={0.01}
-              step="any"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder={product.restockQty ? String(product.restockQty) : "e.g. 24"}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-            />
-          </label>
+          <Input
+            required
+            type="number"
+            min={0.01}
+            step="any"
+            label="Quantity to add"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder={product.restockQty ? String(product.restockQty) : "e.g. 24"}
+          />
           {product.restockQty ? (
             <button
               type="button"
@@ -91,18 +90,15 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
               Use suggested reorder ({product.restockQty})
             </button>
           ) : null}
-          <label className="block text-sm text-white/70">
-            Cost each
-            <input
-              type="number"
-              min={0}
-              step="any"
-              value={unitCost}
-              onChange={(e) => setUnitCost(e.target.value)}
-              placeholder={product.costPrice ?? "0"}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-            />
-          </label>
+          <Input
+            type="number"
+            min={0}
+            step="any"
+            label="Cost each"
+            value={unitCost}
+            onChange={(e) => setUnitCost(e.target.value)}
+            placeholder={product.costPrice ?? "0"}
+          />
           <DateInput
             label="Expiry (optional)"
             value={expiryDate}
@@ -110,17 +106,13 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
             required={false}
           />
           {status ? <p className="text-sm text-rose-200">{status}</p> : null}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-full border border-white/15 px-4 py-3 text-sm font-semibold text-white"
-            >
+          <div className="flex gap-3">
+            <Button type="button" variant="secondary" fullWidth onClick={onClose}>
               Cancel
-            </button>
-            <button type="submit" disabled={loading} className="tap btn-primary flex-1 px-4 py-3 text-sm">
+            </Button>
+            <Button type="submit" fullWidth disabled={loading}>
               {loading ? "…" : "Add stock"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

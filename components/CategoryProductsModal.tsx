@@ -62,7 +62,7 @@ export const CategoryProductsModal = ({ title, filterParam, filterId, onClose }:
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-white/10 bg-[color:var(--surface)] shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between border-b border-white/10 px-5 py-4">

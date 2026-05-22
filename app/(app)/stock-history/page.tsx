@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActionGroup } from "@/components/ui/ActionGroup";
+import { IconButton } from "@/components/ui/IconButton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
+import { Eye } from "@/lib/icons";
 import { toastError } from "@/lib/toast";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
@@ -179,21 +184,21 @@ export default function StockHistoryPage() {
       header: "Actions",
       className: "text-right",
       render: (m) => (
-        <Link href={`/stock-history/${m.id}`} className="text-xs font-semibold text-[var(--accent-2)]">
-          View
-        </Link>
+        <ActionGroup>
+          <Link href={`/stock-history/${m.id}`}>
+            <IconButton variant="secondary" aria-label="View movement" icon={<Eye />} />
+          </Link>
+        </ActionGroup>
       ),
     },
   ];
 
   return (
     <section className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">Stock history</h1>
-        <p className="mt-2 text-sm text-white/60">
-          Paginated ledger — reserves show on-hand and available changes.
-        </p>
-      </header>
+      <PageHeader
+        title="Stock history"
+        description="Paginated ledger — reserves show on-hand and available changes."
+      />
 
       <DateRangeFilter
         from={draftFrom}
@@ -214,41 +219,35 @@ export default function StockHistoryPage() {
       {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm text-white/70">
-          Product
-          <select
-            value={productId}
-            onChange={(e) => {
-              setProductId(e.target.value);
-              setPage(1);
-            }}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            <option value="">All products</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm text-white/70">
-          Movement type
-          <select
-            value={type}
-            onChange={(e) => {
-              setType(e.target.value);
-              setPage(1);
-            }}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            {MOVEMENT_TYPES.map((t) => (
-              <option key={t || "all"} value={t}>
-                {t || "All types"}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          label="Product"
+          value={productId}
+          onChange={(e) => {
+            setProductId(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All products</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Movement type"
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value);
+            setPage(1);
+          }}
+        >
+          {MOVEMENT_TYPES.map((t) => (
+            <option key={t || "all"} value={t}>
+              {t || "All types"}
+            </option>
+          ))}
+        </Select>
       </div>
 
       <ExportMenu

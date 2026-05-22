@@ -85,7 +85,7 @@ export default function StockHistoryDetailPage() {
         <p className="mt-1 text-sm text-white/60">{new Date(movement.createdAt).toLocaleString()}</p>
       </header>
 
-      <article className="space-y-5 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
+      <article className="section-card space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className={label}>Product</p>

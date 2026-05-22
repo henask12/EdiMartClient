@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { toastError } from "@/lib/toast";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { ActionGroup } from "@/components/ui/ActionGroup";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Pencil } from "@/lib/icons";
+import { toastError } from "@/lib/toast";
 
 type ExpiryRow = {
   id: string;
@@ -48,25 +54,9 @@ export default function ExpiryPage() {
   }, [load]);
 
   const statusBadge = (row: ExpiryRow) => {
-    if (row.status === "expired") {
-      return (
-        <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-200">
-          Expired
-        </span>
-      );
-    }
-    if (row.status === "expiring") {
-      return (
-        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-200">
-          Expiring soon
-        </span>
-      );
-    }
-    return (
-      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-white/50">
-        OK
-      </span>
-    );
+    if (row.status === "expired") return <Badge variant="danger">Expired</Badge>;
+    if (row.status === "expiring") return <Badge variant="warning">Expiring soon</Badge>;
+    return <Badge variant="neutral">OK</Badge>;
   };
 
   const columns: DataTableColumn<ExpiryRow>[] = [
@@ -86,27 +76,31 @@ export default function ExpiryPage() {
       className: "tabular-nums",
       render: (r) => r.qtyRemaining,
     },
-    {
-      key: "expiry",
-      header: "Expiry",
-      render: (r) => r.expiryDate,
-    },
+    { key: "expiry", header: "Expiry", render: (r) => r.expiryDate },
     {
       key: "days",
       header: "Days left",
       className: "tabular-nums",
       render: (r) => (r.daysLeft < 0 ? `${Math.abs(r.daysLeft)}d ago` : `${r.daysLeft}d`),
     },
-    {
-      key: "status",
-      header: "Status",
-      render: (r) => statusBadge(r),
-    },
+    { key: "status", header: "Status", render: (r) => statusBadge(r) },
     {
       key: "source",
       header: "Source",
       render: (r) => (
         <span className="text-xs text-white/45">{r.source === "batch" ? "Batch" : "Product"}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "text-right w-12",
+      render: (r) => (
+        <ActionGroup>
+          <Link href={`/products/${r.productId}/edit`}>
+            <IconButton variant="secondary" aria-label="Edit product" title="Edit" icon={<Pencil />} />
+          </Link>
+        </ActionGroup>
       ),
     },
   ];
@@ -119,27 +113,22 @@ export default function ExpiryPage() {
 
   return (
     <section className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">Expiry alerts</h1>
-        <p className="mt-2 text-sm text-white/60">
-          On-hand stock with batch or product expiry dates.
-        </p>
-      </header>
+      <PageHeader
+        title="Expiry alerts"
+        description="On-hand stock with batch or product expiry dates."
+      />
 
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => (
-          <button
+          <Button
             key={f.value}
             type="button"
+            size="sm"
+            variant={status === f.value ? "primary" : "secondary"}
             onClick={() => setStatus(f.value)}
-            className={`tap rounded-full border px-4 py-2 text-sm font-semibold ${
-              status === f.value
-                ? "border-[var(--brand-yellow)]/40 bg-[var(--brand-yellow)]/10 text-[var(--accent)]"
-                : "border-white/15 bg-white/5 text-white/80"
-            }`}
           >
             {f.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -156,7 +145,7 @@ export default function ExpiryPage() {
           }}
           emptyMessage="No items match this filter."
           mobileCard={(r) => (
-            <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/80 p-4 text-sm">
+            <div className="card-surface space-y-3 p-4 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-medium text-white">{r.productName}</p>
@@ -164,14 +153,11 @@ export default function ExpiryPage() {
                 </div>
                 {statusBadge(r)}
               </div>
-              <p className="mt-2 text-white/70">
+              <p className="text-white/70">
                 {r.qtyRemaining} on hand · expires {r.expiryDate}
               </p>
-              <Link
-                href={`/products/${r.productId}/edit`}
-                className="tap mt-2 inline-block text-xs font-semibold text-[var(--accent-2)]"
-              >
-                Edit product
+              <Link href={`/products/${r.productId}/edit`}>
+                <IconButton variant="secondary" aria-label="Edit product" icon={<Pencil />} />
               </Link>
             </div>
           )}

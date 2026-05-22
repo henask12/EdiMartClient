@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { PaymentProofUpload } from "@/components/PaymentProofUpload";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { formatBirr } from "@/lib/format-price";
 import type { MartProduct } from "./ProductCard";
 
@@ -125,7 +127,7 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
       }}
     >
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="action-title" className="text-lg font-semibold text-white">
@@ -139,19 +141,16 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <label className="block text-sm text-white/70">
-            Quantity
-            <input
-              required
-              type="number"
-              min={0.01}
-              step="any"
-              max={Number(product.available)}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[var(--accent)]"
-            />
-          </label>
+          <Input
+            required
+            type="number"
+            min={0.01}
+            step="any"
+            max={Number(product.available)}
+            label="Quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
 
           {mode === "sell" ? (
             <PaymentProofUpload
@@ -161,33 +160,22 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
               onRemove={handleRemoveProof}
             />
           ) : (
-            <label className="block text-sm text-white/70">
-              Customer name (optional)
-              <input
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[var(--accent)]"
-              />
-            </label>
+            <Input
+              label="Customer name (optional)"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
           )}
 
           {status ? <p className="text-sm text-rose-200">{status}</p> : null}
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-full border border-white/15 px-4 py-3 text-sm font-semibold text-white"
-            >
+          <div className="flex gap-3">
+            <Button type="button" variant="secondary" fullWidth onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || uploadingProof}
-              className="tap btn-primary flex-1 px-4 py-3 text-sm disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" fullWidth disabled={loading || uploadingProof}>
               {loading ? "…" : mode === "sell" ? "Confirm sale" : "Reserve"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

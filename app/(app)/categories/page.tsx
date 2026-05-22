@@ -6,7 +6,13 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
+import { ActionGroup } from "@/components/ui/ActionGroup";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { categoryNamesConflict, dedupeCategories, normalizeCategoryName } from "@/lib/dedupe-categories";
+import { Check, Eye, Pencil, Trash2, X } from "@/lib/icons";
 import { parseApiMessage, toastError } from "@/lib/toast";
 
 type Category = {
@@ -96,10 +102,11 @@ export default function CategoriesPage() {
       header: "Name",
       render: (c) =>
         editingId === c.id ? (
-          <input
+          <Input
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            className="w-full max-w-xs rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-white"
+            containerClassName="max-w-xs"
+            aria-label="Category name"
           />
         ) : (
           <span className="font-medium text-white">{c.name}</span>
@@ -122,83 +129,84 @@ export default function CategoriesPage() {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: "",
       className: "text-right",
       render: (c) => (
-        <div className="flex justify-end gap-2">
+        <ActionGroup>
           {c._count.products > 0 ? (
-            <button
-              type="button"
+            <IconButton
+              variant="secondary"
+              aria-label="View products"
+              title="View"
+              icon={<Eye />}
               onClick={() => setViewCategory(c)}
-              className="text-xs font-semibold text-[var(--accent-2)]"
-            >
-              View
-            </button>
+            />
           ) : null}
           {editingId === c.id ? (
             <>
-              <button
-                type="button"
+              <IconButton
+                variant="primary"
+                aria-label="Save"
+                title="Save"
+                icon={<Check />}
                 onClick={() => void handleUpdate(c.id)}
-                className="text-xs font-semibold text-[var(--accent)]"
-              >
-                Save
-              </button>
-              <button
-                type="button"
+              />
+              <IconButton
+                variant="ghost"
+                aria-label="Cancel edit"
+                title="Cancel"
+                icon={<X />}
                 onClick={() => setEditingId(null)}
-                className="text-xs text-white/50"
-              >
-                Cancel
-              </button>
+              />
             </>
           ) : (
             <>
-              <button
-                type="button"
+              <IconButton
+                variant="secondary"
+                aria-label="Edit category"
+                title="Edit"
+                icon={<Pencil />}
                 onClick={() => {
                   setEditingId(c.id);
                   setEditName(c.name);
                 }}
-                className="text-xs font-semibold text-white/70"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
+              />
+              <IconButton
+                variant="danger"
+                aria-label="Delete category"
+                title="Delete"
+                icon={<Trash2 />}
                 onClick={() => setDeleteCategory(c)}
-                className="text-xs font-semibold text-rose-300"
-              >
-                Delete
-              </button>
+              />
             </>
           )}
-        </div>
+        </ActionGroup>
       ),
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Categories</h1>
-        <p className="mt-2 text-sm text-white/60">Organize products — Drinks, Snacks, etc.</p>
-      </div>
+      <PageHeader
+        title="Categories"
+        description="Organize products — Drinks, Snacks, etc."
+      />
 
       <form
         onSubmit={(e) => void handleCreate(e)}
-        className="flex gap-2 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-4"
+        className="section-card flex flex-col gap-3 sm:flex-row sm:items-end"
       >
-        <input
+        <Input
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="New category name"
-          className="flex-1 rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          label="New category"
+          containerClassName="flex-1"
         />
-        <button type="submit" className="tap btn-primary px-4 py-2 text-sm">
+        <Button type="submit" size="sm">
           Add
-        </button>
+        </Button>
       </form>
 
       <DataTable

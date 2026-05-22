@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { BrandLogo } from "@/components/BrandLogo";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -46,42 +48,36 @@ export default function LoginForm() {
         </div>
         <h1 className="mt-8 text-center text-xl font-semibold text-white">Sign in</h1>
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <label className="block text-sm text-white/70">
-            Email
-            <input
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              data-gramm="false"
-              data-gramm_editor="false"
-              data-enable-grammarly="false"
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/35"
-              required
-            />
-          </label>
-          <label className="block text-sm text-white/70">
-            Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              data-gramm="false"
-              data-gramm_editor="false"
-              data-enable-grammarly="false"
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/35"
-              required
-            />
-          </label>
+          <Input
+            type="email"
+            label="Email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            required
+          />
+          <Input
+            type="password"
+            label="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            required
+          />
           {error ? (
             <p className="text-sm text-rose-200" role="alert">
               {error}
             </p>
           ) : null}
-          <button type="submit" disabled={loading} className="tap btn-primary w-full px-4 py-3 text-sm">
+          <Button type="submit" disabled={loading} fullWidth>
             {loading ? "Signing in…" : "Continue"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

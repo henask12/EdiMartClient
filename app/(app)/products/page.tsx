@@ -10,6 +10,8 @@ import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { ProductFilters } from "@/components/ProductFilters";
 import { RestockModal } from "@/components/RestockModal";
 import { dedupeCategories } from "@/lib/dedupe-categories";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { canCreateProduct, canDeactivateProduct, canReceiveStock } from "@/lib/product-permissions";
 
 type Category = { id: string; name: string };
@@ -104,29 +106,28 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Products</h1>
-          <p className="mt-1 text-sm text-white/60">
-            Tap a card for details and actions. Use filters to narrow the list.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canAddProduct ? (
-            <Link href="/products/new" className="tap btn-primary px-5 py-2.5 text-sm">
-              Add product
-            </Link>
-          ) : null}
-          {canStock ? (
-            <Link
-              href="/add-stock"
-              className="tap rounded-full border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 px-5 py-2.5 text-sm font-semibold text-[var(--accent)]"
-            >
-              Stocks
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      <PageHeader
+        title="Products"
+        description="Tap a card for details and actions. Use filters to narrow the list."
+        actions={
+          <>
+            {canAddProduct ? (
+              <Link href="/products/new">
+                <Button type="button" size="sm">
+                  Add product
+                </Button>
+              </Link>
+            ) : null}
+            {canStock ? (
+              <Link href="/add-stock">
+                <Button type="button" variant="secondary" size="sm">
+                  Stocks
+                </Button>
+              </Link>
+            ) : null}
+          </>
+        }
+      />
 
       <ProductFilters
         q={q}

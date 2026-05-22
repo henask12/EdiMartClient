@@ -149,7 +149,7 @@ export const RolePermissionsEditor = ({ roleId: controlledRoleId, compact }: Pro
           type="button"
           disabled={saving}
           onClick={() => void handleSave()}
-          className="tap btn-primary mt-4 px-5 py-2 text-sm disabled:opacity-50"
+          className="btn btn-primary mt-4 disabled:opacity-50"
         >
           {saving ? "Saving…" : `Save ${selectedRole?.name ?? "role"} permissions`}
         </button>
@@ -162,7 +162,7 @@ export const RolePermissionsEditor = ({ roleId: controlledRoleId, compact }: Pro
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[color:var(--surface)]/60 p-5">
+    <section className="section-card">
       {content}
     </section>
   );

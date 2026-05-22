@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   open: boolean;
@@ -39,11 +40,6 @@ export const ConfirmDialog = ({
     }
   };
 
-  const confirmClass =
-    variant === "danger"
-      ? "tap rounded-full border border-rose-500/40 bg-rose-500/20 px-4 py-3 text-sm font-semibold text-rose-100 disabled:opacity-50"
-      : "tap btn-primary flex-1 px-4 py-3 text-sm disabled:opacity-50";
-
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center"
@@ -53,30 +49,32 @@ export const ConfirmDialog = ({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
+        className="w-full max-w-md rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-dialog-title" className="text-lg font-semibold text-white">
           {title}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-white/65">{message}</p>
-        <div className="mt-6 flex gap-2">
-          <button
+        <div className="mt-6 flex gap-3">
+          <Button
             type="button"
+            variant="secondary"
+            fullWidth
             onClick={onCancel}
             disabled={busy}
-            className="tap flex-1 rounded-full border border-white/15 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant={variant === "danger" ? "danger" : "primary"}
+            fullWidth
             onClick={() => void handleConfirm()}
             disabled={busy}
-            className={variant === "danger" ? `${confirmClass} flex-1` : confirmClass}
           >
             {busy ? "…" : confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

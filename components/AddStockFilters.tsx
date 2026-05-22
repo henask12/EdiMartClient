@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Filter, X } from "@/lib/icons";
+import { cn } from "@/lib/cn";
 
 type Category = { id: string; name: string };
 
@@ -46,75 +51,69 @@ export const AddStockFilters = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <Input
           value={q}
           onChange={(e) => onQChange(e.target.value)}
           placeholder="Search name or SKU…"
-          className="min-w-0 flex-1 rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none focus:border-[var(--accent)]"
           aria-label="Search products"
+          containerClassName="flex-1"
         />
-        <button
+        <Button
           type="button"
+          variant={open || hasActiveFilters ? "primary" : "secondary"}
+          size="sm"
+          icon={<Filter className="size-4" />}
           onClick={() => setOpen((v) => !v)}
-          className={`tap shrink-0 rounded-xl border px-4 py-3 text-sm font-semibold ${
-            open || hasActiveFilters
-              ? "border-[var(--brand-yellow)]/40 bg-[var(--brand-yellow)]/10 text-[var(--accent)]"
-              : "border-white/15 bg-white/5 text-white/80"
-          }`}
           aria-expanded={open}
+          className="shrink-0"
         >
           Filters{hasActiveFilters ? ` (${activeChips.length})` : ""}
-        </button>
+        </Button>
       </div>
 
       {open ? (
-        <div className="grid gap-3 rounded-xl border border-white/10 bg-[color:var(--surface)]/60 p-4 sm:grid-cols-2">
-          <label className="block text-xs text-white/60">
-            Category
-            <select
-              value={categoryId}
-              onChange={(e) => onCategoryChange(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white"
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs text-white/60">
-            Stock
-            <select
-              value={stockStatus}
-              onChange={(e) => onStockStatusChange(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white"
-            >
-              {STOCK_OPTIONS.map((o) => (
-                <option key={o.value || "all"} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="grid gap-3 rounded-[var(--radius-md)] border border-white/10 bg-[color:var(--surface)]/60 p-4 sm:grid-cols-2">
+          <Select
+            label="Category"
+            value={categoryId}
+            onChange={(e) => onCategoryChange(e.target.value)}
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Stock"
+            value={stockStatus}
+            onChange={(e) => onStockStatusChange(e.target.value)}
+          >
+            {STOCK_OPTIONS.map((o) => (
+              <option key={o.value || "all"} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
         </div>
       ) : null}
 
       {hasActiveFilters ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeChips.map((chip) => (
             <button
               key={chip.label}
               type="button"
               onClick={chip.onClear}
-              className="tap inline-flex items-center gap-1 rounded-full border border-[var(--brand-yellow)]/30 bg-[var(--brand-yellow)]/10 px-3 py-1 text-xs font-medium text-[var(--accent)]"
+              className={cn(
+                "inline-flex items-center gap-1 rounded-[var(--radius-full)] border border-[var(--brand-yellow)]/30",
+                "bg-[var(--brand-yellow)]/10 px-3 py-1 text-xs font-medium text-[var(--accent)] focus-ring",
+              )}
             >
               {chip.label}
-              <span aria-hidden className="text-white/50">
-                ×
-              </span>
+              <X className="size-3 opacity-70" aria-hidden />
             </button>
           ))}
           <button

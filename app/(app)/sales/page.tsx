@@ -8,6 +8,8 @@ import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { ExportMenu } from "@/components/ExportMenu";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
 import { formatBirr } from "@/lib/format-price";
 import { toastError } from "@/lib/toast";
 
@@ -212,12 +214,10 @@ export default function SalesPage() {
 
   return (
     <section className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">Sales history</h1>
-        <p className="mt-2 text-sm text-white/60">
-          One row per line item — unit price, quantity, profit, and payment proof.
-        </p>
-      </header>
+      <PageHeader
+        title="Sales history"
+        description="One row per line item — unit price, quantity, profit, and payment proof."
+      />
 
       <DateRangeFilter
         from={draftFrom}
@@ -229,42 +229,36 @@ export default function SalesPage() {
       {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm text-white/70">
-          Category
-          <select
-            value={categoryId}
-            onChange={(e) => {
-              setCategoryId(e.target.value);
-              setPage(1);
-            }}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            <option value="">All categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm text-white/70">
-          Product
-          <select
-            value={productId}
-            onChange={(e) => {
-              setProductId(e.target.value);
-              setPage(1);
-            }}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            <option value="">All products</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          label="Category"
+          value={categoryId}
+          onChange={(e) => {
+            setCategoryId(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All categories</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Product"
+          value={productId}
+          onChange={(e) => {
+            setProductId(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All products</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
       </div>
 
       <ExportMenu

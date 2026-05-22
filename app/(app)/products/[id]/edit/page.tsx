@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { parseApiMessage, toastError } from "@/lib/toast";
 
 export default function EditProductPage() {
@@ -102,13 +104,11 @@ export default function EditProductPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <div>
-        <Link href="/products" className="text-sm text-[var(--accent-2)]">
-          ← Products
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-white">Edit product</h1>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-6">
+      <Link href="/products" className="text-sm text-[var(--accent-2)]">
+        ← Products
+      </Link>
+      <PageHeader title="Edit product" />
+      <form onSubmit={handleSubmit} className="section-card space-y-4">
         <CategorySelect value={categoryId} onChange={setCategoryId} allowCreate />
         <label className="block text-sm text-white/70">
           Name
@@ -192,9 +192,9 @@ export default function EditProductPage() {
             />
           </label>
         </div>
-        <button type="submit" disabled={loading} className="tap btn-primary w-full py-3 text-sm">
+        <Button type="submit" disabled={loading} fullWidth>
           {loading ? "Saving…" : "Save changes"}
-        </button>
+        </Button>
       </form>
     </div>
   );
