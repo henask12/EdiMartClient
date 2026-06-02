@@ -37,6 +37,17 @@ type MovementDetail = {
   };
 };
 
+const MOVEMENT_LABELS: Record<string, string> = {
+  RECEIPT: "RECEIVED",
+  SALE: "SOLD",
+  RETURN: "RETURNED",
+  ADJUSTMENT: "ADJUSTED",
+  TRANSFER: "TRANSFERRED",
+  RESERVE: "RESERVED",
+  RELEASE_RESERVE: "RESERVE RELEASED",
+  DAMAGE: "DAMAGED",
+};
+
 const label = "text-xs font-semibold uppercase tracking-wide text-white/45";
 const value = "mt-1 text-sm text-white";
 
@@ -85,7 +96,7 @@ export default function StockHistoryDetailPage() {
         <p className="mt-1 text-sm text-white/60">{new Date(movement.createdAt).toLocaleString()}</p>
       </header>
 
-      <article className="space-y-5 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
+      <article className="section-card space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className={label}>Product</p>
@@ -109,7 +120,7 @@ export default function StockHistoryDetailPage() {
         <dl className="grid grid-cols-2 gap-4">
           <div>
             <dt className={label}>Type</dt>
-            <dd className={value}>{movement.type}</dd>
+            <dd className={value}>{MOVEMENT_LABELS[movement.type] ?? movement.type}</dd>
           </div>
           <div>
             <dt className={label}>Location</dt>

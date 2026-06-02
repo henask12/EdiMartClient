@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { ActionGroup } from "@/components/ui/ActionGroup";
+import { IconButton } from "@/components/ui/IconButton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
+import { Eye } from "@/lib/icons";
 import { toastError } from "@/lib/toast";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
@@ -20,6 +25,17 @@ const MOVEMENT_TYPES = [
   "RELEASE_RESERVE",
   "DAMAGE",
 ] as const;
+
+const MOVEMENT_LABELS: Record<string, string> = {
+  RECEIPT: "RECEIVED",
+  SALE: "SOLD",
+  RETURN: "RETURNED",
+  ADJUSTMENT: "ADJUSTED",
+  TRANSFER: "TRANSFERRED",
+  RESERVE: "RESERVED",
+  RELEASE_RESERVE: "RESERVE RELEASED",
+  DAMAGE: "DAMAGED",
+};
 
 type ReservationMeta = {
   reservedQty?: string;
@@ -45,12 +61,18 @@ type Movement = {
 
 type Product = { id: string; name: string };
 
-const formatOnHand = (m: Movement) => {
-  if (m.beforeOnHand != null && m.afterOnHand != null) {
-    return `${m.beforeOnHand} → ${m.afterOnHand}`;
-  }
-  return "— → —";
+const toNumber = (value: string | null | undefined) => {
+  if (value == null) return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const formatNumber = (value: string | number | null | undefined) =>
+  toNumber(typeof value === "number" ? String(value) : value).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+
+const movementLabel = (type: string) => MOVEMENT_LABELS[type] ?? type;
 
 const formatReserveContext = (m: Movement): string | null => {
   const meta = m.reservationMeta;
@@ -82,11 +104,6 @@ export default function StockHistoryPage() {
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-
-  const qtyDeltaSubtotal = useMemo(
-    () => movements.reduce((sum, m) => sum + Number(m.qtyDelta), 0),
-    [movements],
-  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,12 +158,56 @@ export default function StockHistoryPage() {
     {
       key: "type",
       header: "Type",
-      render: (m) => m.type,
+      render: (m) => movementLabel(m.type),
     },
     {
       key: "onHand",
       header: "On hand",
-      render: (m) => formatOnHand(m),
+      className: "tabular-nums",
+      render: (m) => formatNumber(m.afterOnHand ?? m.beforeOnHand),
+    },
+    {
+      key: "sold",
+      header: "Sold",
+      className: "tabular-nums",
+      render: (m) => (m.type === "SALE" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"),
+    },
+    {
+      key: "reserved",
+      header: "Reserved",
+      className: "tabular-nums",
+      render: (m) =>
+        m.type === "RESERVE" || m.type === "RELEASE_RESERVE"
+          ? formatNumber(Math.abs(toNumber(m.qtyDelta)))
+          : "0",
+    },
+    {
+      key: "restocked",
+      header: "Restocked",
+      className: "tabular-nums",
+      render: (m) => (m.type === "RECEIPT" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"),
+    },
+    {
+      key: "detail",
+      header: "Movement detail",
+      render: (m) => {
+        const positive = toNumber(m.qtyDelta) >= 0;
+        const qty = formatNumber(m.qtyDelta);
+        if (m.type === "RESERVE" || m.type === "RELEASE_RESERVE") {
+          const ctx = formatReserveContext(m);
+          return (
+            <span className={`text-xs ${ctx ? "text-white/70" : positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
+              {ctx ?? `${positive ? "+" : "-"}${qty}`}
+            </span>
+          );
+        }
+        return (
+          <span className={`tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
+            {positive ? "+" : "-"}
+            {qty}
+          </span>
+        );
+      },
     },
     {
       key: "reserve",
@@ -161,17 +222,11 @@ export default function StockHistoryPage() {
           return (
             <span className={`text-xs tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
               Qty {positive ? "+" : ""}
-              {m.qtyDelta}
+              {formatNumber(m.qtyDelta)}
             </span>
           );
         }
-        const positive = Number(m.qtyDelta) >= 0;
-        return (
-          <span className={`tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
-            {positive ? "+" : ""}
-            {m.qtyDelta}
-          </span>
-        );
+        return <span className="text-xs text-white/40">—</span>;
       },
     },
     {
@@ -179,21 +234,23 @@ export default function StockHistoryPage() {
       header: "Actions",
       className: "text-right",
       render: (m) => (
-        <Link href={`/stock-history/${m.id}`} className="text-xs font-semibold text-[var(--accent-2)]">
-          View
-        </Link>
+        <ActionGroup>
+          <Link href={`/stock-history/${m.id}`}>
+            <IconButton variant="secondary" aria-label="View movement" icon={<Eye />} />
+          </Link>
+        </ActionGroup>
       ),
     },
   ];
 
+  const movementDetailSubtotal = movements.reduce((sum, m) => sum + toNumber(m.qtyDelta), 0);
+
   return (
     <section className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">Stock history</h1>
-        <p className="mt-2 text-sm text-white/60">
-          Paginated ledger — reserves show on-hand and available changes.
-        </p>
-      </header>
+      <PageHeader
+        title="Stock history"
+        description="Paginated ledger — reserves show on-hand and available changes."
+      />
 
       <DateRangeFilter
         from={draftFrom}
@@ -214,41 +271,35 @@ export default function StockHistoryPage() {
       {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm text-white/70">
-          Product
-          <select
-            value={productId}
-            onChange={(e) => {
-              setProductId(e.target.value);
-              setPage(1);
-            }}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            <option value="">All products</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm text-white/70">
-          Movement type
-          <select
-            value={type}
-            onChange={(e) => {
-              setType(e.target.value);
-              setPage(1);
-            }}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-          >
-            {MOVEMENT_TYPES.map((t) => (
-              <option key={t || "all"} value={t}>
-                {t || "All types"}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          label="Product"
+          value={productId}
+          onChange={(e) => {
+            setProductId(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All products</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Movement type"
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value);
+            setPage(1);
+          }}
+        >
+          {MOVEMENT_TYPES.map((t) => (
+            <option key={t || "all"} value={t}>
+              {t ? movementLabel(t) : "All types"}
+            </option>
+          ))}
+        </Select>
       </div>
 
       <ExportMenu
@@ -270,10 +321,10 @@ export default function StockHistoryPage() {
         footer={{
           label: "Page subtotal",
           cells: {
-            reserve: (
+            detail: (
               <span className="tabular-nums">
-                {qtyDeltaSubtotal >= 0 ? "+" : ""}
-                {qtyDeltaSubtotal}
+                {movementDetailSubtotal >= 0 ? "+" : ""}
+                {formatNumber(movementDetailSubtotal)}
               </span>
             ),
           },
@@ -288,9 +339,14 @@ export default function StockHistoryPage() {
             >
               <p className="font-medium text-white">{m.inventoryItem.product.name}</p>
               <p className="text-xs text-white/50">
-                {new Date(m.createdAt).toLocaleString()} · {m.type}
+                {new Date(m.createdAt).toLocaleString()} · {movementLabel(m.type)}
               </p>
-              <p className="mt-1 tabular-nums text-white/70">{formatOnHand(m)}</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-white/70">
+                <p>On hand: <span className="tabular-nums">{formatNumber(m.afterOnHand ?? m.beforeOnHand)}</span></p>
+                <p>Sold: <span className="tabular-nums">{m.type === "SALE" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"}</span></p>
+                <p>Reserved: <span className="tabular-nums">{m.type === "RESERVE" || m.type === "RELEASE_RESERVE" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"}</span></p>
+                <p>Restocked: <span className="tabular-nums">{m.type === "RECEIPT" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"}</span></p>
+              </div>
               {ctx ? <p className="mt-1 text-xs text-white/55">{ctx}</p> : null}
             </Link>
           );

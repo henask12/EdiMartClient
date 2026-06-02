@@ -10,7 +10,13 @@ import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { ReceiveStockPickerModal } from "@/components/ReceiveStockPickerModal";
 import { StockHistoryModal } from "@/components/StockHistoryModal";
+import { ActionGroup } from "@/components/ui/ActionGroup";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { dedupeCategories } from "@/lib/dedupe-categories";
+import { History, Pencil, Plus, Trash2 } from "@/lib/icons";
 import { canDeactivateProduct } from "@/lib/product-permissions";
 import { formatBirr } from "@/lib/format-price";
 
@@ -155,13 +161,9 @@ export default function AddStockPage() {
       header: "Status",
       render: (row) => {
         const label = stockLabel(row);
-        const cls =
-          label === "OUT of Stock"
-            ? "text-rose-200"
-            : label === "Low"
-              ? "text-amber-200"
-              : "text-emerald-200";
-        return <span className={`text-xs font-semibold ${cls}`}>{label}</span>;
+        const variant =
+          label === "OUT of Stock" ? "danger" : label === "Low" ? "warning" : "success";
+        return <Badge variant={variant}>{label}</Badge>;
       },
     },
     {
@@ -169,51 +171,42 @@ export default function AddStockPage() {
       header: "Actions",
       className: "text-right",
       render: (row) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Link
-            href={`/products/${row.id}/edit`}
-            className="tap rounded-lg border border-white/15 px-2 py-1 text-xs text-white/80"
-          >
-            Edit
+        <ActionGroup>
+          <Link href={`/products/${row.id}/edit`}>
+            <IconButton variant="secondary" aria-label="Edit product" icon={<Pencil />} />
           </Link>
-          {canDeactivate ? (
-            <button
-              type="button"
-              onClick={() => setDeactivateRow(row)}
-              className="tap rounded-lg border border-rose-500/30 px-2 py-1 text-xs font-semibold text-rose-200"
-            >
-              Deactivate
-            </button>
-          ) : null}
-          <button
-            type="button"
+          <IconButton
+            variant="secondary"
+            aria-label="Stock history"
+            title="History"
+            icon={<History />}
             onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
-            className="tap rounded-lg border border-white/15 px-2 py-1 text-xs text-white/70"
-          >
-            History
-          </button>
-        </div>
+          />
+          {canDeactivate ? (
+            <IconButton
+              variant="danger"
+              aria-label="Deactivate product"
+              title="Deactivate"
+              icon={<Trash2 />}
+              onClick={() => setDeactivateRow(row)}
+            />
+          ) : null}
+        </ActionGroup>
       ),
     },
   ];
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Stocks</h1>
-          <p className="mt-2 text-sm text-white/60">
-            Receive inventory and manage product stock levels.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setPickerOpen(true)}
-          className="tap btn-primary shrink-0 px-5 py-2.5 text-sm"
-        >
-          Add stock
-        </button>
-      </header>
+      <PageHeader
+        title="Stocks"
+        description="Receive inventory and manage product stock levels."
+        actions={
+          <Button type="button" icon={<Plus />} onClick={() => setPickerOpen(true)}>
+            Add stock
+          </Button>
+        }
+      />
 
       <AddStockFilters
         q={q}
@@ -247,35 +240,45 @@ export default function AddStockPage() {
         }}
         emptyMessage="No products match your filters."
         mobileCard={(row) => (
-          <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/70 p-4 text-sm">
-            <p className="font-medium text-white">{row.name}</p>
-            <p className="text-xs text-white/50">
-              {row.category.name} · On hand {row.onHand} · {stockLabel(row)}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link
-                href={`/products/${row.id}/edit`}
-                className="tap rounded-lg border border-white/15 px-2 py-2 text-xs text-white/80"
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium text-white">{row.name}</p>
+                <p className="text-xs text-white/50">
+                  {row.category.name} · On hand {row.onHand}
+                </p>
+              </div>
+              <Badge
+                variant={
+                  stockLabel(row) === "OUT of Stock"
+                    ? "danger"
+                    : stockLabel(row) === "Low"
+                      ? "warning"
+                      : "success"
+                }
               >
-                Edit
-              </Link>
-              {canDeactivate ? (
-                <button
-                  type="button"
-                  onClick={() => setDeactivateRow(row)}
-                  className="tap rounded-lg border border-rose-500/30 px-2 py-2 text-xs text-rose-200"
-                >
-                  Deactivate
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
-                className="tap rounded-lg border border-white/15 px-2 py-2 text-xs text-white/70"
-              >
-                History
-              </button>
+                {stockLabel(row)}
+              </Badge>
             </div>
+            <ActionGroup className="justify-start">
+              <Link href={`/products/${row.id}/edit`}>
+                <IconButton variant="secondary" aria-label="Edit" icon={<Pencil />} />
+              </Link>
+              <IconButton
+                variant="secondary"
+                aria-label="History"
+                icon={<History />}
+                onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
+              />
+              {canDeactivate ? (
+                <IconButton
+                  variant="danger"
+                  aria-label="Deactivate"
+                  icon={<Trash2 />}
+                  onClick={() => setDeactivateRow(row)}
+                />
+              ) : null}
+            </ActionGroup>
           </div>
         )}
       />

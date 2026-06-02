@@ -6,6 +6,13 @@ import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { RolePermissionsEditor, type RoleRow } from "@/components/RolePermissionsEditor";
+import { ActionGroup } from "@/components/ui/ActionGroup";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Trash2 } from "@/lib/icons";
 import { isOwnerRole } from "@/lib/permissions";
 
 type UserInRole = {
@@ -138,13 +145,15 @@ export default function RolesPage() {
       className: "text-right",
       render: (r) =>
         !r.isProtected && !isOwnerRole(r.name) ? (
-          <button
-            type="button"
-            onClick={() => setDeleteRole(r)}
-            className="text-xs font-semibold text-rose-300"
-          >
-            Delete
-          </button>
+          <ActionGroup>
+            <IconButton
+              variant="danger"
+              aria-label="Delete role"
+              title="Delete"
+              icon={<Trash2 />}
+              onClick={() => setDeleteRole(r)}
+            />
+          </ActionGroup>
         ) : null,
     },
   ];
@@ -164,13 +173,9 @@ export default function RolesPage() {
       key: "status",
       header: "Status",
       render: (u) => (
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-            u.isActive ? "bg-emerald-500/20 text-emerald-200" : "bg-white/10 text-white/40"
-          }`}
-        >
+        <Badge variant={u.isActive ? "success" : "neutral"}>
           {u.isActive ? "Active" : "Inactive"}
-        </span>
+        </Badge>
       ),
     },
   ];
@@ -188,27 +193,26 @@ export default function RolesPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Roles</h1>
-        <p className="mt-2 text-sm text-white/60">
-          Create custom roles, assign permissions, and see who has each role.
-        </p>
-      </div>
+      <PageHeader
+        title="Roles"
+        description="Create custom roles, assign permissions, and see who has each role."
+      />
 
       <form
         onSubmit={(e) => void handleCreate(e)}
-        className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-[color:var(--surface)]/60 p-4"
+        className="section-card flex flex-wrap gap-3 sm:items-end"
       >
-        <input
+        <Input
           required
           value={newRoleName}
           onChange={(e) => setNewRoleName(e.target.value)}
           placeholder="New role name (e.g. Shift lead)"
-          className="min-w-[12rem] flex-1 rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          label="New role"
+          containerClassName="min-w-[12rem] flex-1"
         />
-        <button type="submit" className="tap btn-primary px-4 py-2 text-sm">
+        <Button type="submit" size="sm">
           Add role
-        </button>
+        </Button>
       </form>
 
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
@@ -225,7 +229,7 @@ export default function RolesPage() {
       ) : null}
 
       {selectedRole ? (
-        <section className="rounded-2xl border border-white/10 bg-[color:var(--surface)]/60 p-5">
+        <section className="section-card">
           <h2 className="text-lg font-semibold text-white">{selectedRole.name}</h2>
           <div className="mt-4 flex gap-2 border-b border-white/10">
             {(["permissions", "users"] as const).map((t) => (

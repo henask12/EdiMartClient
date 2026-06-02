@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { parseApiMessage, toastError } from "@/lib/toast";
 
 export default function NewProductPage() {
@@ -77,16 +79,11 @@ export default function NewProductPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Add product</h1>
-        <p className="mt-2 text-sm text-white/60">
-          Set up the product and opening stock in one step.
-        </p>
-      </div>
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-6"
-      >
+      <PageHeader
+        title="Add product"
+        description="Set up the product and opening stock in one step."
+      />
+      <form onSubmit={handleSubmit} className="section-card space-y-4">
         <CategorySelect value={categoryId} onChange={setCategoryId} allowCreate />
         <label className="block text-sm text-white/70">
           Product name
@@ -199,13 +196,9 @@ export default function NewProductPage() {
           </div>
         </section>
 
-        <button
-          type="submit"
-          disabled={loading || !categoryId}
-          className="tap btn-primary w-full px-4 py-3 text-sm"
-        >
+        <Button type="submit" disabled={loading || !categoryId} fullWidth>
           {loading ? "Saving…" : "Save product & stock"}
-        </button>
+        </Button>
       </form>
     </div>
   );

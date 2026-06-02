@@ -2,7 +2,7 @@ import { parseApiMessage } from "@/lib/toast";
 
 export const patchReservation = async (
   id: string,
-  body: { quantity?: string; customerName?: string },
+  body: { quantity?: string; customerName?: string; expiresAt?: string | null },
 ): Promise<{ ok: boolean; data: unknown; status: number }> => {
   let res = await fetch(`/api/proxy/reservations/${id}`, {
     method: "PATCH",

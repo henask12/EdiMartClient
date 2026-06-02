@@ -2,9 +2,26 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { BrandLogo } from "./BrandLogo";
+import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/Button";
+import {
+  Calendar,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  MoreVertical,
+  Package,
+  Receipt,
+  Shield,
+  ShoppingCart,
+  Users,
+  Warehouse,
+} from "@/lib/icons";
 import { hasPermission, type Permission } from "@/lib/permissions";
+import { cn } from "@/lib/cn";
 
 type Me = {
   id: string;
@@ -17,42 +34,43 @@ type Me = {
 type NavItem = {
   href: string;
   label: string;
-  icon?: string;
+  icon?: ComponentType<{ className?: string }>;
   permission?: Permission;
-  ownerOnly?: boolean;
 };
 
 const primaryNav: NavItem[] = [
-  { href: "/dashboard", label: "Home", icon: "⌂" },
-  { href: "/products", label: "Products", icon: "▦", permission: "PRODUCTS_VIEW" },
-  { href: "/sell", label: "Sell", icon: "◎", permission: "SALES_CREATE" },
-  { href: "/sales", label: "Sales", icon: "₿", permission: "SALES_VIEW" },
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/products", label: "Products", icon: Package, permission: "PRODUCTS_VIEW" },
+  { href: "/sell", label: "Sell", icon: ShoppingCart, permission: "SALES_CREATE" },
+  { href: "/sales", label: "Sales", icon: Receipt, permission: "SALES_VIEW" },
 ];
 
 const moreNav: NavItem[] = [
-  { href: "/add-stock", label: "Stocks", permission: "STOCK_RECEIVE" },
-  { href: "/expiry", label: "Expiry", permission: "STOCK_HISTORY_VIEW" },
-  { href: "/reservations", label: "Reservations", permission: "RESERVATIONS_MANAGE" },
-  { href: "/stock-history", label: "History", permission: "STOCK_HISTORY_VIEW" },
+  { href: "/add-stock", label: "Stocks", icon: Warehouse, permission: "STOCK_RECEIVE" },
+  { href: "/expiry", label: "Expiry", icon: Calendar, permission: "STOCK_HISTORY_VIEW" },
+  { href: "/reservations", label: "Reservations", icon: ClipboardList, permission: "RESERVATIONS_MANAGE" },
+  { href: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSES_MANAGE" },
+  { href: "/stock-history", label: "History", icon: ClipboardList, permission: "STOCK_HISTORY_VIEW" },
   { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
-  { href: "/settings/users", label: "Users", permission: "USERS_MANAGE" },
-  { href: "/settings/roles", label: "Roles", permission: "ROLES_MANAGE" },
-  { href: "/settings/emails", label: "Alert emails", permission: "SETTINGS_EMAILS" },
+  { href: "/settings/users", label: "Users", icon: Users, permission: "USERS_MANAGE" },
+  { href: "/settings/roles", label: "Roles", icon: Shield, permission: "ROLES_MANAGE" },
+  { href: "/settings/emails", label: "Alert emails", icon: Mail, permission: "SETTINGS_EMAILS" },
 ];
 
 const desktopNav: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/products", label: "Products", permission: "PRODUCTS_VIEW" },
-  { href: "/add-stock", label: "Stocks", permission: "STOCK_RECEIVE" },
-  { href: "/expiry", label: "Expiry", permission: "STOCK_HISTORY_VIEW" },
-  { href: "/sell", label: "Sell", permission: "SALES_CREATE" },
-  { href: "/sales", label: "Sales", permission: "SALES_VIEW" },
-  { href: "/reservations", label: "Reservations", permission: "RESERVATIONS_MANAGE" },
-  { href: "/stock-history", label: "History", permission: "STOCK_HISTORY_VIEW" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/products", label: "Products", icon: Package, permission: "PRODUCTS_VIEW" },
+  { href: "/add-stock", label: "Stocks", icon: Warehouse, permission: "STOCK_RECEIVE" },
+  { href: "/expiry", label: "Expiry", icon: Calendar, permission: "STOCK_HISTORY_VIEW" },
+  { href: "/sell", label: "Sell", icon: ShoppingCart, permission: "SALES_CREATE" },
+  { href: "/sales", label: "Sales", icon: Receipt, permission: "SALES_VIEW" },
+  { href: "/reservations", label: "Reservations", icon: ClipboardList, permission: "RESERVATIONS_MANAGE" },
+  { href: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSES_MANAGE" },
+  { href: "/stock-history", label: "History", icon: ClipboardList, permission: "STOCK_HISTORY_VIEW" },
   { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
-  { href: "/settings/users", label: "Users", permission: "USERS_MANAGE" },
-  { href: "/settings/roles", label: "Roles", permission: "ROLES_MANAGE" },
-  { href: "/settings/emails", label: "Emails", permission: "SETTINGS_EMAILS" },
+  { href: "/settings/users", label: "Users", icon: Users, permission: "USERS_MANAGE" },
+  { href: "/settings/roles", label: "Roles", icon: Shield, permission: "ROLES_MANAGE" },
+  { href: "/settings/emails", label: "Emails", icon: Mail, permission: "SETTINGS_EMAILS" },
 ];
 
 const canSeeNavItem = (item: NavItem, me: Me | null) => {
@@ -63,6 +81,38 @@ const canSeeNavItem = (item: NavItem, me: Me | null) => {
 
 const filterNav = (items: NavItem[], me: Me | null) =>
   items.filter((item) => canSeeNavItem(item, me));
+
+const NavLink = ({
+  item,
+  active,
+  compact,
+  onClick,
+}: {
+  item: NavItem;
+  active: boolean;
+  compact?: boolean;
+  onClick?: () => void;
+}) => {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 rounded-[var(--radius-md)] font-medium transition focus-ring",
+        compact
+          ? "flex-1 flex-col gap-0.5 py-2 text-[10px]"
+          : "px-3 py-2 text-sm",
+        active
+          ? "bg-[var(--brand-yellow)]/15 text-[var(--accent)]"
+          : "text-white/70 hover:bg-white/5 hover:text-white",
+      )}
+    >
+      {Icon ? <Icon className={compact ? "size-5" : "size-4 shrink-0"} /> : null}
+      <span>{item.label}</span>
+    </Link>
+  );
+};
 
 export const Shell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
@@ -109,83 +159,62 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const visibleMore = filterNav(moreNav, me);
   const initials = (me.displayName ?? me.email).slice(0, 1).toUpperCase();
 
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
+
   return (
     <div className="app-bg flex min-h-screen flex-col pb-20 lg:pb-0">
       <header className="sticky top-0 z-30 border-b border-[var(--brand-yellow)]/15 bg-[color:var(--brand-charcoal-deep)]/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <BrandLogo size="sm" linked />
-          <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex" aria-label="Primary">
-            {visibleDesktop.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                    active
-                      ? "bg-[var(--brand-yellow)]/20 text-[var(--accent)]"
-                      : "text-white/70 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+          <nav className="hidden flex-1 flex-wrap items-center justify-center gap-0.5 lg:flex" aria-label="Primary">
+            {visibleDesktop.map((item) => (
+              <NavLink key={item.href} item={item} active={isActive(item.href)} />
+            ))}
           </nav>
           <div className="flex items-center gap-2">
             <Link
               href="/settings/account"
-              className="tap flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-sm font-bold text-[var(--accent)]"
+              className="inline-flex size-10 items-center justify-center rounded-[var(--radius-md)] border border-white/15 bg-white/5 text-sm font-bold text-[var(--accent)] focus-ring"
               aria-label="Account settings"
             >
               {initials}
             </Link>
-            <button
+            <Button
               type="button"
-              onClick={handleLogout}
-              className="hidden rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 lg:inline-flex"
+              variant="ghost"
+              size="sm"
+              className="hidden lg:inline-flex"
+              icon={<LogOut className="size-4" />}
+              onClick={() => void handleLogout()}
             >
               Log out
-            </button>
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">{children}</main>
 
       <nav
         className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[color:var(--brand-charcoal-deep)]/95 backdrop-blur-md lg:hidden"
         aria-label="Mobile"
       >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
-          {filterNav(primaryNav, me).map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`tap flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${
-                  active ? "text-[var(--accent)]" : "text-white/55"
-                }`}
-              >
-                <span className="text-lg leading-none" aria-hidden>
-                  {item.icon}
-                </span>
-                {item.label}
-              </Link>
-            );
-          })}
+        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
+          {filterNav(primaryNav, me).map((item) => (
+            <NavLink key={item.href} item={item} active={isActive(item.href)} compact />
+          ))}
           <button
             type="button"
             onClick={() => setMoreOpen((o) => !o)}
-            className={`tap flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${
-              moreOpen ? "text-[var(--accent)]" : "text-white/55"
-            }`}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold focus-ring",
+              moreOpen ? "text-[var(--accent)]" : "text-white/55",
+            )}
             aria-expanded={moreOpen}
             aria-label="More menu"
           >
-            <span className="text-lg leading-none">⋯</span>
+            <MoreVertical className="size-5" aria-hidden />
             More
           </button>
         </div>
@@ -199,18 +228,16 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
         >
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="absolute bottom-16 left-0 right-0 mx-4 max-h-[60vh] overflow-y-auto rounded-2xl border border-white/10 bg-[color:var(--surface)] p-3 shadow-xl"
+            className="absolute bottom-16 left-0 right-0 mx-4 max-h-[60vh] overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-2 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             {visibleMore.map((item) => (
-              <Link
+              <NavLink
                 key={item.href}
-                href={item.href}
+                item={item}
+                active={isActive(item.href)}
                 onClick={() => setMoreOpen(false)}
-                className="block rounded-xl px-4 py-3 text-sm font-medium text-white hover:bg-white/5"
-              >
-                {item.label}
-              </Link>
+              />
             ))}
             <button
               type="button"
@@ -218,8 +245,9 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
                 setMoreOpen(false);
                 void handleLogout();
               }}
-              className="mt-2 w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-rose-200"
+              className="mt-1 flex w-full items-center gap-2 rounded-[var(--radius-md)] px-4 py-3 text-sm font-medium text-rose-200 hover:bg-white/5"
             >
+              <LogOut className="size-4" />
               Log out
             </button>
           </div>

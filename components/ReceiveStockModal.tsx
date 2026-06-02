@@ -74,7 +74,7 @@ export const ReceiveStockModal = ({ product, onClose, onSuccess }: Props) => {
       aria-modal="true"
       aria-labelledby="receive-stock-title"
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[color:var(--surface)] p-5 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-5 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 id="receive-stock-title" className="text-lg font-semibold text-white">
@@ -159,7 +159,7 @@ export const ReceiveStockModal = ({ product, onClose, onSuccess }: Props) => {
           <button
             type="submit"
             disabled={busy}
-            className="tap btn-primary w-full px-4 py-3 text-sm disabled:opacity-50"
+            className="btn btn-primary w-full disabled:opacity-50"
           >
             {busy ? "Receiving…" : "Receive stock"}
           </button>

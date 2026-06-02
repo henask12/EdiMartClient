@@ -21,7 +21,7 @@ export const ProductDetailModal = ({ product, onClose }: Props) => {
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-[color:var(--surface)] shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-[4/3] bg-black/40">

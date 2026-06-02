@@ -14,6 +14,28 @@ type Movement = {
   notes: string | null;
 };
 
+const MOVEMENT_LABELS: Record<string, string> = {
+  RECEIPT: "RECEIVED",
+  SALE: "SOLD",
+  RETURN: "RETURNED",
+  ADJUSTMENT: "ADJUSTED",
+  TRANSFER: "TRANSFERRED",
+  RESERVE: "RESERVED",
+  RELEASE_RESERVE: "RESERVE RELEASED",
+  DAMAGE: "DAMAGED",
+};
+
+const toNumber = (value: string | null | undefined) => {
+  if (value == null) return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatNumber = (value: string | number | null | undefined) =>
+  toNumber(typeof value === "number" ? String(value) : value).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+
 type Props = {
   productId: string | null;
   productName: string;
@@ -63,7 +85,7 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-white/10 bg-[color:var(--surface)] shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between border-b border-white/10 px-5 py-4">
@@ -106,16 +128,16 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
                       <td className="py-2 pr-2 text-white/80">
                         {new Date(m.createdAt).toLocaleString()}
                       </td>
-                      <td className="py-2 pr-2 text-white/70">{m.type}</td>
+                      <td className="py-2 pr-2 text-white/70">{MOVEMENT_LABELS[m.type] ?? m.type}</td>
                       <td
                         className={`py-2 pr-2 text-right tabular-nums font-medium ${
                           qty < 0 ? "text-rose-200" : qty > 0 ? "text-emerald-200" : "text-white/60"
                         }`}
                       >
-                        {qty > 0 ? `+${m.qtyDelta}` : m.qtyDelta}
+                        {qty > 0 ? `+${formatNumber(m.qtyDelta)}` : formatNumber(m.qtyDelta)}
                       </td>
                       <td className="py-2 text-right tabular-nums text-white/60">
-                        {m.beforeOnHand ?? "—"} → {m.afterOnHand ?? "—"}
+                        {formatNumber(m.afterOnHand ?? m.beforeOnHand)}
                       </td>
                     </tr>
                   );

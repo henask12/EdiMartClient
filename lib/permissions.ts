@@ -16,6 +16,7 @@ export type Permission =
   | "SALES_VIEW"
   | "SALES_EXPORT"
   | "RESERVATIONS_MANAGE"
+  | "EXPENSES_MANAGE"
   | "USERS_MANAGE"
   | "ROLES_MANAGE"
   | "SETTINGS_EMAILS"
@@ -38,6 +39,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   SALES_VIEW: "View sales",
   SALES_EXPORT: "Export sales",
   RESERVATIONS_MANAGE: "Manage reservations",
+  EXPENSES_MANAGE: "Manage expenses",
   USERS_MANAGE: "Manage users",
   ROLES_MANAGE: "Manage role permissions",
   SETTINGS_EMAILS: "Manage alert emails",

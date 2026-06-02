@@ -1,5 +1,9 @@
 "use client";
 
+import { IconButton } from "@/components/ui/IconButton";
+import { ChevronLeft, ChevronRight } from "@/lib/icons";
+import { cn } from "@/lib/cn";
+
 type Props = {
   page: number;
   pageSize: number;
@@ -34,15 +38,13 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: Props) => {
       </p>
       {totalPages > 1 ? (
         <nav className="flex flex-wrap items-center justify-center gap-1" aria-label="Pagination">
-          <button
-            type="button"
+          <IconButton
+            variant="secondary"
+            aria-label="Previous page"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
-            aria-label="Previous page"
-          >
-            Prev
-          </button>
+            icon={<ChevronLeft />}
+          />
           {pageItems.map((item, idx) =>
             item === "ellipsis" ? (
               <span key={`e-${idx}`} className="px-1 text-xs text-white/40">
@@ -53,11 +55,12 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: Props) => {
                 key={item}
                 type="button"
                 onClick={() => onPageChange(item)}
-                className={`min-w-[2rem] rounded-lg border px-2 py-1.5 text-xs font-semibold tabular-nums ${
+                className={cn(
+                  "inline-flex h-9 min-w-9 items-center justify-center rounded-[var(--radius-md)] border px-2 text-xs font-semibold tabular-nums transition focus-ring",
                   item === page
                     ? "border-[var(--brand-yellow)]/40 bg-[var(--brand-yellow)]/15 text-[var(--accent)]"
-                    : "border-white/15 text-white/70 hover:bg-white/5"
-                }`}
+                    : "border-white/15 text-white/70 hover:bg-white/5",
+                )}
                 aria-label={`Page ${item}`}
                 aria-current={item === page ? "page" : undefined}
               >
@@ -65,15 +68,13 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: Props) => {
               </button>
             ),
           )}
-          <button
-            type="button"
+          <IconButton
+            variant="secondary"
+            aria-label="Next page"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
-            aria-label="Next page"
-          >
-            Next
-          </button>
+            icon={<ChevronRight />}
+          />
         </nav>
       ) : null}
     </div>

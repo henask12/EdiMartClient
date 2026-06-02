@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/Select";
+
 type Props = {
   value: number;
   onChange: (size: number) => void;
@@ -11,19 +13,20 @@ export const PageSizeSelect = ({
   onChange,
   options = [12, 24, 48],
 }: Props) => (
-  <label className="flex items-center gap-2 text-xs text-white/55">
-    <span>Per page</span>
-    <select
+  <div className="flex items-center gap-2">
+    <span className="text-xs text-white/55">Per page</span>
+    <Select
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="rounded-lg border border-white/15 bg-black/30 px-2 py-1.5 text-sm text-white"
       aria-label="Items per page"
+      containerClassName="w-auto"
+      className="h-9 w-20 py-0"
     >
       {options.map((n) => (
         <option key={n} value={n}>
           {n}
         </option>
       ))}
-    </select>
-  </label>
+    </Select>
+  </div>
 );

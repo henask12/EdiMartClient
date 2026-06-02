@@ -13,6 +13,13 @@
   --accent-2: var(--brand-yellow-dim);
   --text-on-accent: oklch(0.22 0.02 260);
   --danger: oklch(0.58 0.2 25);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+  --control-h: 2.75rem;
+  --space-page: 1.5rem;
 }
 
 @layer base {
@@ -26,7 +33,7 @@
 
 @layer utilities {
   .tap {
-    @apply min-h-12 min-w-12;
+    @apply min-h-11 min-w-11;
   }
 
   .app-bg {
@@ -36,12 +43,88 @@
       radial-gradient(800px 420px at 92% 0%, oklch(0.38 0.02 260 / 0.5), transparent);
   }
 
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--brand-charcoal-deep)];
+  }
+
+  .btn {
+    @apply inline-flex h-[var(--control-h)] items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 focus-ring;
+  }
+
+  .btn-sm {
+    @apply h-9 px-3 text-xs;
+  }
+
+  .btn-icon {
+    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-50 focus-ring;
+  }
+
   .btn-primary {
-    @apply rounded-full bg-[color:var(--accent)] font-semibold text-[color:var(--text-on-accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply bg-[color:var(--accent)] text-[color:var(--text-on-accent)] hover:brightness-110;
+  }
+
+  .btn-secondary {
+    @apply border border-white/15 bg-white/5 text-white hover:bg-white/10;
+  }
+
+  .btn-ghost {
+    @apply text-white/80 hover:bg-white/5 hover:text-white;
+  }
+
+  .btn-danger {
+    @apply border border-rose-500/35 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25;
+  }
+
+  .input {
+    @apply h-[var(--control-h)] w-full rounded-[var(--radius-md)] border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30;
+  }
+
+  .select {
+    @apply h-[var(--control-h)] w-full rounded-[var(--radius-md)] border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-white/70;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-[var(--radius-full)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide;
+  }
+
+  .badge-success {
+    @apply bg-emerald-500/20 text-emerald-200;
+  }
+
+  .badge-warning {
+    @apply bg-amber-500/20 text-amber-200;
+  }
+
+  .badge-danger {
+    @apply bg-rose-500/20 text-rose-200;
+  }
+
+  .badge-neutral {
+    @apply bg-white/10 text-white/55;
   }
 
   .card-surface {
-    @apply rounded-2xl border border-white/10 bg-[color:var(--surface)]/90;
+    @apply rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)]/90;
+  }
+
+  .section-card {
+    @apply card-surface p-5;
+  }
+
+  .page-header {
+    @apply space-y-1;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-white;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-white/60;
   }
 
   .pb-safe {

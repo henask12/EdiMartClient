@@ -1,6 +1,7 @@
 "use client";
 
 import { DateInput } from "./DateInput";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   from: string;
@@ -15,13 +16,9 @@ export const DateRangeFilter = ({ from, to, onFromChange, onToChange, onApply }:
     <DateInput label="From" value={from} onChange={onFromChange} className="flex-1" id="date-from" />
     <DateInput label="To" value={to} onChange={onToChange} className="flex-1" id="date-to" />
     {onApply ? (
-      <button
-        type="button"
-        onClick={onApply}
-        className="tap rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white sm:mb-1"
-      >
+      <Button type="button" variant="secondary" onClick={onApply} className="sm:mb-0.5">
         Apply
-      </button>
+      </Button>
     ) : null}
   </div>
 );

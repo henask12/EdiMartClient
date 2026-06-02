@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { ProductSelect, type ProductOption } from "@/components/ProductSelect";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { parseApiMessage, toastError, toastSuccess } from "@/lib/toast";
 
 type CartLine = {
@@ -16,7 +19,6 @@ export default function SellPage() {
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [lines, setLines] = useState<CartLine[]>([]);
-  const [status, setStatus] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [proofPaths, setProofPaths] = useState<string[]>([]);
@@ -52,14 +54,13 @@ export default function SellPage() {
   };
 
   const handleAddLine = async () => {
-    setStatus(null);
     if (!productId) {
-      setStatus("Choose a product");
+      toastError("Choose a product");
       return;
     }
     const qty = Number(quantity);
     if (!qty || qty <= 0) {
-      setStatus("Enter a valid quantity");
+      toastError("Enter a valid quantity");
       return;
     }
     let list = products;
@@ -121,35 +122,28 @@ export default function SellPage() {
   };
 
   return (
-    <section className="mx-auto max-w-2xl space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">Sell</h1>
-        <p className="mt-2 text-sm text-white/60">Record a sale and attach payment proof screenshots.</p>
-      </header>
+    <section className="mx-auto max-w-2xl space-y-6">
+      <PageHeader
+        title="Sell"
+        description="Record a sale and attach payment proof screenshots."
+      />
 
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
+      <section className="section-card space-y-4">
         <ProductSelect value={productId} onChange={setProductId} />
-        <label className="block text-sm text-white/70">
-          Quantity sold
-          <input
-            type="number"
-            min={1}
-            step="1"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-lg text-white outline-none focus:border-[var(--accent)]"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={handleAddLine}
-          className="tap w-full rounded-full border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10"
-        >
+        <Input
+          type="number"
+          min={1}
+          step="1"
+          label="Quantity sold"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+        />
+        <Button type="button" variant="secondary" fullWidth onClick={() => void handleAddLine()}>
           Add to sale
-        </button>
+        </Button>
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
+      <section className="section-card space-y-3">
         <h2 className="text-sm font-semibold text-white/80">Payment proof (optional)</h2>
         <input
           type="file"
@@ -163,7 +157,10 @@ export default function SellPage() {
         {proofPreviews.length > 0 ? (
           <ul className="flex flex-wrap gap-2">
             {proofPreviews.map((url) => (
-              <li key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-white/10">
+              <li
+                key={url}
+                className="relative h-16 w-16 overflow-hidden rounded-[var(--radius-md)] border border-white/10"
+              >
                 <Image src={url} alt="Payment proof" fill className="object-cover" unoptimized />
               </li>
             ))}
@@ -173,7 +170,7 @@ export default function SellPage() {
 
       {lines.length > 0 ? (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <section className="rounded-2xl border border-white/10 bg-[color:var(--surface-2)]/70 p-5">
+          <section className="section-card">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">This sale</h2>
             <ul className="mt-4 space-y-3">
               {lines.map((l) => (
@@ -181,7 +178,9 @@ export default function SellPage() {
                   <span>
                     {l.name} × {l.quantity}
                   </span>
-                  <span className="tabular-nums font-medium">{(l.unitPrice * l.quantity).toFixed(2)}</span>
+                  <span className="tabular-nums font-medium">
+                    {(l.unitPrice * l.quantity).toFixed(2)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -190,14 +189,14 @@ export default function SellPage() {
               <span className="tabular-nums">{total.toFixed(2)}</span>
             </div>
           </section>
-          <button type="submit" className="tap btn-primary w-full px-4 py-4 text-base">
+          <Button type="submit" fullWidth>
             Record sale
-          </button>
+          </Button>
         </form>
       ) : null}
 
       {receipt ? (
-        <section className="rounded-2xl border border-white/10 bg-black/40 p-4">
+        <section className="section-card">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-white/45">Receipt</h2>
           <pre className="mt-3 whitespace-pre-wrap text-xs text-white/80">{receipt}</pre>
         </section>

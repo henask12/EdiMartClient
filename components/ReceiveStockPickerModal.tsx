@@ -82,7 +82,7 @@ export const ReceiveStockPickerModal = ({ open, onClose, onSuccess }: Props) => 
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-white/10 bg-[color:var(--surface)] shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-white/10 px-5 py-4">
