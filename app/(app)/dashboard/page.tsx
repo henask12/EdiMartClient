@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePermission } from "@/components/PermissionProvider";
 import { SalesPeriodModal } from "@/components/SalesPeriodModal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,11 +10,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { formatBirr } from "@/lib/format-price";
 import { toastError } from "@/lib/toast";
 import type { PeriodKey } from "@/lib/period-bounds";
+import { requirementForPath } from "@/lib/permissions";
 
 type PeriodSummary = {
   grandTotal: string;
   saleCount: number;
-  netProfit: string;
+  /** Only sent to people allowed to see profit. */
+  netProfit?: string;
 };
 
 type RestockItem = {
@@ -64,15 +67,19 @@ const PERIOD_CARDS: {
 ];
 
 export default function DashboardPage() {
+  const { can, canAny, meets, me } = usePermission();
+  const canReport = can("REPORTING_VIEW");
+  const canDrill = canAny("SALES_VIEW", "SALES_VIEW_OWN", "SALES_VIEW_ALL");
   const [data, setData] = useState<Dashboard | null>(null);
   const [periodModal, setPeriodModal] = useState<{
     period: PeriodKey;
     total: string;
-    netProfit: string;
+    netProfit?: string;
     count: number;
   } | null>(null);
 
   useEffect(() => {
+    if (!canReport) return;
     const load = async () => {
       try {
         const res = await fetch("/api/proxy/reporting/dashboard", { cache: "no-store" });
@@ -83,7 +90,41 @@ export default function DashboardPage() {
       }
     };
     void load();
-  }, []);
+  }, [canReport]);
+
+  if (!canReport) {
+    // no reports for this role: a simple start page with the places they can go
+    const places = [
+      { href: "/sell", label: "Record a sale" },
+      { href: "/products", label: "Products" },
+      { href: "/sales", label: "Sales" },
+      { href: "/reservations", label: "Reservations" },
+      { href: "/add-stock", label: "Stocks" },
+      { href: "/expiry", label: "Expiry" },
+      { href: "/stock-history", label: "Stock history" },
+    ].filter((p) => meets(requirementForPath(p.href)));
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={`Welcome, ${me.displayName ?? me.email}`}
+          description="Pick what you want to do."
+        />
+        {places.length === 0 ? (
+          <p className="text-sm text-white/60">
+            Your role does not have access to any pages yet. Ask the shop owner to set it up.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {places.map((p) => (
+              <Link key={p.href} href={p.href} className="tap card-surface block p-5 text-lg font-semibold text-white">
+                {p.label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (!data) {
     return <p className="text-sm text-white/60">Loading…</p>;
@@ -96,16 +137,20 @@ export default function DashboardPage() {
         description="Sales, restock alerts, expiring batches, and reservations."
         actions={
           <>
-            <Link href="/sell">
-              <Button type="button" size="sm">
-                Record sale
-              </Button>
-            </Link>
-            <Link href="/add-stock">
-              <Button type="button" variant="secondary" size="sm">
-                Stocks
-              </Button>
-            </Link>
+            {can("SALES_CREATE") ? (
+              <Link href="/sell">
+                <Button type="button" size="sm">
+                  Record sale
+                </Button>
+              </Link>
+            ) : null}
+            {can("STOCK_RECEIVE") ? (
+              <Link href="/add-stock">
+                <Button type="button" variant="secondary" size="sm">
+                  Stocks
+                </Button>
+              </Link>
+            ) : null}
           </>
         }
       />
@@ -121,12 +166,13 @@ export default function DashboardPage() {
                 setPeriodModal({
                   period: p.key,
                   total: summary.grandTotal,
-                  netProfit: summary.netProfit ?? "0",
+                  netProfit: summary.netProfit,
                   count: summary.saleCount,
                 })
               }
-              className="tap card-surface relative p-5 text-left transition hover:border-[var(--brand-yellow)]/30"
-              aria-label={`View ${p.label} sales details`}
+              disabled={!canDrill}
+              className="tap card-surface relative p-5 text-left transition enabled:hover:border-[var(--brand-yellow)]/30 disabled:cursor-default"
+              aria-label={canDrill ? `View ${p.label} sales details` : `${p.label} sales`}
             >
               <div className="text-xs font-semibold uppercase tracking-wide text-white/45">
                 {p.label}
@@ -135,10 +181,12 @@ export default function DashboardPage() {
                 {formatBirr(summary.grandTotal)}
               </div>
               <p className="mt-1 text-sm text-white/55">{summary.saleCount} sales</p>
-              <p className="mt-2 text-xs text-[var(--accent-2)]">View details →</p>
-              <p className="absolute bottom-4 right-4 text-[10px] tabular-nums text-white/45">
-                Profit {formatBirr(summary.netProfit ?? "0")}
-              </p>
+              {canDrill ? <p className="mt-2 text-xs text-[var(--accent-2)]">View details →</p> : null}
+              {summary.netProfit !== undefined ? (
+                <p className="absolute bottom-4 right-4 text-[10px] tabular-nums text-white/45">
+                  Profit {formatBirr(summary.netProfit)}
+                </p>
+              ) : null}
             </button>
           );
         })}

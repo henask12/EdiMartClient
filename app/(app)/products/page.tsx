@@ -12,15 +12,14 @@ import { RestockModal } from "@/components/RestockModal";
 import { dedupeCategories } from "@/lib/dedupe-categories";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { usePermission } from "@/components/PermissionProvider";
 import { canCreateProduct, canDeactivateProduct, canReceiveStock } from "@/lib/product-permissions";
 
 type Category = { id: string; name: string };
-type Me = { role: string; permissions: string[] };
 
 export default function ProductsPage() {
   const [items, setItems] = useState<MartProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [me, setMe] = useState<Me | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [q, setQ] = useState("");
@@ -35,7 +34,7 @@ export default function ProductsPage() {
   const [restockProduct, setRestockProduct] = useState<MartProduct | null>(null);
   const [detailProduct, setDetailProduct] = useState<MartProduct | null>(null);
 
-  const permissions = me?.permissions ?? [];
+  const { permissions } = usePermission();
   const canStock = canReceiveStock(permissions);
   const canAddProduct = canCreateProduct(permissions);
   const canDeactivate = canDeactivateProduct(permissions);
@@ -44,12 +43,6 @@ export default function ProductsPage() {
     const t = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(t);
   }, [q]);
-
-  useEffect(() => {
-    void fetch("/api/proxy/auth/me", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setMe(data as Me | null));
-  }, []);
 
   const load = useCallback(async () => {
     try {

@@ -21,63 +21,55 @@ import {
   Users,
   Warehouse,
 } from "@/lib/icons";
-import { hasPermission, type Permission } from "@/lib/permissions";
+import { AccessDenied } from "@/components/AccessDenied";
+import { PermissionProvider, type Me } from "@/components/PermissionProvider";
+import { meetsRequirement, missingFrom, permissionName, requirementForPath } from "@/lib/permissions";
+import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 
-type Me = {
-  id: string;
-  email: string;
-  displayName: string | null;
-  role: string;
-  permissions: string[];
-  mustChangePassword?: boolean;
-};
 
 type NavItem = {
   href: string;
   label: string;
   icon?: ComponentType<{ className?: string }>;
-  permission?: Permission;
 };
 
 const primaryNav: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package, permission: "PRODUCTS_VIEW" },
-  { href: "/sell", label: "Sell", icon: ShoppingCart, permission: "SALES_CREATE" },
-  { href: "/sales", label: "Sales", icon: Receipt, permission: "SALES_VIEW" },
+  { href: "/products", label: "Products", icon: Package },
+  { href: "/sell", label: "Sell", icon: ShoppingCart },
+  { href: "/sales", label: "Sales", icon: Receipt },
 ];
 
 const moreNav: NavItem[] = [
-  { href: "/add-stock", label: "Stocks", icon: Warehouse, permission: "STOCK_RECEIVE" },
-  { href: "/expiry", label: "Expiry", icon: Calendar, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/reservations", label: "Reservations", icon: ClipboardList, permission: "RESERVATIONS_MANAGE" },
-  { href: "/stock-history", label: "History", icon: ClipboardList, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/categories", label: "Categories", icon: Tag, permission: "CATEGORIES_MANAGE" },
-  { href: "/settings/users", label: "Users", icon: Users, permission: "USERS_MANAGE" },
-  { href: "/settings/roles", label: "Roles", icon: Shield, permission: "ROLES_MANAGE" },
-  { href: "/settings/emails", label: "Alert emails", icon: Mail, permission: "SETTINGS_EMAILS" },
+  { href: "/add-stock", label: "Stocks", icon: Warehouse },
+  { href: "/expiry", label: "Expiry", icon: Calendar },
+  { href: "/reservations", label: "Reservations", icon: ClipboardList },
+  { href: "/stock-history", label: "History", icon: ClipboardList },
+  { href: "/categories", label: "Categories", icon: Tag },
+  { href: "/settings/users", label: "Users", icon: Users },
+  { href: "/settings/roles", label: "Roles", icon: Shield },
+  { href: "/settings/emails", label: "Alert emails", icon: Mail },
 ];
 
 const desktopNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package, permission: "PRODUCTS_VIEW" },
-  { href: "/add-stock", label: "Stocks", icon: Warehouse, permission: "STOCK_RECEIVE" },
-  { href: "/expiry", label: "Expiry", icon: Calendar, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/sell", label: "Sell", icon: ShoppingCart, permission: "SALES_CREATE" },
-  { href: "/sales", label: "Sales", icon: Receipt, permission: "SALES_VIEW" },
-  { href: "/reservations", label: "Reservations", icon: ClipboardList, permission: "RESERVATIONS_MANAGE" },
-  { href: "/stock-history", label: "History", icon: ClipboardList, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/categories", label: "Categories", icon: Tag, permission: "CATEGORIES_MANAGE" },
-  { href: "/settings/users", label: "Users", icon: Users, permission: "USERS_MANAGE" },
-  { href: "/settings/roles", label: "Roles", icon: Shield, permission: "ROLES_MANAGE" },
-  { href: "/settings/emails", label: "Emails", icon: Mail, permission: "SETTINGS_EMAILS" },
+  { href: "/products", label: "Products", icon: Package },
+  { href: "/add-stock", label: "Stocks", icon: Warehouse },
+  { href: "/expiry", label: "Expiry", icon: Calendar },
+  { href: "/sell", label: "Sell", icon: ShoppingCart },
+  { href: "/sales", label: "Sales", icon: Receipt },
+  { href: "/reservations", label: "Reservations", icon: ClipboardList },
+  { href: "/stock-history", label: "History", icon: ClipboardList },
+  { href: "/categories", label: "Categories", icon: Tag },
+  { href: "/settings/users", label: "Users", icon: Users },
+  { href: "/settings/roles", label: "Roles", icon: Shield },
+  { href: "/settings/emails", label: "Emails", icon: Mail },
 ];
 
-const canSeeNavItem = (item: NavItem, me: Me | null) => {
-  if (!item.permission) return true;
-  if (!me) return false;
-  return hasPermission(me.permissions, item.permission);
-};
+// One source of truth: a link is shown exactly when its page would open (lib/permissions.ts).
+const canSeeNavItem = (item: NavItem, me: Me | null) =>
+  Boolean(me) && meetsRequirement(me!.permissions, requirementForPath(item.href));
 
 const filterNav = (items: NavItem[], me: Me | null) =>
   items.filter((item) => canSeeNavItem(item, me));
@@ -126,6 +118,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const originalFetch = window.fetch;
     let redirecting = false;
+    let lastDeniedToast = 0;
     window.fetch = async (...args: Parameters<typeof fetch>) => {
       const res = await originalFetch(...args);
       const input = args[0];
@@ -141,6 +134,13 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           if (body?.code === "PASSWORD_CHANGE_REQUIRED") {
             redirecting = true;
             window.location.assign("/settings/account");
+          } else if (!String(body?.code ?? "").startsWith("APPROVAL_")) {
+            // never a silent failure: say plainly that this person is not allowed (once per few seconds)
+            const now = Date.now();
+            if (now - lastDeniedToast > 4000) {
+              lastDeniedToast = now;
+              toastError("You don't have access to do that.");
+            }
           }
         }
       }
@@ -190,6 +190,8 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  const pageRequirement = requirementForPath(pathname);
+  const pageAllowed = meetsRequirement(me.permissions, pageRequirement);
   const visibleDesktop = filterNav(desktopNav, me);
   const visibleMore = filterNav(moreNav, me);
   const initials = (me.displayName ?? me.email).slice(0, 1).toUpperCase();
@@ -229,7 +231,17 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
+        <PermissionProvider me={me}>
+          {pageRequirement && !pageAllowed ? (
+            <AccessDenied
+              needs={missingFrom(me.permissions, pageRequirement).map(permissionName)}
+            />
+          ) : (
+            children
+          )}
+        </PermissionProvider>
+      </main>
 
       <nav
         className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[color:var(--brand-charcoal-deep)]/95 backdrop-blur-md lg:hidden"

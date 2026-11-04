@@ -1,5 +1,31 @@
 # Changelog
 
+## Phase 1 - one permission model
+
+### Added
+- `usePermission()` (`can`, `canAny`, `meets`, `canSeeCost`): one place answers "can this person do X?",
+  fed by `/auth/me` through the app shell.
+- **"You don't have access to this"** page, naming the permission that is missing, instead of a blank or
+  broken page. Navigation links and page access come from one table (`ROUTE_REQUIREMENTS` in
+  `lib/permissions.ts`), so a link shows exactly when its page would open. A 403 from any call shows a
+  clear message.
+- **Roles screen is a permission matrix**: permissions grouped by area with a one-line description,
+  one column per role, "Sensitive" flags, a warning when switching sensitive ones on, and a Save bar.
+  The owner column is locked.
+- **Approval PIN** form on My account (set, change, remove).
+- Dashboard start page for roles without report access.
+
+### Changed
+- **Cost and profit are hidden** when the API does not send them: sales ledger and period details,
+  dashboard, product forms (cost field and what is sent), Stocks page cost column.
+- Selling needs "Record sales" (not "Sell products"); adding stock needs "Receive stock". Edit and
+  History buttons on the Stocks page show only for people who may use them.
+- The web proxy forwards `X-Approval-Token` and supports `PUT`.
+- Sales page loads its filter lists only for people who can view products.
+
+### Removed
+- The old per-role permission editor (replaced by the matrix) and the per-page `/auth/me` fetches.
+
 ## Phase 0 - correct and safe
 
 ### Fixed

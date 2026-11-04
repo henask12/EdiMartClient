@@ -4,12 +4,14 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { usePermission } from "@/components/PermissionProvider";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { parseApiMessage, toastError } from "@/lib/toast";
 
 export default function NewProductPage() {
   const router = useRouter();
+  const { canSeeCost } = usePermission();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -52,7 +54,7 @@ export default function NewProductPage() {
           name,
           categoryId,
           sellingPrice,
-          costPrice: costPrice || "0",
+          ...(canSeeCost ? { costPrice: costPrice || "0" } : {}),
           restockAt: Number(restockAt),
           restockQty: Number(restockQty),
           imagePath,
@@ -133,14 +135,16 @@ export default function NewProductPage() {
               className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
             />
           </label>
-          <label className="block text-sm text-white/70">
-            Cost each
-            <input
-              value={costPrice}
-              onChange={(e) => setCostPrice(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-            />
-          </label>
+          {canSeeCost ? (
+            <label className="block text-sm text-white/70">
+              Cost each
+              <input
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+              />
+            </label>
+          ) : null}
         </div>
 
         <section className="rounded-xl border border-[var(--brand-yellow)]/20 bg-[var(--brand-yellow)]/5 p-4">

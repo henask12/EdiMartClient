@@ -12,7 +12,7 @@ type SaleLine = {
   quantity: string;
   unitPrice: string;
   lineTotal: string;
-  netProfit: string;
+  netProfit?: string;
   product: { name: string };
 };
 
@@ -28,7 +28,8 @@ type Sale = {
 type Props = {
   period: PeriodKey;
   summaryTotal: string;
-  summaryNetProfit: string;
+  /** Only given to people who may see profit. */
+  summaryNetProfit?: string;
   summaryCount: number;
   onClose: () => void;
 };
@@ -91,8 +92,8 @@ export const SalesPeriodModal = ({
               {bounds.label} sales
             </h2>
             <p className="mt-1 text-sm text-white/55">
-              {summaryCount} sales · {formatBirr(summaryTotal)} · Profit{" "}
-              {formatBirr(summaryNetProfit)}
+              {summaryCount} sales · {formatBirr(summaryTotal)}
+              {summaryNetProfit !== undefined ? ` · Profit ${formatBirr(summaryNetProfit)}` : null}
             </p>
             <p className="mt-0.5 text-xs text-white/40">
               {bounds.from} — {bounds.to}
@@ -135,9 +136,11 @@ export const SalesPeriodModal = ({
                         </span>
                         <span className="shrink-0 text-right tabular-nums text-white/55">
                           {formatBirr(line.lineTotal)}
-                          <span className="block text-[10px] text-[var(--accent)]">
-                            Profit {formatBirr(line.netProfit ?? "0")}
-                          </span>
+                          {line.netProfit !== undefined ? (
+                            <span className="block text-[10px] text-[var(--accent)]">
+                              Profit {formatBirr(line.netProfit)}
+                            </span>
+                          ) : null}
                         </span>
                       </li>
                     ))}

@@ -11,6 +11,7 @@ import { Pagination } from "@/components/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { formatBirr } from "@/lib/format-price";
+import { usePermission } from "@/components/PermissionProvider";
 import { paymentLabel } from "@/lib/payment-methods";
 import { toastError } from "@/lib/toast";
 
@@ -21,7 +22,7 @@ type SaleLine = {
   unitPrice: string;
   lineTotal: string;
   unitCostAtSale: string;
-  netProfit: string;
+  netProfit?: string;
   product: { name: string; category?: { name: string } };
 };
 type Sale = {
@@ -44,7 +45,7 @@ type SaleLineRow = {
   unitPrice: string;
   quantity: string;
   lineTotal: string;
-  netProfit: string;
+  netProfit?: string;
   attachments: Attachment[];
 };
 
@@ -70,6 +71,7 @@ const flattenSales = (sales: Sale[]): SaleLineRow[] =>
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
+  const { can, canSeeCost } = usePermission();
   const urlFrom = searchParams.get("from") ?? "";
   const urlTo = searchParams.get("to") ?? "";
 
@@ -91,11 +93,13 @@ export default function SalesPage() {
 
   const pageSubtotals = useMemo(() => {
     const lineTotal = lineRows.reduce((sum, r) => sum + Number(r.lineTotal), 0);
-    const netProfit = lineRows.reduce((sum, r) => sum + Number(r.netProfit), 0);
+    const netProfit = lineRows.reduce((sum, r) => sum + Number(r.netProfit ?? 0), 0);
     return { lineTotal, netProfit };
   }, [lineRows]);
 
   useEffect(() => {
+    // the filter lists come from the product catalogue, which needs "View products"
+    if (!can("PRODUCTS_VIEW")) return;
     void Promise.all([
       fetch("/api/proxy/categories", { cache: "no-store" }),
       fetch("/api/proxy/products?take=300", { cache: "no-store" }),
@@ -106,7 +110,7 @@ export default function SalesPage() {
         setProducts(data.items);
       }
     });
-  }, []);
+  }, [can]);
 
   const load = useCallback(async () => {
     try {
@@ -182,19 +186,23 @@ export default function SalesPage() {
       className: "tabular-nums",
       render: (r) => formatBirr(r.lineTotal),
     },
-    {
-      key: "netProfit",
-      header: "Net profit",
-      className: "tabular-nums",
-      render: (r) => {
-        const profit = Number(r.netProfit);
-        return (
-          <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
-            {formatBirr(r.netProfit)}
-          </span>
-        );
-      },
-    },
+    ...(canSeeCost
+      ? [
+          {
+            key: "netProfit",
+            header: "Net profit",
+            className: "tabular-nums",
+            render: (r: SaleLineRow) => {
+              const profit = Number(r.netProfit ?? 0);
+              return (
+                <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
+                  {formatBirr(r.netProfit ?? "0")}
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: "proof",
       header: "Proof",
@@ -288,12 +296,12 @@ export default function SalesPage() {
           label: "Page subtotal",
           cells: {
             lineTotal: formatBirr(String(pageSubtotals.lineTotal)),
-            netProfit: formatBirr(String(pageSubtotals.netProfit)),
+            ...(canSeeCost ? { netProfit: formatBirr(String(pageSubtotals.netProfit)) } : {}),
           },
         }}
         emptyMessage="No sales in this range."
         mobileCard={(r) => {
-          const profit = Number(r.netProfit);
+          const profit = Number(r.netProfit ?? 0);
           return (
             <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/80 p-4 text-sm">
               <div className="flex justify-between gap-2">
@@ -306,10 +314,16 @@ export default function SalesPage() {
                 {new Date(r.salesDate).toLocaleString()} · {r.cashier} · {r.payment}
               </p>
               <p className="mt-2 text-xs text-white/60">
-                {r.quantity} × {formatBirr(r.unitPrice)} · Profit{" "}
-                <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
-                  {formatBirr(r.netProfit)}
-                </span>
+                {r.quantity} × {formatBirr(r.unitPrice)}
+                {canSeeCost ? (
+                  <>
+                    {" "}
+                    · Profit{" "}
+                    <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
+                      {formatBirr(r.netProfit ?? "0")}
+                    </span>
+                  </>
+                ) : null}
               </p>
               {r.attachments.length > 0 ? (
                 <ul className="mt-3 flex flex-wrap gap-2">

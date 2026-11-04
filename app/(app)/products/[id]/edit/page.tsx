@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { usePermission } from "@/components/PermissionProvider";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { parseApiMessage, toastError } from "@/lib/toast";
@@ -12,6 +13,7 @@ import { parseApiMessage, toastError } from "@/lib/toast";
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { canSeeCost } = usePermission();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -35,7 +37,7 @@ export default function EditProductPage() {
         name: string;
         categoryId: string;
         sellingPrice: string;
-        costPrice: string;
+        costPrice?: string;
         restockAt: number;
         restockQty: number;
         description?: string | null;
@@ -45,7 +47,7 @@ export default function EditProductPage() {
       setName(p.name);
       setCategoryId(p.categoryId);
       setSellingPrice(p.sellingPrice);
-      setCostPrice(p.costPrice);
+      setCostPrice(p.costPrice ?? "");
       setRestockAt(String(p.restockAt));
       setRestockQty(String(p.restockQty));
       setDescription(p.description ?? "");
@@ -80,7 +82,7 @@ export default function EditProductPage() {
           name,
           categoryId,
           sellingPrice,
-          costPrice: costPrice || "0",
+          ...(canSeeCost ? { costPrice: costPrice || "0" } : {}),
           restockAt: Number(restockAt),
           restockQty: Number(restockQty),
           imagePath,
@@ -161,14 +163,16 @@ export default function EditProductPage() {
               className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
             />
           </label>
-          <label className="text-sm text-white/70">
-            Cost
-            <input
-              value={costPrice}
-              onChange={(e) => setCostPrice(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-            />
-          </label>
+          {canSeeCost ? (
+            <label className="text-sm text-white/70">
+              Cost
+              <input
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+              />
+            </label>
+          ) : null}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-white/70">

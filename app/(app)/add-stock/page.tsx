@@ -17,6 +17,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { dedupeCategories } from "@/lib/dedupe-categories";
 import { History, Pencil, Plus, Trash2 } from "@/lib/icons";
+import { usePermission } from "@/components/PermissionProvider";
 import { canDeactivateProduct } from "@/lib/product-permissions";
 import { formatBirr } from "@/lib/format-price";
 
@@ -24,7 +25,7 @@ type Category = { id: string; name: string };
 type StockRow = {
   id: string;
   name: string;
-  costPrice: string;
+  costPrice?: string;
   sellingPrice: string;
   onHand: string;
   available: string;
@@ -44,7 +45,7 @@ const stockLabel = (row: StockRow) => {
 export default function AddStockPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<StockRow[]>([]);
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const { permissions, canSeeCost, can } = usePermission();
   const [categoryId, setCategoryId] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [q, setQ] = useState("");
@@ -73,13 +74,6 @@ export default function AddStockPage() {
     void fetch("/api/proxy/categories", { cache: "no-store" }).then(async (res) => {
       if (res.ok) setCategories(dedupeCategories((await res.json()) as Category[]));
     });
-    void fetch("/api/proxy/auth/me", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data && Array.isArray(data.permissions)) {
-          setPermissions(data.permissions as string[]);
-        }
-      });
   }, []);
 
   const load = useCallback(async () => {
@@ -144,12 +138,16 @@ export default function AddStockPage() {
       className: "tabular-nums",
       render: (row) => row.available,
     },
-    {
-      key: "cost",
-      header: "Cost",
-      className: "tabular-nums",
-      render: (row) => formatBirr(row.costPrice),
-    },
+    ...(canSeeCost
+      ? [
+          {
+            key: "cost",
+            header: "Cost",
+            className: "tabular-nums",
+            render: (row: StockRow) => formatBirr(row.costPrice ?? "0"),
+          },
+        ]
+      : []),
     {
       key: "price",
       header: "Sell",
@@ -172,16 +170,20 @@ export default function AddStockPage() {
       className: "text-right",
       render: (row) => (
         <ActionGroup>
-          <Link href={`/products/${row.id}/edit`}>
-            <IconButton variant="secondary" aria-label="Edit product" icon={<Pencil />} />
-          </Link>
-          <IconButton
-            variant="secondary"
-            aria-label="Stock history"
-            title="History"
-            icon={<History />}
-            onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
-          />
+          {can("PRODUCTS_EDIT") ? (
+            <Link href={`/products/${row.id}/edit`}>
+              <IconButton variant="secondary" aria-label="Edit product" icon={<Pencil />} />
+            </Link>
+          ) : null}
+          {can("STOCK_HISTORY_VIEW") ? (
+            <IconButton
+              variant="secondary"
+              aria-label="Stock history"
+              title="History"
+              icon={<History />}
+              onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
+            />
+          ) : null}
           {canDeactivate ? (
             <IconButton
               variant="danger"
@@ -261,15 +263,19 @@ export default function AddStockPage() {
               </Badge>
             </div>
             <ActionGroup className="justify-start">
-              <Link href={`/products/${row.id}/edit`}>
-                <IconButton variant="secondary" aria-label="Edit" icon={<Pencil />} />
-              </Link>
-              <IconButton
-                variant="secondary"
-                aria-label="History"
-                icon={<History />}
-                onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
-              />
+              {can("PRODUCTS_EDIT") ? (
+                <Link href={`/products/${row.id}/edit`}>
+                  <IconButton variant="secondary" aria-label="Edit" icon={<Pencil />} />
+                </Link>
+              ) : null}
+              {can("STOCK_HISTORY_VIEW") ? (
+                <IconButton
+                  variant="secondary"
+                  aria-label="History"
+                  icon={<History />}
+                  onClick={() => setHistoryProduct({ id: row.id, name: row.name })}
+                />
+              ) : null}
               {canDeactivate ? (
                 <IconButton
                   variant="danger"

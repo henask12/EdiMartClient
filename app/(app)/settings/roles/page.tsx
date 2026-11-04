@@ -5,7 +5,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
-import { RolePermissionsEditor, type RoleRow } from "@/components/RolePermissionsEditor";
+import { PermissionMatrix, type RoleRow } from "@/components/PermissionMatrix";
 import { ActionGroup } from "@/components/ui/ActionGroup";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -26,7 +26,6 @@ type UserInRole = {
 export default function RolesPage() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"permissions" | "users">("permissions");
   const [newRoleName, setNewRoleName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -73,8 +72,8 @@ export default function RolesPage() {
   }, [loadRoles]);
 
   useEffect(() => {
-    if (tab === "users") void loadUsers();
-  }, [tab, loadUsers]);
+    void loadUsers();
+  }, [loadUsers]);
 
   const selectedRole = roles.find((r) => r.id === selectedId);
   const rolesTotal = roles.length;
@@ -217,6 +216,8 @@ export default function RolesPage() {
 
       {error ? <p className="text-sm text-rose-200">{error}</p> : null}
 
+      <PermissionMatrix roles={roles} onSaved={loadRoles} focusRoleId={selectedId} />
+
       <DataTable columns={roleColumns} rows={pagedRoles} rowKey={(r) => r.id} />
 
       {rolesTotal > rolesPageSize ? (
@@ -230,53 +231,31 @@ export default function RolesPage() {
 
       {selectedRole ? (
         <section className="section-card">
-          <h2 className="text-lg font-semibold text-white">{selectedRole.name}</h2>
-          <div className="mt-4 flex gap-2 border-b border-white/10">
-            {(["permissions", "users"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className={`tap border-b-2 px-3 py-2 text-sm font-semibold capitalize ${
-                  tab === t
-                    ? "border-[var(--brand-yellow)] text-[var(--accent)]"
-                    : "border-transparent text-white/50"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
+          <h2 className="text-lg font-semibold text-white">People with the {selectedRole.name} role</h2>
+          <p className="mt-1 text-xs text-white/50">Choose another role in the table above to see who has it.</p>
           <div className="mt-4">
-            {tab === "permissions" ? (
-              <RolePermissionsEditor roleId={selectedId} compact />
-            ) : (
-              <>
-                <DataTable
-                  columns={userColumns}
-                  rows={users}
-                  rowKey={(u) => u.id}
-                  emptyMessage="No users in this role."
-                />
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <PageSizeSelect
-                    value={usersPageSize}
-                    options={[10, 15, 25]}
-                    onChange={(size) => {
-                      setUsersPageSize(size);
-                      setUsersPage(1);
-                    }}
-                  />
-                  <Pagination
-                    page={usersPage}
-                    pageSize={usersPageSize}
-                    total={usersTotal}
-                    onPageChange={setUsersPage}
-                  />
-                </div>
-              </>
-            )}
+            <DataTable
+              columns={userColumns}
+              rows={users}
+              rowKey={(u) => u.id}
+              emptyMessage="No users in this role."
+            />
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <PageSizeSelect
+                value={usersPageSize}
+                options={[10, 15, 25]}
+                onChange={(size) => {
+                  setUsersPageSize(size);
+                  setUsersPage(1);
+                }}
+              />
+              <Pagination
+                page={usersPage}
+                pageSize={usersPageSize}
+                total={usersTotal}
+                onPageChange={setUsersPage}
+              />
+            </div>
           </div>
         </section>
       ) : null}

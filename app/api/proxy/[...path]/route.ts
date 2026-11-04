@@ -4,7 +4,7 @@ const apiBase = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:4000";
 const cookieName = process.env.AUTH_COOKIE_NAME ?? "edisims_access";
 
 /** Request headers the API needs to see. Everything else is dropped. */
-const FORWARDED_HEADERS = ["content-type", "idempotency-key"] as const;
+const FORWARDED_HEADERS = ["content-type", "idempotency-key", "x-approval-token"] as const;
 
 const clearSessionCookie = (res: NextResponse) => {
   res.cookies.set(cookieName, "", { httpOnly: true, path: "/", maxAge: 0 });
@@ -84,6 +84,9 @@ export const POST = (req: NextRequest, ctx: { params: Promise<{ path: string[] }
 
 export const PATCH = (req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) =>
   forward(req, ctx.params, "PATCH");
+
+export const PUT = (req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) =>
+  forward(req, ctx.params, "PUT");
 
 export const DELETE = (req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) =>
   forward(req, ctx.params, "DELETE");
