@@ -10,10 +10,11 @@ import { ExportMenu } from "@/components/ExportMenu";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SaleDetailSheet } from "@/components/SaleDetailSheet";
 import { Select } from "@/components/ui/Select";
 import { formatMoney } from "@/lib/format-money";
 import { usePermission } from "@/components/PermissionProvider";
-import { paymentLabel } from "@/lib/payment-methods";
+import { PAYMENT_METHODS, paymentLabel } from "@/lib/payment-methods";
 import { toastError } from "@/lib/toast";
 import { formatDate } from "@/lib/date-helpers";
 
@@ -79,6 +80,7 @@ export default function SalesPage() {
   const t = useTranslations("Sales");
   const urlFrom = searchParams.get("from") ?? "";
   const urlTo = searchParams.get("to") ?? "";
+  const urlSaleId = searchParams.get("saleId");
 
   const [items, setItems] = useState<Sale[]>([]);
   const [from, setFrom] = useState(urlFrom);
@@ -88,11 +90,26 @@ export default function SalesPage() {
   const [dateError, setDateError] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [productId, setProductId] = useState("");
+  const [cashier, setCashier] = useState("");
+  const [method, setMethod] = useState("");
+  const [status, setStatus] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [total, setTotal] = useState(0);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(urlSaleId);
+
+  useEffect(() => {
+    if (urlSaleId) setSelectedSaleId(urlSaleId);
+  }, [urlSaleId]);
+
+  const cashiers = useMemo(() => {
+    const names = new Set(
+      items.map((s) => s.createdBy.displayName ?? s.createdBy.email),
+    );
+    return [...names].sort();
+  }, [items]);
 
   const lineRows = useMemo(() => flattenSales(items), [items]);
 
@@ -132,6 +149,9 @@ export default function SalesPage() {
       if (to) params.set("to", to);
       if (productId) params.set("productId", productId);
       if (categoryId) params.set("categoryId", categoryId);
+      if (cashier) params.set("cashier", cashier);
+      if (method) params.set("method", method);
+      if (status) params.set("status", status);
       const res = await fetch(`/api/proxy/sales?${params}`, {
         cache: "no-store",
       });
@@ -142,7 +162,7 @@ export default function SalesPage() {
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Failed to load sales");
     }
-  }, [from, to, productId, categoryId, page, pageSize]);
+  }, [from, to, productId, categoryId, cashier, method, status, page, pageSize]);
 
   useEffect(() => {
     void load();
@@ -163,7 +183,15 @@ export default function SalesPage() {
     {
       key: "item",
       header: t("item"),
-      render: (r) => <span className="font-medium text-text">{r.item}</span>,
+      render: (r) => (
+        <button
+          type="button"
+          className="font-medium text-primary underline-offset-2 hover:underline focus-ring rounded"
+          onClick={() => setSelectedSaleId(r.saleId)}
+        >
+          {r.item}
+        </button>
+      ),
     },
     {
       key: "date",
@@ -254,7 +282,7 @@ export default function SalesPage() {
         <p className="text-sm text-danger">{dateError}</p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Select
           label={t("category")}
           value={categoryId}
@@ -284,6 +312,49 @@ export default function SalesPage() {
               {p.name}
             </option>
           ))}
+        </Select>
+        <Select
+          label={t("cashier")}
+          value={cashier}
+          onChange={(e) => {
+            setCashier(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{t("cashier")}: {t("allStatuses")}</option>
+          {cashiers.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label={t("method")}
+          value={method}
+          onChange={(e) => {
+            setMethod(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{t("allMethods")}</option>
+          {PAYMENT_METHODS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label={t("status")}
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{t("allStatuses")}</option>
+          <option value="COMPLETED">COMPLETED</option>
+          <option value="VOIDED">VOIDED</option>
+          <option value="RETURNED">RETURNED</option>
         </Select>
       </div>
 
@@ -316,7 +387,11 @@ export default function SalesPage() {
         mobileCard={(r) => {
           const profit = Number(r.netProfit ?? 0);
           return (
-            <div className="text-sm">
+            <button
+              type="button"
+              className="w-full text-left text-sm focus-ring rounded-lg"
+              onClick={() => setSelectedSaleId(r.saleId)}
+            >
               <div className="flex justify-between gap-2">
                 <p className="font-medium text-text">{r.item}</p>
                 <p className="font-semibold tabular-nums text-primary">
@@ -346,28 +421,29 @@ export default function SalesPage() {
                 <ul className="mt-3 flex flex-wrap gap-2">
                   {r.attachments.map((a) => (
                     <li key={a.id}>
-                      <a
-                        href={a.imageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <span className="relative block size-12 overflow-hidden rounded-lg border border-border">
-                          <Image
-                            src={a.imageUrl}
-                            alt="Proof"
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        </span>
-                      </a>
+                      <span className="relative block size-12 overflow-hidden rounded-lg border border-border">
+                        <Image
+                          src={a.imageUrl}
+                          alt="Proof"
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </span>
                     </li>
                   ))}
                 </ul>
               ) : null}
-            </div>
+            </button>
           );
         }}
+      />
+
+      <SaleDetailSheet
+        saleId={selectedSaleId}
+        open={!!selectedSaleId}
+        onClose={() => setSelectedSaleId(null)}
+        onChanged={() => void load()}
       />
 
       <footer className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">

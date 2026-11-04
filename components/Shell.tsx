@@ -45,6 +45,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const [me, setMe] = useState<Me | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [online, setOnline] = useState(true);
 
   // Restore sidebar state
   useEffect(() => {
@@ -52,6 +53,18 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
       const saved = localStorage.getItem(SIDEBAR_KEY);
       if (saved === "true") setCollapsed(true);
     } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    setOnline(navigator.onLine);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
   }, []);
 
   const handleToggleCollapse = useCallback(() => {
@@ -164,12 +177,77 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const pageRequirement = requirementForPath(pathname);
   const pageAllowed = meetsRequirement(me.permissions, pageRequirement);
   const initials = (me.displayName ?? me.email).slice(0, 1).toUpperCase();
+  const isPosFocus = pathname === "/pos" || pathname.startsWith("/pos/");
+
   const cycleTheme = () => {
     if (theme === "dark") setTheme("light");
     else if (theme === "light") setTheme("system");
     else setTheme("dark");
   };
   const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
+
+  const pageBody = (
+    <PermissionProvider me={me}>
+      {pageRequirement && !pageAllowed ? (
+        <AccessDenied
+          needs={missingFrom(me.permissions, pageRequirement).map(permissionName)}
+        />
+      ) : (
+        children
+      )}
+    </PermissionProvider>
+  );
+
+  if (isPosFocus) {
+    return (
+      <div className="flex min-h-screen flex-col bg-bg">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-3 sm:px-4">
+          <Link
+            href="/dashboard"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-text hover:bg-surface-muted focus-ring"
+          >
+            {tShell("exitPos")}
+          </Link>
+          <div className="flex-1" />
+          <span
+            className={cn(
+              "hidden items-center gap-1.5 text-xs font-medium sm:inline-flex",
+              online ? "text-success" : "text-danger",
+            )}
+            aria-live="polite"
+          >
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                online ? "bg-success" : "bg-danger",
+              )}
+            />
+            {online ? tShell("online") : tShell("offline")}
+          </span>
+          <button
+            type="button"
+            onClick={cycleTheme}
+            className="rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            aria-label={tShell("theme")}
+          >
+            <ThemeIcon className="size-4" />
+          </button>
+          <span className="truncate text-sm font-medium text-text">
+            {me.displayName ?? me.email}
+          </span>
+          <Link
+            href="/settings/account"
+            className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring"
+            aria-label={me.displayName ?? me.email}
+          >
+            {initials}
+          </Link>
+        </header>
+        <main className="min-h-0 flex-1 overflow-hidden">{pageBody}</main>
+        <CommandPalette me={me} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -293,19 +371,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
 
         {/* Page content */}
         <main className="flex-1 p-4 sm:p-6">
-          <div className="mx-auto max-w-7xl">
-            <PermissionProvider me={me}>
-              {pageRequirement && !pageAllowed ? (
-                <AccessDenied
-                  needs={missingFrom(me.permissions, pageRequirement).map(
-                    permissionName,
-                  )}
-                />
-              ) : (
-                children
-              )}
-            </PermissionProvider>
-          </div>
+          <div className="mx-auto max-w-7xl">{pageBody}</div>
         </main>
       </div>
 
@@ -317,7 +383,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-safe">
           {[
             { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-            { href: "/sell", label: "Sell", icon: ShoppingCart },
+            { href: "/pos", label: "POS", icon: ShoppingCart },
             { href: "#scan", label: tShell("scan"), icon: ScanLine, center: true },
             { href: "/products", label: "Products", icon: Package },
             { href: "#more", label: "More", icon: MoreHorizontal },

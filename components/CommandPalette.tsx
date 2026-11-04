@@ -35,8 +35,9 @@ type PageEntry = {
 
 const PAGES: PageEntry[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, group: "Pages" },
-  { href: "/sell", labelKey: "sell", icon: ShoppingCart, group: "Sell" },
+  { href: "/pos", labelKey: "sell", icon: ShoppingCart, group: "Sell" },
   { href: "/sales", labelKey: "sales", icon: Receipt, group: "Sell" },
+  { href: "/settings/pos", labelKey: "posSettings", icon: Settings, group: "Settings" },
   { href: "/inventory", labelKey: "overview", icon: Warehouse, group: "Inventory" },
   { href: "/products", labelKey: "products", icon: Package, group: "Inventory" },
   { href: "/stock-lookup", labelKey: "stockLookup", icon: Search, group: "Inventory" },

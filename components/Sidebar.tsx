@@ -53,7 +53,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: "sellGroup",
     items: [
-      { href: "/sell", labelKey: "sell", icon: ShoppingCart },
+      { href: "/pos", labelKey: "sell", icon: ShoppingCart },
       { href: "/sales", labelKey: "sales", icon: Receipt },
     ],
   },
@@ -77,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [
+  { href: "/settings/pos", labelKey: "posSettings", icon: ShoppingCart },
   { href: "/settings/locations", labelKey: "locations", icon: Warehouse },
   { href: "/settings/users", labelKey: "users", icon: Users },
   { href: "/settings/roles", labelKey: "roles", icon: Shield },

@@ -1,6 +1,34 @@
 # Changelog
 
-## Phase 3 — Inventory core (in progress)
+## Phase 4 — POS selling screen
+
+### Added (client)
+- Focus-mode `/pos` register: catalog search (MiniSearch), category chips, favourites,
+  product grid/list, Walk-in cart, Hold / Discount / Note, Charge → payment sheet.
+- HID barcode burst listener + optional beep; camera scan via `BarcodeDetector` when available.
+- Cart persisted in IndexedDB (`lib/pos-cart-db.ts`); park/hold against API with local fallback.
+- Payment sheet: method tiles, cash numpad + quick tenders, split payments, proof upload,
+  Idempotency-Key checkout (`payments[]` + legacy single-method fields).
+- `ManagerApprovalDialog` for DISCOUNT_OVER_LIMIT / PRICE_OVERRIDE / SALE_VOID /
+  REFUND_OUTSIDE_WINDOW via `/approvals`.
+- Success screen: change due, 80mm `receipt-print.css`, print/PDF/share, new sale.
+- `/sell` redirects to `/pos`. Shell hides sidebar on `/pos` (Exit, user, online).
+- Sales ledger: cashier/method/status filters, row → detail sheet with void/return;
+  `/sales/[id]` deep-link.
+- Thin `/settings/pos` — PATCH `/settings/store` with POS camelCase aliases.
+- i18n `Pos` + Sales extras (en + am). Nav / command palette point Sell → `/pos`.
+
+### Defaults in force
+- VAT 15% inclusive · Walk-in only · no store credit · HID + beep · 80mm print CSS · no cash drawer.
+
+### Known gaps
+- Payment-method requireReference/requireProof not enforced in the payment sheet yet.
+- One manager approval token covers one action (price override + over-limit discount in the
+  same cart still needs two approvals).
+- No QZ Tray / cash drawer; no store credit / CRM; no shifts (Phase 5).
+- Playwright critical POS flows still deferred.
+
+## Phase 3 — Inventory core (committed)
 
 ### Added (client)
 - Inventory nav: Overview, Stock lookup, Transfers, Stock counts, Labels, Locations (settings).
