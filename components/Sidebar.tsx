@@ -24,6 +24,7 @@ import {
   Search,
   ScanBarcode,
   Truck,
+  Clock3,
   type LucideIcon,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
@@ -55,6 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/pos", labelKey: "sell", icon: ShoppingCart },
       { href: "/sales", labelKey: "sales", icon: Receipt },
+      { href: "/shifts", labelKey: "shifts", icon: Clock3 },
     ],
   },
   {

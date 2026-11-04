@@ -1,5 +1,33 @@
 # Changelog
 
+## Phase 5 — Shifts and cash (client)
+
+### Added
+- Proxy forwards `x-register-id` (with existing `idempotency-key` / `x-approval-token`).
+- Route `/shifts` (`SHIFT_MANAGE` or `SHIFT_VIEW_ALL`); nav + command palette under Sell.
+- Shifts UI: list filters, open with denomination counter, cash in/out, no-sale drawer
+  (ManagerApprovalDialog `NO_SALE_DRAWER_OPEN` unless `CASH_DRAWER_OPEN`), X report, blind
+  close count then expected/counted/variance + `SHIFT_VARIANCE_OVER_LIMIT` retry, thermal
+  X/Z print CSS.
+- POS: loads `/shifts/current`, shift pill in Shell focus bar, blocks Charge when
+  `shifts.requireOpenShift` and no open shift (toast + link to `/shifts`); checkout sends
+  `x-register-id` from `localStorage` (`edimart-register-id`).
+- Device till toggle on `/settings/pos` (`edimart-till-registered`); Switch user → logout
+  to `/login?next=/pos` (no PIN login until API adds it).
+- Store settings aliases: `requireOpenShift`, `varianceApprovalThreshold`, `eodEmailEnabled`.
+
+### Defaults
+- One till REGISTER-1 · require open shift · blind close · no drawer hardware.
+
+### Known gaps vs API
+- Aligned to live `/registers`, `/shifts`, `/shifts/current`, `/shifts/open`,
+  `…/cash-in|cash-out|no-sale|close|x-report|z-report` (denoms-only open/close bodies).
+- No `POST /auth/pin-login` — Switch user logs out to `/login?next=/pos`.
+- `GET /shifts/current` needs `SHIFT_MANAGE` and is scoped to the opener; cashiers need
+  that permission (plus `SALES_CREATE`) for the POS pill / gate.
+- Variance close keeps expected blind until approved close succeeds (API design).
+- EOD email is API-side; client only toggles `eodEmailEnabled`.
+
 ## Phase 4 — POS selling screen
 
 ### Added (client)

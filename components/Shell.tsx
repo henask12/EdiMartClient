@@ -24,6 +24,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { PermissionProvider, type Me } from "@/components/PermissionProvider";
 import { Sidebar } from "@/components/Sidebar";
 import { Kbd } from "@/components/ui/Kbd";
+import { formatDate } from "@/lib/date-helpers";
 import {
   meetsRequirement,
   missingFrom,
@@ -31,6 +32,8 @@ import {
   requirementForPath,
   isOwnerRole,
 } from "@/lib/permissions";
+import { isTillRegistered } from "@/lib/register-device";
+import { fetchCurrentShift, openerName, type Shift } from "@/lib/shifts";
 import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 
@@ -46,6 +49,8 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [online, setOnline] = useState(true);
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [tillRegistered, setTillRegistered] = useState(false);
 
   // Restore sidebar state
   useEffect(() => {
@@ -66,6 +71,22 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener("offline", off);
     };
   }, []);
+
+  useEffect(() => {
+    setTillRegistered(isTillRegistered());
+    let cancelled = false;
+    const loadShift = async () => {
+      const shift = await fetchCurrentShift();
+      if (!cancelled) setCurrentShift(shift);
+    };
+    void loadShift();
+    const onFocus = () => void loadShift();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [pathname]);
 
   const handleToggleCollapse = useCallback(() => {
     setCollapsed((prev) => {
@@ -155,6 +176,34 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     router.refresh();
   };
 
+  const handleSwitchUser = async () => {
+    const next = pathname.startsWith("/pos") ? "/pos" : pathname;
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace(`/login?next=${encodeURIComponent(next)}`);
+    router.refresh();
+  };
+
+  const shiftPill = (
+    <Link
+      href="/shifts"
+      className={cn(
+        "hidden max-w-[14rem] truncate rounded-full px-2.5 py-1 text-xs font-medium md:inline-flex",
+        currentShift?.status === "OPEN"
+          ? "bg-success-soft text-success"
+          : "bg-surface-muted text-text-muted",
+      )}
+      title={
+        currentShift?.status === "OPEN"
+          ? `${tShell("shiftOpen")} · ${openerName(currentShift)} · ${formatDate(currentShift.openedAt)}`
+          : tShell("noShift")
+      }
+    >
+      {currentShift?.status === "OPEN"
+        ? `${tShell("shiftOpen")} · ${openerName(currentShift)}`
+        : tShell("noShift")}
+    </Link>
+  );
+
   const handleSetLocale = async (locale: string) => {
     document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
     await fetch("/api/proxy/auth/me", {
@@ -208,6 +257,12 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           >
             {tShell("exitPos")}
           </Link>
+          {shiftPill}
+          {tillRegistered ? (
+            <span className="hidden rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary sm:inline">
+              {tShell("tillRegistered")}
+            </span>
+          ) : null}
           <div className="flex-1" />
           <span
             className={cn(
@@ -232,6 +287,16 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           >
             <ThemeIcon className="size-4" />
           </button>
+          {tillRegistered ? (
+            <button
+              type="button"
+              onClick={() => void handleSwitchUser()}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-text hover:bg-surface-muted focus-ring"
+              aria-label={tShell("switchUser")}
+            >
+              {tShell("switchUser")}
+            </button>
+          ) : null}
           <span className="truncate text-sm font-medium text-text">
             {me.displayName ?? me.email}
           </span>
@@ -322,10 +387,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           </button>
           <div className="flex-1 sm:hidden" />
 
-          {/* Shift placeholder */}
-          <span className="hidden text-xs text-text-muted md:inline">
-            {tShell("noShift")}
-          </span>
+          {shiftPill}
 
           {/* Theme toggle */}
           <button

@@ -21,6 +21,7 @@ import {
   ArrowLeftRight,
   ClipboardCheck,
   ScanBarcode,
+  Clock3,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
 import { meetsRequirement, requirementForPath, isOwnerRole } from "@/lib/permissions";
@@ -37,6 +38,7 @@ const PAGES: PageEntry[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, group: "Pages" },
   { href: "/pos", labelKey: "sell", icon: ShoppingCart, group: "Sell" },
   { href: "/sales", labelKey: "sales", icon: Receipt, group: "Sell" },
+  { href: "/shifts", labelKey: "shifts", icon: Clock3, group: "Sell" },
   { href: "/settings/pos", labelKey: "posSettings", icon: Settings, group: "Settings" },
   { href: "/inventory", labelKey: "overview", icon: Warehouse, group: "Inventory" },
   { href: "/products", labelKey: "products", icon: Package, group: "Inventory" },

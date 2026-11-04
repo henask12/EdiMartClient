@@ -4,7 +4,12 @@ const apiBase = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:4000";
 const cookieName = process.env.AUTH_COOKIE_NAME ?? "edisims_access";
 
 /** Request headers the API needs to see. Everything else is dropped. */
-const FORWARDED_HEADERS = ["content-type", "idempotency-key", "x-approval-token"] as const;
+const FORWARDED_HEADERS = [
+  "content-type",
+  "idempotency-key",
+  "x-approval-token",
+  "x-register-id",
+] as const;
 
 const clearSessionCookie = (res: NextResponse) => {
   res.cookies.set(cookieName, "", { httpOnly: true, path: "/", maxAge: 0 });

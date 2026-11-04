@@ -78,6 +78,12 @@ import type {
   PosProduct,
   PosSettings,
 } from "@/lib/pos-types";
+import { registerHeaders } from "@/lib/register-device";
+import {
+  fetchCurrentShift,
+  parseShiftSettings,
+  type Shift,
+} from "@/lib/shifts";
 import { parseApiMessage, toastError, toastSuccess } from "@/lib/toast";
 
 const lineId = () =>
@@ -132,6 +138,8 @@ export const PosClient = () => {
   const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
   const [online, setOnline] = useState(true);
   const [hydrated, setHydrated] = useState(false);
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [requireOpenShift, setRequireOpenShift] = useState(true);
 
   const index = useMemo(() => {
     const ms = new MiniSearch<PosProduct>({
@@ -206,9 +214,12 @@ export const PosClient = () => {
       if (settingsRes.ok) {
         const data = (await settingsRes.json()) as Record<string, unknown>;
         setSettings(parsePosSettings(data));
+        setRequireOpenShift(parseShiftSettings(data).requireOpenShift);
       } else {
         setSettings(parsePosSettings(null));
       }
+      const shift = await fetchCurrentShift();
+      setCurrentShift(shift);
     } catch {
       toastError(t("catalogLoadFailed"));
     }
@@ -224,6 +235,14 @@ export const PosClient = () => {
       setParked(localParked);
     })();
   }, [loadCatalog]);
+
+  const ensureCanCharge = useCallback((): boolean => {
+    if (requireOpenShift && (!currentShift || currentShift.status !== "OPEN")) {
+      toastError(`${t("shiftRequired")} (${t("openShiftLink")})`);
+      return false;
+    }
+    return true;
+  }, [requireOpenShift, currentShift, t]);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
@@ -589,9 +608,14 @@ export const PosClient = () => {
       return;
     }
     setSubmitting(true);
+    if (!ensureCanCharge()) {
+      setSubmitting(false);
+      return;
+    }
     const headers: Record<string, string> = {
       "content-type": "application/json",
       "idempotency-key": attemptKey.current,
+      ...registerHeaders(),
     };
     if (approvalToken) headers["x-approval-token"] = approvalToken;
 
@@ -614,6 +638,10 @@ export const PosClient = () => {
     if (!res.ok) {
       if (shouldRotateKey(res.status)) attemptKey.current = newIdempotencyKey();
       const code = String((data as { code?: string }).code ?? "");
+      if (code === "SHIFT_REQUIRED") {
+        toastError(`${t("shiftRequired")} (${t("openShiftLink")})`);
+        return;
+      }
       if (code.startsWith("APPROVAL_") || res.status === 403) {
         const token = await requestApproval(
           "DISCOUNT_OVER_LIMIT",
@@ -694,7 +722,7 @@ export const PosClient = () => {
       }
       if (e.key === "F8" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
         e.preventDefault();
-        if (cart.lines.length) setPaymentOpen(true);
+        if (cart.lines.length && ensureCanCharge()) setPaymentOpen(true);
         return;
       }
       if (e.key === "Escape") {
@@ -735,6 +763,7 @@ export const PosClient = () => {
     mobileCartOpen,
     cheatOpen,
     persist,
+    ensureCanCharge,
     t,
   ]);
 
@@ -955,12 +984,22 @@ export const PosClient = () => {
             {t("note")}
           </Button>
         </div>
+        {requireOpenShift && (!currentShift || currentShift.status !== "OPEN") ? (
+          <p className="rounded-lg bg-warning-soft px-3 py-2 text-center text-sm text-warning">
+            {t("shiftRequired")}{" "}
+            <Link href="/shifts" className="font-semibold underline">
+              {t("openShiftLink")}
+            </Link>
+          </p>
+        ) : null}
         <Button
           type="button"
           size="pos"
           fullWidth
           disabled={!cart.lines.length}
-          onClick={() => setPaymentOpen(true)}
+          onClick={() => {
+            if (ensureCanCharge()) setPaymentOpen(true);
+          }}
         >
           {t("charge", { amount: formatMoney(totals.total) })}
         </Button>

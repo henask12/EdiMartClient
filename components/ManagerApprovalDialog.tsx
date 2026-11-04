@@ -21,7 +21,8 @@ export type ApprovalAction =
   | "SALE_VOID"
   | "REFUND_OUTSIDE_WINDOW"
   | "STOCK_ADJUST_OVER_LIMIT"
-  | "NO_SALE_DRAWER_OPEN";
+  | "NO_SALE_DRAWER_OPEN"
+  | "SHIFT_VARIANCE_OVER_LIMIT";
 
 type Manager = {
   id: string;
