@@ -100,6 +100,14 @@ export const ROUTE_REQUIREMENTS: { prefix: string; requires: Requirement }[] = [
   { prefix: "/shifts", requires: { any: ["SHIFT_MANAGE", "SHIFT_VIEW_ALL"] } },
   { prefix: "/sales", requires: { any: SALES_VIEW_ANY } },
   { prefix: "/settings/pos", requires: { all: ["SETTINGS_MANAGE"] } },
+  { prefix: "/settings/purchasing", requires: { all: ["SETTINGS_MANAGE"] } },
+  { prefix: "/purchase-orders/", requires: { all: ["PURCHASING_MANAGE"] } },
+  { prefix: "/purchase-orders", requires: { all: ["PURCHASING_MANAGE"] } },
+  { prefix: "/goods-receipts", requires: { all: ["PURCHASING_MANAGE"] } },
+  { prefix: "/reorder", requires: { all: ["PURCHASING_MANAGE"] } },
+  { prefix: "/supplier-returns", requires: { all: ["PURCHASING_MANAGE"] } },
+  { prefix: "/supplier-bills", requires: { all: ["SUPPLIER_PAYMENTS_MANAGE"] } },
+  { prefix: "/suppliers", requires: { any: ["SUPPLIERS_MANAGE", "PRODUCTS_VIEW"] } },
   { prefix: "/add-stock", requires: { all: ["STOCK_RECEIVE", "PRODUCTS_VIEW"] } },
   { prefix: "/inventory", requires: { all: ["STOCK_VIEW"] } },
   { prefix: "/stock-lookup", requires: { all: ["STOCK_VIEW"] } },
@@ -153,6 +161,10 @@ const NAMES: Partial<Record<Permission, string>> = {
   SETTINGS_MANAGE: "Manage store settings",
   REPORTING_VIEW: "View reports",
   REPORTS_VIEW_COST_PROFIT: "See cost and profit",
+  SUPPLIERS_MANAGE: "Manage suppliers",
+  PURCHASING_MANAGE: "Manage purchasing",
+  PURCHASE_APPROVE: "Approve purchase orders",
+  SUPPLIER_PAYMENTS_MANAGE: "Manage supplier payments",
 };
 
 export const permissionName = (key: Permission) => NAMES[key] ?? key;

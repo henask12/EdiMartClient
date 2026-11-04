@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatMoney } from "@/lib/format-money";
 import { usePermission } from "@/components/PermissionProvider";
+import { fetchIncoming } from "@/lib/purchasing";
 import { toastError } from "@/lib/toast";
 
 type LookupResult = {
@@ -22,6 +23,7 @@ type LookupResult = {
   onHand: string;
   reserved: string;
   available: string;
+  incoming?: string;
   byLocation: Array<{
     locationId: string;
     code: string;
@@ -58,7 +60,15 @@ const StockLookupPage = () => {
         return;
       }
       if (!res.ok) throw new Error("Lookup failed");
-      setResult(await res.json());
+      const data = (await res.json()) as LookupResult;
+      if (data.incoming == null && data.product?.id) {
+        try {
+          data.incoming = await fetchIncoming(data.product.id);
+        } catch {
+          data.incoming = "0";
+        }
+      }
+      setResult(data);
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Lookup failed");
     } finally {
@@ -103,7 +113,7 @@ const StockLookupPage = () => {
                 ? ` · Cost ${formatMoney(result.product.costPrice)}`
                 : ""}
             </p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-4">
               <div>
                 <p className="text-xs text-text-muted">On hand</p>
                 <p className="text-lg font-semibold tabular-nums text-text">{result.onHand}</p>
@@ -115,6 +125,12 @@ const StockLookupPage = () => {
               <div>
                 <p className="text-xs text-text-muted">Available</p>
                 <p className="text-lg font-semibold tabular-nums text-accent">{result.available}</p>
+              </div>
+              <div>
+                <p className="text-xs text-text-muted">Incoming</p>
+                <p className="text-lg font-semibold tabular-nums text-text">
+                  {result.incoming ?? "0"}
+                </p>
               </div>
             </div>
           </Card>

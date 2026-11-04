@@ -179,6 +179,15 @@ export default function ExpiryPage() {
               Write off
             </Button>
           ) : null}
+          {can("PURCHASING_MANAGE") ? (
+            <Link
+              href={`/supplier-returns?productId=${encodeURIComponent(r.productId)}&qty=${encodeURIComponent(r.qtyRemaining)}`}
+            >
+              <Button size="sm" variant="secondary">
+                Return to supplier
+              </Button>
+            </Link>
+          ) : null}
         </ActionGroup>
       ),
     },
@@ -259,6 +268,15 @@ export default function ExpiryPage() {
                   <Button size="sm" variant="danger" onClick={() => void handleWriteOff(r)}>
                     Write off
                   </Button>
+                ) : null}
+                {can("PURCHASING_MANAGE") ? (
+                  <Link
+                    href={`/supplier-returns?productId=${encodeURIComponent(r.productId)}&qty=${encodeURIComponent(r.qtyRemaining)}`}
+                  >
+                    <Button size="sm" variant="secondary">
+                      Return to supplier
+                    </Button>
+                  </Link>
                 ) : null}
               </div>
             </div>

@@ -1,0 +1,31 @@
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .po-print,
+  .po-print * {
+    visibility: visible;
+  }
+  .po-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px;
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+.po-print {
+  display: none;
+}
+
+@media print {
+  .po-print {
+    display: block;
+  }
+}

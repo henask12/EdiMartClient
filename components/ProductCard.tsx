@@ -20,6 +20,8 @@ export type MartProduct = {
   onHand: string;
   available: string;
   reserved: string;
+  /** Open PO remaining qty when the API returns it (Phase 6). */
+  incoming?: string;
   restockAt: number;
   restockQty?: number;
   stockStatus?: string;
@@ -109,6 +111,9 @@ export const ProductCard = ({
             available
             {Number(product.reserved) > 0 ? (
               <span className="text-warning"> · {product.reserved} reserved</span>
+            ) : null}
+            {product.incoming != null && Number(product.incoming) > 0 ? (
+              <span className="text-info"> · {product.incoming} incoming</span>
             ) : null}
           </p>
         </div>

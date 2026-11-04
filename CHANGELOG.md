@@ -1,5 +1,37 @@
 # Changelog
 
+## Phase 6 — Purchasing (client)
+
+### Added
+- Permissions/routes: `SUPPLIERS_MANAGE`, `PURCHASING_MANAGE`, `PURCHASE_APPROVE`,
+  `SUPPLIER_PAYMENTS_MANAGE` wired in `lib/permissions.ts` + nav requirements.
+- Purchasing nav group + command palette: Reorder, Purchase orders, Suppliers,
+  Supplier bills, Supplier returns; settings link `/settings/purchasing`.
+- Pages: `/suppliers`, `/purchase-orders`, `/purchase-orders/[id]` (approve/send/
+  cancel/close + `window.print` doc), `/goods-receipts/new` (receive + optional
+  landed cost), `/reorder`, `/supplier-bills` (create from receipts, pay, aged),
+  `/supplier-returns`, `/settings/purchasing` (`poApproveThreshold`, default 10000).
+- Shared client API helper `lib/purchasing.ts` against `/suppliers`,
+  `/purchase-orders`, `/goods-receipts`, `/supplier-bills`, `/supplier-returns`,
+  `/purchasing/reorder-suggestions`, `/purchasing/incoming`.
+- Stock lookup + product cards show **incoming** when the API returns it (lookup
+  also falls back to `GET /purchasing/incoming`).
+- Expiry centre: “Return to supplier” → `/supplier-returns` with product/qty query.
+- i18n `Purchasing` namespace (en + am). Unit costs gated by `canSeeCost`.
+
+### Defaults
+- No pack conversion · ETB · PO approve threshold Br 10k · incoming from open POs.
+
+### Known gaps / API alignment
+- Client assumes the Phase 6 API module paths above; if the API mounts bills aged
+  summary at `/supplier-bills/aged-payables` the client tries that as fallback.
+- Reorder create-pos accepts either `{ groups: [...] }` or a single
+  `{ supplierId, lines }` body (retry).
+- Seasonality uplift, pack/carton UOM, Telegram/WhatsApp PO send UI not built
+  (print/PDF via browser print only).
+- Three-way match flags and supplier performance metrics not shown yet.
+- Depends on API Phase 6 being deployed/migrated locally before screens work.
+
 ## Phase 5 — Shifts and cash (client)
 
 ### Added

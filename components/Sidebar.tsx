@@ -25,6 +25,10 @@ import {
   ScanBarcode,
   Truck,
   Clock3,
+  Building2,
+  FileText,
+  RotateCcw,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
@@ -76,10 +80,21 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/reservations", labelKey: "reservations", icon: ClipboardCheck },
     ],
   },
+  {
+    labelKey: "purchasingGroup",
+    items: [
+      { href: "/reorder", labelKey: "reorderPlanner", icon: ClipboardList },
+      { href: "/purchase-orders", labelKey: "purchaseOrders", icon: FileText },
+      { href: "/suppliers", labelKey: "suppliers", icon: Building2 },
+      { href: "/supplier-bills", labelKey: "supplierBills", icon: Wallet },
+      { href: "/supplier-returns", labelKey: "supplierReturns", icon: RotateCcw },
+    ],
+  },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [
   { href: "/settings/pos", labelKey: "posSettings", icon: ShoppingCart },
+  { href: "/settings/purchasing", labelKey: "purchasingSettings", icon: Truck },
   { href: "/settings/locations", labelKey: "locations", icon: Warehouse },
   { href: "/settings/users", labelKey: "users", icon: Users },
   { href: "/settings/roles", labelKey: "roles", icon: Shield },

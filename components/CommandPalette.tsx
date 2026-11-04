@@ -22,6 +22,11 @@ import {
   ClipboardCheck,
   ScanBarcode,
   Clock3,
+  Building2,
+  FileText,
+  RotateCcw,
+  Wallet,
+  Truck,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
 import { meetsRequirement, requirementForPath, isOwnerRole } from "@/lib/permissions";
@@ -52,6 +57,12 @@ const PAGES: PageEntry[] = [
   { href: "/categories", labelKey: "categories", icon: Tag, group: "Inventory" },
   { href: "/product-types", labelKey: "productTypes", icon: Tag, group: "Inventory" },
   { href: "/reservations", labelKey: "reservations", icon: ClipboardList, group: "Inventory" },
+  { href: "/reorder", labelKey: "reorderPlanner", icon: ClipboardList, group: "Purchasing" },
+  { href: "/purchase-orders", labelKey: "purchaseOrders", icon: FileText, group: "Purchasing" },
+  { href: "/suppliers", labelKey: "suppliers", icon: Building2, group: "Purchasing" },
+  { href: "/supplier-bills", labelKey: "supplierBills", icon: Wallet, group: "Purchasing" },
+  { href: "/supplier-returns", labelKey: "supplierReturns", icon: RotateCcw, group: "Purchasing" },
+  { href: "/settings/purchasing", labelKey: "purchasingSettings", icon: Truck, group: "Settings" },
   { href: "/settings/locations", labelKey: "locations", icon: Warehouse, group: "Settings" },
   { href: "/settings/users", labelKey: "users", icon: Users, group: "Settings" },
   { href: "/settings/roles", labelKey: "roles", icon: Shield, group: "Settings" },
