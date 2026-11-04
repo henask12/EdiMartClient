@@ -18,11 +18,17 @@ export default function NewProductPage() {
   const t = useTranslations("Products");
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
+  const [nameAm, setNameAm] = useState("");
+  const [brand, setBrand] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [trackBatches, setTrackBatches] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [restockAt, setRestockAt] = useState("5");
   const [restockQty, setRestockQty] = useState("10");
+  const [minStock, setMinStock] = useState("0");
+  const [maxStock, setMaxStock] = useState("0");
   const [initialQuantity, setInitialQuantity] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [description, setDescription] = useState("");
@@ -56,11 +62,17 @@ export default function NewProductPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           name,
+          nameAm: nameAm.trim() || undefined,
+          brand: brand.trim() || undefined,
+          barcode: barcode.trim() || undefined,
+          trackBatches: trackBatches || Boolean(expiryDate),
           categoryId,
           sellingPrice,
           ...(canSeeCost ? { costPrice: costPrice || "0" } : {}),
           restockAt: Number(restockAt),
           restockQty: Number(restockQty),
+          minStock: Number(minStock) || 0,
+          maxStock: Number(maxStock) || 0,
           imagePath,
           description: description.trim() || undefined,
           originCountry: originCountry.trim() || undefined,
@@ -105,6 +117,33 @@ export default function NewProductPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Sugar 1kg"
             />
+            <Input
+              label="Amharic name"
+              value={nameAm}
+              onChange={(e) => setNameAm(e.target.value)}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Brand"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+              />
+              <Input
+                label="Barcode"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                placeholder="Scan or type"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-text">
+              <input
+                type="checkbox"
+                checked={trackBatches || Boolean(expiryDate)}
+                onChange={(e) => setTrackBatches(e.target.checked)}
+                className="size-4"
+              />
+              Track batches and expiry (FEFO)
+            </label>
             <label className="block text-sm text-text-muted">
               {t("listingDetails")}
               <textarea
@@ -196,6 +235,20 @@ export default function NewProductPage() {
               label={t("suggestedReorder")}
               value={restockQty}
               onChange={(e) => setRestockQty(e.target.value)}
+            />
+            <Input
+              type="number"
+              min={0}
+              label="Min stock"
+              value={minStock}
+              onChange={(e) => setMinStock(e.target.value)}
+            />
+            <Input
+              type="number"
+              min={0}
+              label="Max stock"
+              value={maxStock}
+              onChange={(e) => setMaxStock(e.target.value)}
             />
           </div>
         </div>

@@ -60,18 +60,24 @@ const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: "inventoryGroup",
     items: [
+      { href: "/inventory", labelKey: "overview", icon: Warehouse },
       { href: "/products", labelKey: "products", icon: Package },
+      { href: "/stock-lookup", labelKey: "stockLookup", icon: Search },
       { href: "/add-stock", labelKey: "receiveStock", icon: Truck },
+      { href: "/transfers", labelKey: "transfers", icon: ArrowLeftRight },
+      { href: "/stock-counts", labelKey: "stockCounts", icon: ClipboardCheck },
       { href: "/expiry", labelKey: "expiry", icon: Calendar },
+      { href: "/labels", labelKey: "labels", icon: ScanBarcode },
       { href: "/stock-history", labelKey: "stockHistory", icon: ClipboardList },
       { href: "/categories", labelKey: "categories", icon: Tag },
       { href: "/product-types", labelKey: "productTypes", icon: Tag },
-      { href: "/reservations", labelKey: "overview", icon: ClipboardCheck },
+      { href: "/reservations", labelKey: "reservations", icon: ClipboardCheck },
     ],
   },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [
+  { href: "/settings/locations", labelKey: "locations", icon: Warehouse },
   { href: "/settings/users", labelKey: "users", icon: Users },
   { href: "/settings/roles", labelKey: "roles", icon: Shield },
   { href: "/settings/emails", labelKey: "alertEmails", icon: Mail },

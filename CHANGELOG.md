@@ -1,5 +1,26 @@
 # Changelog
 
+## Phase 3 — Inventory core (in progress)
+
+### Added (client)
+- Inventory nav: Overview, Stock lookup, Transfers, Stock counts, Labels, Locations (settings).
+- Pages: `/inventory`, `/stock-lookup`, `/transfers`, `/stock-counts`, `/labels`,
+  `/settings/locations` — wired to the new Phase 3 API routes.
+- Route permission gates for the new pages (`STOCK_VIEW`, `STOCK_TRANSFER`, `STOCK_COUNT`,
+  `LABELS_PRINT`, `LOCATIONS_MANAGE`).
+
+### Follow-ups in this phase
+- Edit + create product: Amharic name, brand, barcode, track-batches, min/max.
+- Expiry centre: quarantine and write-off actions; 30/60/90 day filters.
+- Stock-count detail page with blind counted-qty entry + post.
+- Inventory overview: floor replenishment suggestions → transfer draft.
+- Bulk CSV import at `/products/import` (preview then commit).
+
+### Not yet (known gaps)
+- Count accuracy history / cycle-count scheduling (Phase 8).
+- Product merge tool; variants / packs / bundles (Section 0 undecided).
+- Playwright critical flows.
+
 ## Phase 2 - design system
 
 ### Added

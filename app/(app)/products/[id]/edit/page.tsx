@@ -20,11 +20,17 @@ export default function EditProductPage() {
   const t = useTranslations("Products");
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
+  const [nameAm, setNameAm] = useState("");
+  const [brand, setBrand] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [trackBatches, setTrackBatches] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [sellingPrice, setSellingPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [restockAt, setRestockAt] = useState("0");
   const [restockQty, setRestockQty] = useState("0");
+  const [minStock, setMinStock] = useState("0");
+  const [maxStock, setMaxStock] = useState("0");
   const [description, setDescription] = useState("");
   const [originCountry, setOriginCountry] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -41,6 +47,11 @@ export default function EditProductPage() {
       }
       const p = (await prodRes.json()) as {
         name: string;
+        nameAm?: string | null;
+        brand?: string | null;
+        trackBatches?: boolean;
+        minStock?: number;
+        maxStock?: number;
         categoryId: string;
         sellingPrice: string;
         costPrice?: string;
@@ -49,8 +60,14 @@ export default function EditProductPage() {
         description?: string | null;
         originCountry?: string | null;
         expiryDate?: string | null;
+        barcodes?: Array<{ barcode: string; isPrimary: boolean }>;
       };
       setName(p.name);
+      setNameAm(p.nameAm ?? "");
+      setBrand(p.brand ?? "");
+      setTrackBatches(Boolean(p.trackBatches));
+      setMinStock(String(p.minStock ?? 0));
+      setMaxStock(String(p.maxStock ?? 0));
       setCategoryId(p.categoryId);
       setSellingPrice(p.sellingPrice);
       setCostPrice(p.costPrice ?? "");
@@ -61,6 +78,8 @@ export default function EditProductPage() {
       setExpiryDate(
         p.expiryDate ? new Date(p.expiryDate).toISOString().slice(0, 10) : "",
       );
+      const primary = p.barcodes?.find((b) => b.isPrimary) ?? p.barcodes?.[0];
+      setBarcode(primary?.barcode ?? "");
     };
     void load();
   }, [id]);
@@ -89,11 +108,17 @@ export default function EditProductPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           name,
+          nameAm: nameAm.trim() || null,
+          brand: brand.trim() || null,
+          barcode: barcode.trim() || undefined,
+          trackBatches: trackBatches || Boolean(expiryDate),
           categoryId,
           sellingPrice,
           ...(canSeeCost ? { costPrice: costPrice || "0" } : {}),
           restockAt: Number(restockAt),
           restockQty: Number(restockQty),
+          minStock: Number(minStock) || 0,
+          maxStock: Number(maxStock) || 0,
           imagePath,
           description: description.trim() || null,
           originCountry: originCountry.trim() || null,
@@ -133,6 +158,32 @@ export default function EditProductPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+            <Input
+              label="Amharic name"
+              value={nameAm}
+              onChange={(e) => setNameAm(e.target.value)}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Brand"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+              />
+              <Input
+                label="Barcode"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-text">
+              <input
+                type="checkbox"
+                checked={trackBatches || Boolean(expiryDate)}
+                onChange={(e) => setTrackBatches(e.target.checked)}
+                className="size-4"
+              />
+              Track batches and expiry (FEFO)
+            </label>
             <label className="block text-sm text-text-muted">
               {t("description")}
               <textarea
@@ -195,6 +246,20 @@ export default function EditProductPage() {
                 label={t("suggestedReorder")}
                 value={restockQty}
                 onChange={(e) => setRestockQty(e.target.value)}
+              />
+              <Input
+                type="number"
+                min={0}
+                label="Min stock"
+                value={minStock}
+                onChange={(e) => setMinStock(e.target.value)}
+              />
+              <Input
+                type="number"
+                min={0}
+                label="Max stock"
+                value={maxStock}
+                onChange={(e) => setMaxStock(e.target.value)}
               />
             </div>
           </div>
