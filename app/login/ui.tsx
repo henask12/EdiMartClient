@@ -10,8 +10,8 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
-  const [email, setEmail] = useState("owner@edisims.local");
-  const [password, setPassword] = useState("Owner123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +30,13 @@ export default function LoginForm() {
         setError(typeof data.message === "string" ? data.message : "Login failed");
         return;
       }
-      router.replace(next.startsWith("/") ? next : "/dashboard");
+      // Seeded and admin-set passwords must be replaced before anything else.
+      if (data.user?.mustChangePassword) {
+        router.replace("/settings/account");
+        router.refresh();
+        return;
+      }
+      router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
       router.refresh();
     } catch {
       setError("Network error");

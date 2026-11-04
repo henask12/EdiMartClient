@@ -30,6 +30,7 @@ type Me = {
   displayName: string | null;
   role: string;
   permissions: string[];
+  mustChangePassword?: boolean;
 };
 
 type NavItem = {
@@ -119,15 +120,50 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const [me, setMe] = useState<Me | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
 
+  // Any API call answered with 401 means the login is no longer valid (the proxy has already
+  // cleared the cookie): go to the sign-in page and come back here afterwards. A 403 with
+  // PASSWORD_CHANGE_REQUIRED sends the person to the account page instead.
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    let redirecting = false;
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const res = await originalFetch(...args);
+      const input = args[0];
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.pathname : input.url;
+      if (!redirecting && url.includes("/api/proxy/")) {
+        if (res.status === 401) {
+          redirecting = true;
+          const here = window.location.pathname + window.location.search;
+          window.location.assign(`/login?next=${encodeURIComponent(here)}`);
+        } else if (res.status === 403) {
+          const body = await res.clone().json().catch(() => null);
+          if (body?.code === "PASSWORD_CHANGE_REQUIRED") {
+            redirecting = true;
+            window.location.assign("/settings/account");
+          }
+        }
+      }
+      return res;
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       try {
         const res = await fetch("/api/proxy/auth/me", { cache: "no-store" });
         if (!res.ok) {
-          router.replace("/login");
+          const here = window.location.pathname + window.location.search;
+          router.replace(`/login?next=${encodeURIComponent(here)}`);
           return;
         }
         const data = (await res.json()) as Me;
+        if (data.mustChangePassword && window.location.pathname !== "/settings/account") {
+          router.replace("/settings/account");
+        }
         setMe({
           ...data,
           permissions: Array.isArray(data.permissions) ? data.permissions : [],

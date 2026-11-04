@@ -1,11 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
+import { PaymentMethodField } from "@/components/PaymentMethodField";
 import { ProductSelect, type ProductOption } from "@/components/ProductSelect";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { newIdempotencyKey, shouldRotateKey } from "@/lib/idempotency";
+import type { PaymentMethod } from "@/lib/payment-methods";
 import { parseApiMessage, toastError, toastSuccess } from "@/lib/toast";
 
 type CartLine = {
@@ -24,6 +27,11 @@ export default function SellPage() {
   const [proofPaths, setProofPaths] = useState<string[]>([]);
   const [proofPreviews, setProofPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  // One key per sale attempt: a retry after a dropped connection must not sell twice.
+  const attemptKey = useRef(newIdempotencyKey());
 
   const total = useMemo(
     () => lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
@@ -98,22 +106,42 @@ export default function SellPage() {
       toastError("Add items to sell");
       return;
     }
-    const res = await fetch("/api/proxy/sales/checkout", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        lines: lines.map((l) => ({
-          productId: l.productId,
-          quantity: String(l.quantity),
-        })),
-        proofImagePaths: proofPaths.length ? proofPaths : undefined,
-      }),
-    });
+    if (submitting) return;
+    setSubmitting(true);
+    let res: Response;
+    try {
+      res = await fetch("/api/proxy/sales/checkout", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": attemptKey.current,
+        },
+        body: JSON.stringify({
+          lines: lines.map((l) => ({
+            productId: l.productId,
+            quantity: String(l.quantity),
+          })),
+          proofImagePaths: proofPaths.length ? proofPaths : undefined,
+          paymentMethod,
+          paymentReference: paymentReference.trim() || undefined,
+        }),
+      });
+    } catch {
+      // Outcome unknown: keep the same key so pressing the button again cannot double-sell.
+      toastError("No connection. Check the sales list, then press Record sale again.");
+      setSubmitting(false);
+      return;
+    }
     const data = await res.json().catch(() => ({}));
+    setSubmitting(false);
     if (!res.ok) {
+      if (shouldRotateKey(res.status)) attemptKey.current = newIdempotencyKey();
       toastError(parseApiMessage(data, "Could not record sale"));
       return;
     }
+    attemptKey.current = newIdempotencyKey();
+    setPaymentMethod("CASH");
+    setPaymentReference("");
     toastSuccess("Sale recorded");
     setReceipt((data.digitalReceipt as string) ?? "Sale recorded");
     setLines([]);
@@ -189,8 +217,16 @@ export default function SellPage() {
               <span className="tabular-nums">{total.toFixed(2)}</span>
             </div>
           </section>
-          <Button type="submit" fullWidth>
-            Record sale
+          <section className="section-card">
+            <PaymentMethodField
+              method={paymentMethod}
+              onMethodChange={setPaymentMethod}
+              reference={paymentReference}
+              onReferenceChange={setPaymentReference}
+            />
+          </section>
+          <Button type="submit" fullWidth disabled={submitting}>
+            {submitting ? "Recording…" : "Record sale"}
           </Button>
         </form>
       ) : null}

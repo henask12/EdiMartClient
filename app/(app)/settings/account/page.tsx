@@ -2,7 +2,13 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-type Me = { id: string; email: string; displayName: string | null; role: string };
+type Me = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: string;
+  mustChangePassword?: boolean;
+};
 
 export default function AccountSettingsPage() {
   const [me, setMe] = useState<Me | null>(null);
@@ -58,6 +64,10 @@ export default function AccountSettingsPage() {
     setCurrentPassword("");
     setNewPassword("");
     setPasswordStatus("Password updated");
+    if (me?.mustChangePassword) {
+      // Full reload so the app picks up the cleared flag.
+      window.location.assign("/dashboard");
+    }
   };
 
   if (!me) {
@@ -69,6 +79,15 @@ export default function AccountSettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-white">My account</h1>
         <p className="mt-2 text-sm text-white/60">Role: {me.role}</p>
+        {me.mustChangePassword ? (
+          <p
+            className="mt-4 rounded-xl border border-amber-300/40 bg-amber-300/10 p-3 text-sm text-amber-100"
+            role="alert"
+          >
+            For your security, choose a new password before you continue. The one you signed in with
+            was set up for you and must be replaced.
+          </p>
+        ) : null}
       </div>
 
       <form onSubmit={handleProfile} className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
@@ -118,7 +137,7 @@ export default function AccountSettingsPage() {
           <input
             type="password"
             required
-            minLength={6}
+            minLength={8}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"

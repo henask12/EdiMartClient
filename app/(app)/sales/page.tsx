@@ -11,6 +11,7 @@ import { Pagination } from "@/components/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 import { formatBirr } from "@/lib/format-price";
+import { paymentLabel } from "@/lib/payment-methods";
 import { toastError } from "@/lib/toast";
 
 type Attachment = { id: string; imageUrl: string };
@@ -29,6 +30,7 @@ type Sale = {
   createdAt: string;
   lines: SaleLine[];
   attachments?: Attachment[];
+  payments?: { method: string; reference: string | null }[];
   createdBy: { displayName: string | null; email: string };
 };
 
@@ -38,6 +40,7 @@ type SaleLineRow = {
   item: string;
   salesDate: string;
   cashier: string;
+  payment: string;
   unitPrice: string;
   quantity: string;
   lineTotal: string;
@@ -56,6 +59,7 @@ const flattenSales = (sales: Sale[]): SaleLineRow[] =>
       item: line.product.name,
       salesDate: sale.createdAt,
       cashier: sale.createdBy.displayName ?? sale.createdBy.email,
+      payment: (sale.payments ?? []).map((p) => paymentLabel(p.method)).join(" + ") || "—",
       unitPrice: line.unitPrice,
       quantity: line.quantity,
       lineTotal: line.lineTotal,
@@ -154,6 +158,11 @@ export default function SalesPage() {
       key: "cashier",
       header: "Cashier",
       render: (r) => r.cashier,
+    },
+    {
+      key: "payment",
+      header: "Payment",
+      render: (r) => r.payment,
     },
     {
       key: "unitPrice",
@@ -294,7 +303,7 @@ export default function SalesPage() {
                 </p>
               </div>
               <p className="mt-1 text-xs text-white/50">
-                {new Date(r.salesDate).toLocaleString()} · {r.cashier}
+                {new Date(r.salesDate).toLocaleString()} · {r.cashier} · {r.payment}
               </p>
               <p className="mt-2 text-xs text-white/60">
                 {r.quantity} × {formatBirr(r.unitPrice)} · Profit{" "}

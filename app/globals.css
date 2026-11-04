@@ -48,7 +48,7 @@
   }
 
   .btn {
-    @apply inline-flex h-[var(--control-h)] items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 focus-ring;
+    @apply inline-flex h-[var(--control-h)] items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--brand-charcoal-deep)];
   }
 
   .btn-sm {
@@ -56,7 +56,7 @@
   }
 
   .btn-icon {
-    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-50 focus-ring;
+    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--brand-charcoal-deep)];
   }
 
   .btn-primary {
@@ -112,7 +112,7 @@
   }
 
   .section-card {
-    @apply card-surface p-5;
+    @apply rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)]/90 p-5;
   }
 
   .page-header {

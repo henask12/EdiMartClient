@@ -1,10 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { PaymentMethodField } from "@/components/PaymentMethodField";
 import { PaymentProofUpload } from "@/components/PaymentProofUpload";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { formatBirr } from "@/lib/format-price";
+import { newIdempotencyKey, shouldRotateKey } from "@/lib/idempotency";
+import type { PaymentMethod } from "@/lib/payment-methods";
 import type { MartProduct } from "./ProductCard";
 
 type Mode = "sell" | "reserve";
@@ -24,6 +27,9 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
   const [proofPaths, setProofPaths] = useState<string[]>([]);
   const [proofPreviews, setProofPreviews] = useState<string[]>([]);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [paymentReference, setPaymentReference] = useState("");
+  const attemptKey = useRef(newIdempotencyKey());
 
   useEffect(() => {
     if (!product) return;
@@ -32,6 +38,9 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
     setStatus(null);
     setProofPaths([]);
     setProofPreviews([]);
+    setPaymentMethod("CASH");
+    setPaymentReference("");
+    attemptKey.current = newIdempotencyKey();
   }, [product?.id, mode]);
 
   if (!product) {
@@ -75,17 +84,24 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
       if (mode === "sell") {
         const res = await fetch("/api/proxy/sales/checkout", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            "idempotency-key": attemptKey.current,
+          },
           body: JSON.stringify({
             lines: [{ productId: product.id, quantity }],
             proofImagePaths: proofPaths.length ? proofPaths : undefined,
+            paymentMethod,
+            paymentReference: paymentReference.trim() || undefined,
           }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
+          if (shouldRotateKey(res.status)) attemptKey.current = newIdempotencyKey();
           setStatus(typeof data.message === "string" ? data.message : "Sale failed");
           return;
         }
+        attemptKey.current = newIdempotencyKey();
       } else {
         const res = await fetch("/api/proxy/reservations", {
           method: "POST",
@@ -105,7 +121,8 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
       onSuccess();
       onClose();
     } catch {
-      setStatus("Network error");
+      // Outcome unknown: the same Idempotency-Key is kept, so pressing again cannot double-sell.
+      setStatus("Network error - press confirm again to retry");
     } finally {
       setLoading(false);
     }
@@ -153,12 +170,20 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
           />
 
           {mode === "sell" ? (
-            <PaymentProofUpload
-              proofPreviews={proofPreviews}
-              uploading={uploadingProof}
-              onUpload={(files) => void handleProofUpload(files)}
-              onRemove={handleRemoveProof}
-            />
+            <>
+              <PaymentMethodField
+                method={paymentMethod}
+                onMethodChange={setPaymentMethod}
+                reference={paymentReference}
+                onReferenceChange={setPaymentReference}
+              />
+              <PaymentProofUpload
+                proofPreviews={proofPreviews}
+                uploading={uploadingProof}
+                onUpload={(files) => void handleProofUpload(files)}
+                onRemove={handleRemoveProof}
+              />
+            </>
           ) : (
             <Input
               label="Customer name (optional)"

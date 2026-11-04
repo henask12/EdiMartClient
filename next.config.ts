@@ -5,6 +5,23 @@ const apiUrl =
   process.env.PUBLIC_API_URL ??
   "http://127.0.0.1:4000";
 
+// Optional: public base URL of the image bucket/CDN when the API uses STORAGE_DRIVER=s3.
+const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
+const imageHostPattern = (() => {
+  try {
+    if (!imageBaseUrl) return null;
+    const u = new URL(imageBaseUrl);
+    return {
+      protocol: u.protocol.replace(":", "") as "http" | "https",
+      hostname: u.hostname,
+      ...(u.port ? { port: u.port } : {}),
+      pathname: "/**",
+    };
+  } catch {
+    return null;
+  }
+})();
+
 const apiUploadPattern = (() => {
   try {
     const u = new URL(apiUrl);
@@ -39,6 +56,7 @@ const nextConfig: NextConfig = {
         pathname: "/uploads/**",
       },
       ...(apiUploadPattern ? [apiUploadPattern] : []),
+      ...(imageHostPattern ? [imageHostPattern] : []),
     ],
   },
   env: {
