@@ -104,6 +104,7 @@ export const ROUTE_REQUIREMENTS: { prefix: string; requires: Requirement }[] = [
   { prefix: "/settings/users", requires: { all: ["USERS_MANAGE"] } },
   { prefix: "/settings/roles", requires: { all: ["ROLES_MANAGE"] } },
   { prefix: "/settings/emails", requires: { all: ["SETTINGS_EMAILS"] } },
+  { prefix: "/design", requires: { all: ["ROLES_MANAGE"] } },
 ];
 
 const pathMatches = (pathname: string, prefix: string) =>

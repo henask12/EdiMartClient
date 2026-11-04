@@ -1,6 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 
 type Props = {
@@ -8,8 +15,7 @@ type Props = {
   title: string;
   message: string;
   confirmLabel?: string;
-  cancelLabel?: string;
-  variant?: "danger" | "default";
+  variant?: "primary" | "danger";
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 };
@@ -19,64 +25,27 @@ export const ConfirmDialog = ({
   title,
   message,
   confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  variant = "default",
+  variant = "primary",
   onConfirm,
   onCancel,
-}: Props) => {
-  const [busy, setBusy] = useState(false);
-
-  if (!open) {
-    return null;
-  }
-
-  const handleConfirm = async () => {
-    setBusy(true);
-    try {
-      await onConfirm();
-      onCancel();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      onClick={onCancel}
-    >
-      <div
-        className="w-full max-w-md rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="confirm-dialog-title" className="text-lg font-semibold text-white">
-          {title}
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-white/65">{message}</p>
-        <div className="mt-6 flex gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth
-            onClick={onCancel}
-            disabled={busy}
-          >
-            {cancelLabel}
-          </Button>
-          <Button
-            type="button"
-            variant={variant === "danger" ? "danger" : "primary"}
-            fullWidth
-            onClick={() => void handleConfirm()}
-            disabled={busy}
-          >
-            {busy ? "…" : confirmLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
+}: Props) => (
+  <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{message}</DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          variant={variant === "danger" ? "danger" : "primary"}
+          onClick={() => void onConfirm()}
+        >
+          {confirmLabel}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);

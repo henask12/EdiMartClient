@@ -15,10 +15,16 @@ export const PageHeader = ({ title, description, actions, className }: Props) =>
       className,
     )}
   >
-    <div className="page-header">
-      <h1 className="page-title">{title}</h1>
-      {description ? <p className="page-subtitle">{description}</p> : null}
+    <div className="space-y-1">
+      <h1 className="text-2xl font-semibold tracking-tight text-text">
+        {title}
+      </h1>
+      {description ? (
+        <p className="text-sm text-text-muted">{description}</p>
+      ) : null}
     </div>
-    {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
+    {actions ? (
+      <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>
+    ) : null}
   </header>
 );

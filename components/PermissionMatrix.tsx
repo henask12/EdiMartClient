@@ -135,10 +135,10 @@ export const PermissionMatrix = ({ roles, onSaved, focusRoleId }: Props) => {
   };
 
   if (loadError) {
-    return <p className="text-sm text-rose-200">{loadError}</p>;
+    return <p className="text-sm text-danger">{loadError}</p>;
   }
   if (!catalog) {
-    return <p className="text-sm text-white/60">Loading permissions…</p>;
+    return <p className="text-sm text-text-muted">Loading permissions…</p>;
   }
 
   const visible = (p: CatalogEntry) => (p.deprecated ? showOld : p.status === "planned" ? showPlanned : true);
@@ -150,17 +150,17 @@ export const PermissionMatrix = ({ roles, onSaved, focusRoleId }: Props) => {
   );
 
   return (
-    <section className="section-card space-y-4" aria-labelledby="matrix-title">
+    <section className="rounded-xl border border-border bg-surface p-5 shadow-sm space-y-4" aria-labelledby="matrix-title">
       <div>
-        <h2 id="matrix-title" className="text-lg font-semibold text-white">
+        <h2 id="matrix-title" className="text-lg font-semibold text-text">
           What each role can do
         </h2>
-        <p className="mt-1 text-sm text-white/55">
+        <p className="mt-1 text-sm text-text-muted">
           Tick what a role may do. The owner can always do everything. Items marked{" "}
           <span className="font-semibold text-amber-200">Sensitive</span> involve money, stock corrections or who can
           do what, so switch them on with care.
         </p>
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/60">
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-text-muted">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={showPlanned} onChange={(e) => setShowPlanned(e.target.checked)} />
             Show features that are not used yet
@@ -172,11 +172,11 @@ export const PermissionMatrix = ({ roles, onSaved, focusRoleId }: Props) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full min-w-[40rem] border-collapse text-sm">
           <thead>
-            <tr className="bg-black/30 text-left">
-              <th scope="col" className="sticky left-0 z-10 min-w-[16rem] bg-[color:var(--surface)] px-3 py-3 font-semibold text-white/70">
+            <tr className="bg-surface-muted text-left">
+              <th scope="col" className="sticky left-0 z-10 min-w-[16rem] bg-surface px-3 py-3 font-semibold text-text-muted">
                 Permission
               </th>
               {roles.map((role) => (
@@ -184,14 +184,14 @@ export const PermissionMatrix = ({ roles, onSaved, focusRoleId }: Props) => {
                   key={role.id}
                   scope="col"
                   className={`px-3 py-3 text-center font-semibold ${
-                    focusRoleId === role.id ? "text-[var(--accent)]" : "text-white/80"
+                    focusRoleId === role.id ? "text-accent" : "text-text"
                   }`}
                 >
                   <span className="block">{role.name}</span>
                   {role.isProtected || isOwnerRole(role.name) ? (
-                    <span className="block text-[10px] font-normal text-white/40">always everything</span>
+                    <span className="block text-[10px] font-normal text-text-muted">always everything</span>
                   ) : (
-                    <span className="block text-[10px] font-normal text-white/40">{role.userCount ?? 0} users</span>
+                    <span className="block text-[10px] font-normal text-text-muted">{role.userCount ?? 0} users</span>
                   )}
                 </th>
               ))}
@@ -203,28 +203,28 @@ export const PermissionMatrix = ({ roles, onSaved, focusRoleId }: Props) => {
               if (rows.length === 0) return null;
               return (
                 <Fragment key={group}>
-                  <tr className="bg-white/5">
+                  <tr className="bg-surface-muted">
                     <th
                       scope="colgroup"
                       colSpan={roles.length + 1}
-                      className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-white/55"
+                      className="px-3 py-2 text-left text-xs font-bold uppercase tracking-wide text-text-muted"
                     >
                       {group}
                     </th>
                   </tr>
                   {rows.map((p) => (
-                    <tr key={p.key} className={`border-t border-white/5 ${p.status === "planned" ? "opacity-70" : ""}`}>
+                    <tr key={p.key} className={`border-t border-border/50 ${p.status === "planned" ? "opacity-70" : ""}`}>
                       <th
                         scope="row"
-                        className="sticky left-0 z-10 bg-[color:var(--surface)] px-3 py-2 text-left align-top font-normal"
+                        className="sticky left-0 z-10 bg-surface px-3 py-2 text-left align-top font-normal"
                       >
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium text-white">{p.label}</span>
+                          <span className="font-medium text-text">{p.label}</span>
                           {p.sensitive ? <Badge variant="warning">Sensitive</Badge> : null}
                           {p.status === "planned" ? <Badge variant="neutral">Not used yet</Badge> : null}
                           {p.deprecated ? <Badge variant="neutral">Old</Badge> : null}
                         </span>
-                        <span className="mt-0.5 block text-xs text-white/50">{p.description}</span>
+                        <span className="mt-0.5 block text-xs text-text-muted">{p.description}</span>
                       </th>
                       {roles.map((role) => {
                         const locked = role.isProtected || isOwnerRole(role.name);
@@ -252,7 +252,7 @@ export const PermissionMatrix = ({ roles, onSaved, focusRoleId }: Props) => {
       </div>
 
       {Object.entries(errors).map(([roleId, message]) => (
-        <p key={roleId} className="text-sm text-rose-200" role="alert">
+        <p key={roleId} className="text-sm text-danger" role="alert">
           {roles.find((r) => r.id === roleId)?.name}: {message}
         </p>
       ))}
@@ -263,8 +263,8 @@ export const PermissionMatrix = ({ roles, onSaved, focusRoleId }: Props) => {
       ) : null}
 
       {changes.length > 0 ? (
-        <div className="sticky bottom-20 z-20 space-y-3 rounded-xl border border-[var(--accent)]/40 bg-[color:var(--surface)] p-4 shadow-xl lg:bottom-4">
-          <p className="text-sm text-white">
+        <div className="sticky bottom-20 z-20 space-y-3 rounded-xl border border-accent/40 bg-surface p-4 shadow-xl lg:bottom-4">
+          <p className="text-sm text-text">
             Unsaved changes:{" "}
             {changes.map((c) => `${c.role.name} (+${c.added.length} / −${c.removed.length})`).join(", ")}
           </p>

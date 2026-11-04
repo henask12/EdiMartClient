@@ -133,8 +133,8 @@ export default function StockHistoryPage() {
       header: "Product",
       render: (m) => (
         <div>
-          <p className="font-medium text-white">{m.inventoryItem.product.name}</p>
-          <p className="text-xs text-white/45">{m.inventoryItem.product.category.name}</p>
+          <p className="font-medium text-text">{m.inventoryItem.product.name}</p>
+          <p className="text-xs text-text-muted">{m.inventoryItem.product.category.name}</p>
         </div>
       ),
     },
@@ -159,12 +159,12 @@ export default function StockHistoryPage() {
       render: (m) => {
         const ctx = formatReserveContext(m);
         if (ctx) {
-          return <span className="text-xs text-white/70">{ctx}</span>;
+          return <span className="text-xs text-text-muted">{ctx}</span>;
         }
         if (m.type === "RESERVE" || m.type === "RELEASE_RESERVE") {
           const positive = Number(m.qtyDelta) >= 0;
           return (
-            <span className={`text-xs tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
+            <span className={`text-xs tabular-nums ${positive ? "text-accent" : "text-danger"}`}>
               Qty {positive ? "+" : ""}
               {m.qtyDelta}
             </span>
@@ -172,7 +172,7 @@ export default function StockHistoryPage() {
         }
         const positive = Number(m.qtyDelta) >= 0;
         return (
-          <span className={`tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
+          <span className={`tabular-nums ${positive ? "text-accent" : "text-danger"}`}>
             {positive ? "+" : ""}
             {m.qtyDelta}
           </span>
@@ -216,7 +216,7 @@ export default function StockHistoryPage() {
           setPage(1);
         }}
       />
-      {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
+      {dateError ? <p className="text-sm text-danger">{dateError}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Select
@@ -260,7 +260,7 @@ export default function StockHistoryPage() {
         }}
       />
 
-      {loading ? <p className="text-sm text-white/50">Loading…</p> : null}
+      {loading ? <p className="text-sm text-text-muted">Loading…</p> : null}
 
       <DataTable
         columns={columns}
@@ -283,14 +283,14 @@ export default function StockHistoryPage() {
           return (
             <Link
               href={`/stock-history/${m.id}`}
-              className="block rounded-xl border border-white/10 bg-[color:var(--surface)]/70 p-4 text-sm"
+              className="block rounded-xl border border-border bg-surface p-4 text-sm"
             >
-              <p className="font-medium text-white">{m.inventoryItem.product.name}</p>
-              <p className="text-xs text-white/50">
+              <p className="font-medium text-text">{m.inventoryItem.product.name}</p>
+              <p className="text-xs text-text-muted">
                 {new Date(m.createdAt).toLocaleString()} · {m.type}
               </p>
-              <p className="mt-1 tabular-nums text-white/70">{formatOnHand(m)}</p>
-              {ctx ? <p className="mt-1 text-xs text-white/55">{ctx}</p> : null}
+              <p className="mt-1 tabular-nums text-text-muted">{formatOnHand(m)}</p>
+              {ctx ? <p className="mt-1 text-xs text-text-muted">{ctx}</p> : null}
             </Link>
           );
         }}

@@ -5,7 +5,7 @@ import { PaymentMethodField } from "@/components/PaymentMethodField";
 import { PaymentProofUpload } from "@/components/PaymentProofUpload";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { formatBirr } from "@/lib/format-price";
+import { formatMoney } from "@/lib/format-money";
 import { newIdempotencyKey, shouldRotateKey } from "@/lib/idempotency";
 import type { PaymentMethod } from "@/lib/payment-methods";
 import type { MartProduct } from "./ProductCard";
@@ -144,16 +144,16 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
       }}
     >
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-surface p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="action-title" className="text-lg font-semibold text-white">
+        <h2 id="action-title" className="text-lg font-semibold text-text">
           {mode === "sell" ? "Sell" : "Reserve"} — {product.name}
         </h2>
-        <p className="mt-1 text-sm text-white/55">
-          {product.available} available · {formatBirr(product.sellingPrice)} each
+        <p className="mt-1 text-sm text-text-muted">
+          {product.available} available · {formatMoney(product.sellingPrice)} each
           {mode === "sell" && Number(quantity) > 0 ? (
-            <span className="text-white/70"> · Total {formatBirr(String(lineTotal))}</span>
+            <span className="text-text"> · Total {formatMoney(String(lineTotal))}</span>
           ) : null}
         </p>
 
@@ -192,7 +192,7 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
             />
           )}
 
-          {status ? <p className="text-sm text-rose-200">{status}</p> : null}
+          {status ? <p className="text-sm text-danger">{status}</p> : null}
 
           <div className="flex gap-3">
             <Button type="button" variant="secondary" fullWidth onClick={onClose}>

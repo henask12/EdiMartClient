@@ -2,16 +2,20 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
 import { usePermission } from "@/components/PermissionProvider";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { parseApiMessage, toastError } from "@/lib/toast";
 
 export default function NewProductPage() {
   const router = useRouter();
   const { canSeeCost } = usePermission();
+  const t = useTranslations("Products");
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -61,7 +65,8 @@ export default function NewProductPage() {
           description: description.trim() || undefined,
           originCountry: originCountry.trim() || undefined,
           initialQuantity: hasOpeningStock ? initialQuantity : undefined,
-          initialExpiryDate: hasOpeningStock && expiryDate ? expiryDate : undefined,
+          initialExpiryDate:
+            hasOpeningStock && expiryDate ? expiryDate : undefined,
           expiryDate: expiryDate || undefined,
         }),
       });
@@ -82,126 +87,121 @@ export default function NewProductPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <PageHeader
-        title="Add product"
-        description="Set up the product and opening stock in one step."
+        title={t("addProduct")}
+        description={t("addProductDesc")}
       />
-      <form onSubmit={handleSubmit} className="section-card space-y-4">
-        <CategorySelect value={categoryId} onChange={setCategoryId} allowCreate />
-        <label className="block text-sm text-white/70">
-          Product name
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Sugar 1kg"
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[var(--accent)]"
-          />
-        </label>
-        <label className="block text-sm text-white/70">
-          Listing details (optional)
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={5}
-            placeholder={"✨ Absorbs gunk in 6–8 hours\n✨ Suitable for sensitive skin\n1 pack · 12 pcs"}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--accent)]"
-          />
-        </label>
-        <label className="block text-sm text-white/70">
-          Origin (optional)
-          <input
-            value={originCountry}
-            onChange={(e) => setOriginCountry(e.target.value)}
-            placeholder="e.g. USA 🇺🇸"
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white outline-none focus:border-[var(--accent)]"
-          />
-        </label>
-        <label className="block text-sm text-white/70">
-          Photo (optional)
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-            className="mt-2 w-full text-sm text-white/70"
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm text-white/70">
-            Sell price
-            <input
-              required
-              value={sellingPrice}
-              onChange={(e) => setSellingPrice(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Card>
+          <div className="space-y-4">
+            <CategorySelect
+              value={categoryId}
+              onChange={setCategoryId}
+              allowCreate
             />
-          </label>
-          {canSeeCost ? (
-            <label className="block text-sm text-white/70">
-              Cost each
-              <input
-                value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+            <Input
+              required
+              label={t("productName")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Sugar 1kg"
+            />
+            <label className="block text-sm text-text-muted">
+              {t("listingDetails")}
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={5}
+                placeholder={
+                  "✨ Absorbs gunk in 6–8 hours\n✨ Suitable for sensitive skin\n1 pack · 12 pcs"
+                }
+                className="mt-2 w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm text-text outline-none focus:border-primary"
               />
             </label>
-          ) : null}
-        </div>
+            <Input
+              label={t("origin")}
+              value={originCountry}
+              onChange={(e) => setOriginCountry(e.target.value)}
+              placeholder="e.g. USA 🇺🇸"
+            />
+            <label className="block text-sm text-text-muted">
+              {t("photo")}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                className="mt-2 w-full text-sm text-text-muted"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                required
+                label={t("sellPrice")}
+                value={sellingPrice}
+                onChange={(e) => setSellingPrice(e.target.value)}
+              />
+              {canSeeCost ? (
+                <Input
+                  label={t("costEach")}
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                />
+              ) : null}
+            </div>
+          </div>
+        </Card>
 
-        <section className="rounded-xl border border-[var(--brand-yellow)]/20 bg-[var(--brand-yellow)]/5 p-4">
-          <h2 className="text-sm font-semibold text-[var(--accent)]">Opening stock</h2>
-          <p className="mt-1 text-xs text-white/50">Recorded in stock history automatically.</p>
+        <div className="rounded-xl border border-accent/20 bg-accent/5 p-4">
+          <h2 className="text-sm font-semibold text-accent">
+            {t("openingStock")}
+          </h2>
+          <p className="mt-1 text-xs text-text-muted">
+            {t("openingStockDesc")}
+          </p>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <label className="block text-sm text-white/70">
-              Quantity
-              <input
-                type="number"
-                min={0}
-                step="any"
-                value={initialQuantity}
-                onChange={(e) => setInitialQuantity(e.target.value)}
-                placeholder="0"
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-              />
-            </label>
+            <Input
+              type="number"
+              min={0}
+              step="any"
+              label={t("quantity")}
+              value={initialQuantity}
+              onChange={(e) => setInitialQuantity(e.target.value)}
+              placeholder="0"
+            />
             <DateInput
-              label="Expiry (optional)"
+              label={t("expiryOptional")}
               value={expiryDate}
               onChange={setExpiryDate}
               required={false}
             />
           </div>
-        </section>
+        </div>
 
-        <section className="rounded-xl border border-white/10 bg-black/20 p-4">
-          <h2 className="text-sm font-semibold text-white/80">Restock alerts</h2>
+        <div className="rounded-xl border border-border bg-surface-muted p-4">
+          <h2 className="text-sm font-semibold text-text">
+            {t("restockAlerts")}
+          </h2>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <label className="block text-sm text-white/70">
-              Alert when below
-              <input
-                type="number"
-                min={0}
-                required
-                value={restockAt}
-                onChange={(e) => setRestockAt(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-              />
-            </label>
-            <label className="block text-sm text-white/70">
-              Suggested reorder qty
-              <input
-                type="number"
-                min={0}
-                required
-                value={restockQty}
-                onChange={(e) => setRestockQty(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
-              />
-            </label>
+            <Input
+              type="number"
+              min={0}
+              required
+              label={t("alertWhenBelow")}
+              value={restockAt}
+              onChange={(e) => setRestockAt(e.target.value)}
+            />
+            <Input
+              type="number"
+              min={0}
+              required
+              label={t("suggestedReorder")}
+              value={restockQty}
+              onChange={(e) => setRestockQty(e.target.value)}
+            />
           </div>
-        </section>
+        </div>
 
         <Button type="submit" disabled={loading || !categoryId} fullWidth>
-          {loading ? "Saving…" : "Save product & stock"}
+          {loading ? t("saving") : t("saveProduct")}
         </Button>
       </form>
     </div>

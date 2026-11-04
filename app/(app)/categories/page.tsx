@@ -109,7 +109,7 @@ export default function CategoriesPage() {
             aria-label="Category name"
           />
         ) : (
-          <span className="font-medium text-white">{c.name}</span>
+          <span className="font-medium text-text">{c.name}</span>
         ),
     },
     {
@@ -120,7 +120,7 @@ export default function CategoriesPage() {
         <button
           type="button"
           onClick={() => setViewCategory(c)}
-          className="tap text-[var(--accent-2)] underline-offset-2 hover:underline"
+          className="tap text-primary underline-offset-2 hover:underline"
           disabled={c._count.products === 0}
         >
           {c._count.products}
@@ -194,7 +194,7 @@ export default function CategoriesPage() {
 
       <form
         onSubmit={(e) => void handleCreate(e)}
-        className="section-card flex flex-col gap-3 sm:flex-row sm:items-end"
+        className="rounded-xl border border-border bg-surface p-5 shadow-sm flex flex-col gap-3 sm:flex-row sm:items-end"
       >
         <Input
           required

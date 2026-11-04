@@ -61,11 +61,11 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--brand-yellow)]/20 bg-[color:var(--surface)] p-6 shadow-xl"
+        className="w-full max-w-md rounded-xl border border-accent/20 bg-surface p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-white">Restock — {product.name}</h2>
-        <p className="mt-1 text-sm text-white/55">
+        <h2 className="text-lg font-semibold text-text">Restock — {product.name}</h2>
+        <p className="mt-1 text-sm text-text-muted">
           {product.onHand} on hand · alert below {product.restockAt}
           {product.restockQty ? ` · suggest +${product.restockQty}` : ""}
         </p>
@@ -85,7 +85,7 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
             <button
               type="button"
               onClick={() => setQuantity(String(product.restockQty))}
-              className="text-xs font-semibold text-[var(--accent)]"
+              className="text-xs font-semibold text-accent"
             >
               Use suggested reorder ({product.restockQty})
             </button>
@@ -105,7 +105,7 @@ export const RestockModal = ({ product, onClose, onSuccess }: Props) => {
             onChange={setExpiryDate}
             required={false}
           />
-          {status ? <p className="text-sm text-rose-200">{status}</p> : null}
+          {status ? <p className="text-sm text-danger">{status}</p> : null}
           <div className="flex gap-3">
             <Button type="button" variant="secondary" fullWidth onClick={onClose}>
               Cancel

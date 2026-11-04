@@ -32,19 +32,21 @@ export const ExportMenu = ({ basePath, queryParams = {} }: Props) => {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-white/45">Export</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+        Export
+      </span>
       {(["csv", "xlsx", "pdf"] as const).map((fmt) => (
         <button
           key={fmt}
           type="button"
           disabled={busy}
           onClick={() => void handleExport(fmt)}
-          className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase text-white/80 disabled:opacity-50"
+          className="rounded-full border border-border bg-surface-muted px-3 py-1.5 text-xs font-semibold uppercase text-text-muted disabled:opacity-50"
         >
           {fmt}
         </button>
       ))}
-      {error ? <span className="text-xs text-rose-200">{error}</span> : null}
+      {error ? <span className="text-xs text-danger">{error}</span> : null}
     </div>
   );
 };

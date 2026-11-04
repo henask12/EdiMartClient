@@ -143,9 +143,9 @@ export default function ProductsPage() {
         exportParams={exportParams}
       />
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <p className="text-xs text-white/45">
+      <p className="text-xs text-text-muted">
         {total} product{total === 1 ? "" : "s"}
       </p>
 
@@ -165,7 +165,7 @@ export default function ProductsPage() {
       </div>
 
       {items.length === 0 && !error ? (
-        <p className="text-center text-sm text-white/50">No products match your filters.</p>
+        <p className="text-center text-sm text-text-muted">No products match your filters.</p>
       ) : null}
 
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">

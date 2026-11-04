@@ -1,11 +1,13 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const apiUrl =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.PUBLIC_API_URL ??
   "http://127.0.0.1:4000";
 
-// Optional: public base URL of the image bucket/CDN when the API uses STORAGE_DRIVER=s3.
 const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
 const imageHostPattern = (() => {
   try {
@@ -64,4 +66,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

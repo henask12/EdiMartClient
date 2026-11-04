@@ -1,130 +1,132 @@
 @import "tailwindcss";
 
-/* Edi's Collection — golden yellow + charcoal */
-:root {
-  --brand-yellow: oklch(0.84 0.17 95);
-  --brand-yellow-dim: oklch(0.72 0.14 95);
-  --brand-charcoal: oklch(0.34 0.012 260);
-  --brand-charcoal-deep: oklch(0.2 0.01 260);
+/*
+ * EdiMart design tokens — Phase 2
+ * "Calm boutique, cash-register fast, stockroom precise."
+ *
+ * Components use ONLY semantic tokens (bg-surface, text-primary, etc.).
+ * No raw hex values or arbitrary color classes in components.
+ */
 
-  --surface: oklch(0.26 0.012 260);
-  --surface-2: oklch(0.3 0.012 260);
-  --accent: var(--brand-yellow);
-  --accent-2: var(--brand-yellow-dim);
-  --text-on-accent: oklch(0.22 0.02 260);
-  --danger: oklch(0.58 0.2 25);
+/* ── Tailwind theme: register semantic colors as first-class utilities ── */
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
 
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-full: 9999px;
-  --control-h: 2.75rem;
-  --space-page: 1.5rem;
+  --font-sans: var(--font-inter), "Noto Sans Ethiopic", system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Fira Code", monospace;
 }
 
+/* ── Light theme (default) ── */
+:root {
+  --bg: #F7F6F3;
+  --surface: #FFFFFF;
+  --surface-muted: #F1EFEA;
+  --border: #E4E1DA;
+  --border-strong: #CFCAC0;
+  --text: #1C1B19;
+  --text-muted: #6B675F;
+  --primary: #0F6B5F;
+  --primary-hover: #0B5A50;
+  --primary-fg: #FFFFFF;
+  --primary-soft: #E3F1EE;
+  --accent: #D9922E;
+  --accent-fg: #FFFFFF;
+  --success: #1E8E4E;
+  --success-soft: #E4F4EA;
+  --warning: #B86E0A;
+  --warning-soft: #FCF1DC;
+  --danger: #C8372D;
+  --danger-soft: #FBE6E4;
+  --info: #2F6FD6;
+  --info-soft: #E5EEFB;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.1);
+}
+
+/* ── Dark theme ── */
+.dark {
+  --bg: #0E1110;
+  --surface: #161A19;
+  --surface-muted: #1D2221;
+  --border: #2A302E;
+  --border-strong: #3A4240;
+  --text: #ECEDEA;
+  --text-muted: #A3A8A4;
+  --primary: #3FB3A2;
+  --primary-hover: #5CC4B4;
+  --primary-fg: #06231F;
+  --primary-soft: #12302B;
+  --accent: #F0B25A;
+  --accent-fg: #1A1200;
+  --success: #3DBB74;
+  --success-soft: #123222;
+  --warning: #E3A13B;
+  --warning-soft: #33260F;
+  --danger: #EF6B60;
+  --danger-soft: #3A1A17;
+  --info: #6C9CF0;
+  --info-soft: #16233A;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.4);
+}
+
+/* ── Base ── */
 @layer base {
   * {
-    @apply border-white/10;
+    @apply border-border;
   }
+
+  body {
+    @apply bg-bg text-text antialiased;
+    font-variant-numeric: normal;
+  }
+
   a {
-    @apply text-[var(--accent)] underline-offset-4 hover:underline;
+    @apply text-primary underline-offset-4 hover:underline;
+  }
+
+  /* Tabular figures for money and quantities */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
 
+/* ── Utilities ── */
 @layer utilities {
   .tap {
     @apply min-h-11 min-w-11;
   }
 
-  .app-bg {
-    background-color: var(--brand-charcoal-deep);
-    background-image:
-      radial-gradient(1100px 520px at 12% -8%, oklch(0.55 0.14 95 / 0.28), transparent),
-      radial-gradient(800px 420px at 92% 0%, oklch(0.38 0.02 260 / 0.5), transparent);
+  .tap-pos {
+    @apply min-h-14 min-w-14;
   }
 
   .focus-ring {
-    @apply outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--brand-charcoal-deep)];
-  }
-
-  .btn {
-    @apply inline-flex h-[var(--control-h)] items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--brand-charcoal-deep)];
-  }
-
-  .btn-sm {
-    @apply h-9 px-3 text-xs;
-  }
-
-  .btn-icon {
-    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--brand-charcoal-deep)];
-  }
-
-  .btn-primary {
-    @apply bg-[color:var(--accent)] text-[color:var(--text-on-accent)] hover:brightness-110;
-  }
-
-  .btn-secondary {
-    @apply border border-white/15 bg-white/5 text-white hover:bg-white/10;
-  }
-
-  .btn-ghost {
-    @apply text-white/80 hover:bg-white/5 hover:text-white;
-  }
-
-  .btn-danger {
-    @apply border border-rose-500/35 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25;
-  }
-
-  .input {
-    @apply h-[var(--control-h)] w-full rounded-[var(--radius-md)] border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30;
-  }
-
-  .select {
-    @apply h-[var(--control-h)] w-full rounded-[var(--radius-md)] border border-white/15 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-[var(--accent)]/60 focus:ring-1 focus:ring-[var(--accent)]/30;
-  }
-
-  .label {
-    @apply block text-sm font-medium text-white/70;
-  }
-
-  .badge {
-    @apply inline-flex items-center rounded-[var(--radius-full)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide;
-  }
-
-  .badge-success {
-    @apply bg-emerald-500/20 text-emerald-200;
-  }
-
-  .badge-warning {
-    @apply bg-amber-500/20 text-amber-200;
-  }
-
-  .badge-danger {
-    @apply bg-rose-500/20 text-rose-200;
-  }
-
-  .badge-neutral {
-    @apply bg-white/10 text-white/55;
-  }
-
-  .card-surface {
-    @apply rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)]/90;
-  }
-
-  .section-card {
-    @apply rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)]/90 p-5;
-  }
-
-  .page-header {
-    @apply space-y-1;
-  }
-
-  .page-title {
-    @apply text-2xl font-semibold tracking-tight text-white;
-  }
-
-  .page-subtitle {
-    @apply text-sm text-white/60;
+    @apply outline-none ring-offset-bg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2;
   }
 
   .pb-safe {

@@ -163,7 +163,7 @@ export default function ReservationsPage() {
         />
       </ActionGroup>
     ) : (
-      <span className="text-xs text-white/40">—</span>
+      <span className="text-xs text-text-muted">—</span>
     );
 
   const columns: DataTableColumn<Reservation>[] = [
@@ -172,8 +172,8 @@ export default function ReservationsPage() {
       header: "Product",
       render: (r) => (
         <div>
-          <p className="font-medium text-white">{r.product.name}</p>
-          <p className="text-xs text-white/45">{r.product.category.name}</p>
+          <p className="font-medium text-text">{r.product.name}</p>
+          <p className="text-xs text-text-muted">{r.product.category.name}</p>
         </div>
       ),
     },
@@ -198,10 +198,10 @@ export default function ReservationsPage() {
               setPage(1);
             }}
             className={cn(
-              "rounded-[var(--radius-full)] px-4 py-2 text-xs font-semibold transition focus-ring",
+              "rounded-full px-4 py-2 text-xs font-semibold transition focus-ring",
               status === s
-                ? "bg-[var(--brand-yellow)]/20 text-[var(--accent)]"
-                : "bg-white/5 text-white/60 hover:bg-white/10",
+                ? "bg-accent/20 text-accent"
+                : "bg-surface-muted text-text-muted hover:bg-surface-muted/80",
             )}
           >
             {s.charAt(0) + s.slice(1).toLowerCase()}
@@ -219,8 +219,8 @@ export default function ReservationsPage() {
           <div className="space-y-3 text-sm">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-medium text-white">{r.product.name}</p>
-                <p className="text-xs text-white/50">
+                <p className="font-medium text-text">{r.product.name}</p>
+                <p className="text-xs text-text-muted">
                   Qty {r.quantity}
                   {r.customerName ? ` · ${r.customerName}` : ""}
                 </p>
@@ -235,17 +235,17 @@ export default function ReservationsPage() {
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
 
       {editTarget ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
           <div
-            className="w-full max-w-md rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
+            className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-reservation-title"
           >
-            <h2 id="edit-reservation-title" className="text-lg font-semibold text-white">
+            <h2 id="edit-reservation-title" className="text-lg font-semibold text-text">
               Edit reservation
             </h2>
-            <p className="mt-1 text-sm text-white/55">{editTarget.product.name}</p>
+            <p className="mt-1 text-sm text-text-muted">{editTarget.product.name}</p>
 
             <div className="mt-4 space-y-3">
               <Input

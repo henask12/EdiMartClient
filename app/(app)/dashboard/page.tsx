@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { usePermission } from "@/components/PermissionProvider";
 import { SalesPeriodModal } from "@/components/SalesPeriodModal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Card, StatCard } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { formatBirr } from "@/lib/format-price";
+import { SkeletonCard } from "@/components/ui/Skeleton";
+import { formatMoney } from "@/lib/format-money";
 import { toastError } from "@/lib/toast";
 import type { PeriodKey } from "@/lib/period-bounds";
 import { requirementForPath } from "@/lib/permissions";
@@ -15,7 +18,6 @@ import { requirementForPath } from "@/lib/permissions";
 type PeriodSummary = {
   grandTotal: string;
   saleCount: number;
-  /** Only sent to people allowed to see profit. */
   netProfit?: string;
 };
 
@@ -57,17 +59,18 @@ type Dashboard = {
 
 const PERIOD_CARDS: {
   key: PeriodKey;
-  label: string;
+  labelKey: string;
   dataKey: keyof Pick<Dashboard, "today" | "week" | "month" | "year">;
 }[] = [
-  { key: "today", label: "Today", dataKey: "today" },
-  { key: "week", label: "This week", dataKey: "week" },
-  { key: "month", label: "This month", dataKey: "month" },
-  { key: "year", label: "This year", dataKey: "year" },
+  { key: "today", labelKey: "today", dataKey: "today" },
+  { key: "week", labelKey: "thisWeek", dataKey: "week" },
+  { key: "month", labelKey: "thisMonth", dataKey: "month" },
+  { key: "year", labelKey: "thisYear", dataKey: "year" },
 ];
 
 export default function DashboardPage() {
   const { can, canAny, meets, me } = usePermission();
+  const t = useTranslations("Dashboard");
   const canReport = can("REPORTING_VIEW");
   const canDrill = canAny("SALES_VIEW", "SALES_VIEW_OWN", "SALES_VIEW_ALL");
   const [data, setData] = useState<Dashboard | null>(null);
@@ -82,7 +85,9 @@ export default function DashboardPage() {
     if (!canReport) return;
     const load = async () => {
       try {
-        const res = await fetch("/api/proxy/reporting/dashboard", { cache: "no-store" });
+        const res = await fetch("/api/proxy/reporting/dashboard", {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Failed to load dashboard");
         setData((await res.json()) as Dashboard);
       } catch (e) {
@@ -93,30 +98,32 @@ export default function DashboardPage() {
   }, [canReport]);
 
   if (!canReport) {
-    // no reports for this role: a simple start page with the places they can go
     const places = [
-      { href: "/sell", label: "Record a sale" },
+      { href: "/sell", label: t("recordSale") },
       { href: "/products", label: "Products" },
       { href: "/sales", label: "Sales" },
       { href: "/reservations", label: "Reservations" },
-      { href: "/add-stock", label: "Stocks" },
+      { href: "/add-stock", label: t("stocks") },
       { href: "/expiry", label: "Expiry" },
       { href: "/stock-history", label: "Stock history" },
     ].filter((p) => meets(requirementForPath(p.href)));
+
     return (
       <div className="space-y-6">
         <PageHeader
-          title={`Welcome, ${me.displayName ?? me.email}`}
-          description="Pick what you want to do."
+          title={t("welcome", { name: me.displayName ?? me.email })}
+          description={t("pickAction")}
         />
         {places.length === 0 ? (
-          <p className="text-sm text-white/60">
-            Your role does not have access to any pages yet. Ask the shop owner to set it up.
-          </p>
+          <p className="text-sm text-text-muted">{t("noAccess")}</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {places.map((p) => (
-              <Link key={p.href} href={p.href} className="tap card-surface block p-5 text-lg font-semibold text-white">
+              <Link
+                key={p.href}
+                href={p.href}
+                className="tap block rounded-xl border border-border bg-surface p-5 text-lg font-semibold text-text shadow-sm transition hover:border-primary/30 hover:shadow-md"
+              >
                 {p.label}
               </Link>
             ))}
@@ -127,29 +134,34 @@ export default function DashboardPage() {
   }
 
   if (!data) {
-    return <p className="text-sm text-white/60">Loading…</p>;
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t("title")} description={t("description")} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
-        description="Sales, restock alerts, expiring batches, and reservations."
+        title={t("title")}
+        description={t("description")}
         actions={
           <>
             {can("SALES_CREATE") ? (
-              <Link href="/sell">
-                <Button type="button" size="sm">
-                  Record sale
-                </Button>
-              </Link>
+              <Button asChild size="sm">
+                <Link href="/sell">{t("recordSale")}</Link>
+              </Button>
             ) : null}
             {can("STOCK_RECEIVE") ? (
-              <Link href="/add-stock">
-                <Button type="button" variant="secondary" size="sm">
-                  Stocks
-                </Button>
-              </Link>
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/add-stock">{t("stocks")}</Link>
+              </Button>
             ) : null}
           </>
         }
@@ -159,111 +171,110 @@ export default function DashboardPage() {
         {PERIOD_CARDS.map((p) => {
           const summary = data[p.dataKey];
           return (
-            <button
+            <StatCard
               key={p.key}
-              type="button"
-              onClick={() =>
-                setPeriodModal({
-                  period: p.key,
-                  total: summary.grandTotal,
-                  netProfit: summary.netProfit,
-                  count: summary.saleCount,
-                })
+              label={t(p.labelKey)}
+              value={formatMoney(summary.grandTotal)}
+              detail={`${summary.saleCount} sales`}
+              onClick={
+                canDrill
+                  ? () =>
+                      setPeriodModal({
+                        period: p.key,
+                        total: summary.grandTotal,
+                        netProfit: summary.netProfit,
+                        count: summary.saleCount,
+                      })
+                  : undefined
               }
-              disabled={!canDrill}
-              className="tap card-surface relative p-5 text-left transition enabled:hover:border-[var(--brand-yellow)]/30 disabled:cursor-default"
-              aria-label={canDrill ? `View ${p.label} sales details` : `${p.label} sales`}
-            >
-              <div className="text-xs font-semibold uppercase tracking-wide text-white/45">
-                {p.label}
-              </div>
-              <div className="mt-2 text-2xl font-semibold tabular-nums text-white">
-                {formatBirr(summary.grandTotal)}
-              </div>
-              <p className="mt-1 text-sm text-white/55">{summary.saleCount} sales</p>
-              {canDrill ? <p className="mt-2 text-xs text-[var(--accent-2)]">View details →</p> : null}
-              {summary.netProfit !== undefined ? (
-                <p className="absolute bottom-4 right-4 text-[10px] tabular-nums text-white/45">
-                  Profit {formatBirr(summary.netProfit)}
-                </p>
-              ) : null}
-            </button>
+            />
           );
         })}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="section-card">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
-            Restock soon ({data.needsRestock.length})
+        <Card>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+            {t("restockSoon", { count: data.needsRestock.length })}
           </h2>
           {data.needsRestock.length === 0 ? (
-            <p className="mt-4 text-sm text-white/50">All products above alert level.</p>
+            <p className="mt-4 text-sm text-text-muted">{t("allAboveAlert")}</p>
           ) : (
             <ul className="mt-4 space-y-2">
               {data.needsRestock.map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between rounded-[var(--radius-md)] border border-white/10 bg-black/20 px-4 py-3 text-sm"
+                  className="flex items-center justify-between rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm"
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-white">{item.name}</span>
-                    <Badge variant={item.status === "OUT" ? "danger" : "warning"}>
+                    <span className="font-medium text-text">{item.name}</span>
+                    <Badge
+                      variant={item.status === "OUT" ? "danger" : "warning"}
+                    >
                       {item.status === "OUT" ? "OUT of Stock" : "Low"}
                     </Badge>
                   </div>
-                  <span className="text-white/55">
-                    {item.available} avail · reorder {item.restockQty}
+                  <span className="text-text-muted">
+                    {item.available} {t("available")} · {t("reorder")}{" "}
+                    {item.restockQty}
                   </span>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </Card>
 
-        <section className="section-card">
+        <Card>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
-              Expiring soon ({data.expiringSoon.length})
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+              {t("expiringSoon", { count: data.expiringSoon.length })}
             </h2>
-            <Link href="/expiry" className="text-xs font-semibold text-[var(--accent-2)]">
-              View all
+            <Link href="/expiry" className="text-xs font-semibold text-primary">
+              {/* View all */}
             </Link>
           </div>
           {data.expiringSoon.length === 0 ? (
-            <p className="mt-4 text-sm text-white/50">No batches expiring soon.</p>
+            <p className="mt-4 text-sm text-text-muted">
+              {t("noBatchesExpiring")}
+            </p>
           ) : (
             <ul className="mt-4 space-y-2">
               {data.expiringSoon.map((b) => (
                 <li
                   key={b.id}
-                  className="rounded-[var(--radius-md)] border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/80"
+                  className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-text"
                 >
-                  {b.productName} · {b.qtyRemaining} left · {b.expiryDate ?? "—"}
+                  {b.productName} · {b.qtyRemaining} {t("left")} ·{" "}
+                  {b.expiryDate ?? "—"}
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </Card>
       </div>
 
-      <section className="section-card">
+      <Card>
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">
-            Open reservations ({data.openReservations.length})
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+            {t("openReservations", {
+              count: data.openReservations.length,
+            })}
           </h2>
-          <Link href="/reservations" className="text-xs font-semibold text-[var(--accent-2)]">
-            View all
+          <Link
+            href="/reservations"
+            className="text-xs font-semibold text-primary"
+          >
+            {/* View all */}
           </Link>
         </div>
         {data.openReservations.length === 0 ? (
-          <p className="mt-4 text-sm text-white/50">No active reservations.</p>
+          <p className="mt-4 text-sm text-text-muted">{t("noReservations")}</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {data.openReservations.map((r) => (
               <li
                 key={r.id}
-                className="rounded-[var(--radius-md)] border border-white/10 bg-black/20 px-4 py-3 text-sm text-white"
+                className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-text"
               >
                 {r.productName} · qty {r.quantity}
                 {r.customerName ? ` · ${r.customerName}` : ""}
@@ -271,9 +282,11 @@ export default function DashboardPage() {
             ))}
           </ul>
         )}
-      </section>
+      </Card>
 
-      <p className="text-sm text-white/45">{data.productCount} products tracked</p>
+      <p className="text-sm text-text-muted">
+        {t("productsTracked", { count: data.productCount })}
+      </p>
 
       {periodModal ? (
         <SalesPeriodModal

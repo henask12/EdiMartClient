@@ -19,7 +19,7 @@ import { dedupeCategories } from "@/lib/dedupe-categories";
 import { History, Pencil, Plus, Trash2 } from "@/lib/icons";
 import { usePermission } from "@/components/PermissionProvider";
 import { canDeactivateProduct } from "@/lib/product-permissions";
-import { formatBirr } from "@/lib/format-price";
+import { formatMoney } from "@/lib/format-money";
 
 type Category = { id: string; name: string };
 type StockRow = {
@@ -119,8 +119,8 @@ export default function AddStockPage() {
       header: "Product",
       render: (row) => (
         <div>
-          <p className="font-medium text-white">{row.name}</p>
-          <p className="text-xs text-white/45">
+          <p className="font-medium text-text">{row.name}</p>
+          <p className="text-xs text-text-muted">
             {row.productType?.name ?? "—"} · {row.category.name}
           </p>
         </div>
@@ -144,7 +144,7 @@ export default function AddStockPage() {
             key: "cost",
             header: "Cost",
             className: "tabular-nums",
-            render: (row: StockRow) => formatBirr(row.costPrice ?? "0"),
+            render: (row: StockRow) => formatMoney(row.costPrice ?? "0"),
           },
         ]
       : []),
@@ -152,7 +152,7 @@ export default function AddStockPage() {
       key: "price",
       header: "Sell",
       className: "tabular-nums",
-      render: (row) => formatBirr(row.sellingPrice),
+      render: (row) => formatMoney(row.sellingPrice),
     },
     {
       key: "status",
@@ -245,8 +245,8 @@ export default function AddStockPage() {
           <div className="space-y-3 text-sm">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-medium text-white">{row.name}</p>
-                <p className="text-xs text-white/50">
+                <p className="font-medium text-text">{row.name}</p>
+                <p className="text-xs text-text-muted">
                   {row.category.name} · On hand {row.onHand}
                 </p>
               </div>

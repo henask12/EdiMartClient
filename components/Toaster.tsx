@@ -9,11 +9,11 @@ export const Toaster = () => (
     closeButton
     toastOptions={{
       classNames: {
-        toast: "border border-white/10 bg-[color:var(--surface)] text-white shadow-lg",
-        title: "text-white",
-        description: "text-white/70",
-        success: "border-[var(--brand-yellow)]/30",
-        error: "border-rose-500/40",
+        toast: "border border-border bg-surface text-text shadow-lg",
+        title: "text-text",
+        description: "text-text-muted",
+        success: "border-success/30",
+        error: "border-danger/40",
       },
     }}
   />

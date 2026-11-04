@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { FormEvent, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { PaymentMethodField } from "@/components/PaymentMethodField";
 import { ProductSelect, type ProductOption } from "@/components/ProductSelect";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { newIdempotencyKey, shouldRotateKey } from "@/lib/idempotency";
@@ -19,6 +21,7 @@ type CartLine = {
 };
 
 export default function SellPage() {
+  const t = useTranslations("Sell");
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [lines, setLines] = useState<CartLine[]>([]);
@@ -30,7 +33,6 @@ export default function SellPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [paymentReference, setPaymentReference] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  // One key per sale attempt: a retry after a dropped connection must not sell twice.
   const attemptKey = useRef(newIdempotencyKey());
 
   const total = useMemo(
@@ -45,7 +47,10 @@ export default function SellPage() {
       for (const file of Array.from(files)) {
         const fd = new FormData();
         fd.append("file", file);
-        const res = await fetch("/api/proxy/uploads/sale-proof", { method: "POST", body: fd });
+        const res = await fetch("/api/proxy/uploads/sale-proof", {
+          method: "POST",
+          body: fd,
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           toastError(parseApiMessage(data, "Proof upload failed"));
@@ -63,7 +68,7 @@ export default function SellPage() {
 
   const handleAddLine = async () => {
     if (!productId) {
-      toastError("Choose a product");
+      toastError(t("chooseProduct"));
       return;
     }
     const qty = Number(quantity);
@@ -73,7 +78,9 @@ export default function SellPage() {
     }
     let list = products;
     if (!list.length) {
-      const res = await fetch("/api/proxy/products?take=200", { cache: "no-store" });
+      const res = await fetch("/api/proxy/products?take=200", {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = (await res.json()) as { items: ProductOption[] };
         list = data.items;
@@ -90,10 +97,15 @@ export default function SellPage() {
       const existing = prev.find((l) => l.productId === productId);
       if (existing) {
         return prev.map((l) =>
-          l.productId === productId ? { ...l, quantity: l.quantity + qty } : l,
+          l.productId === productId
+            ? { ...l, quantity: l.quantity + qty }
+            : l,
         );
       }
-      return [...prev, { productId, name: product.name, unitPrice: price, quantity: qty }];
+      return [
+        ...prev,
+        { productId, name: product.name, unitPrice: price, quantity: qty },
+      ];
     });
     setProductId("");
     setQuantity("1");
@@ -127,23 +139,23 @@ export default function SellPage() {
         }),
       });
     } catch {
-      // Outcome unknown: keep the same key so pressing the button again cannot double-sell.
-      toastError("No connection. Check the sales list, then press Record sale again.");
+      toastError(t("noConnection"));
       setSubmitting(false);
       return;
     }
     const data = await res.json().catch(() => ({}));
     setSubmitting(false);
     if (!res.ok) {
-      if (shouldRotateKey(res.status)) attemptKey.current = newIdempotencyKey();
-      toastError(parseApiMessage(data, "Could not record sale"));
+      if (shouldRotateKey(res.status))
+        attemptKey.current = newIdempotencyKey();
+      toastError(parseApiMessage(data, t("couldNotRecord")));
       return;
     }
     attemptKey.current = newIdempotencyKey();
     setPaymentMethod("CASH");
     setPaymentReference("");
-    toastSuccess("Sale recorded");
-    setReceipt((data.digitalReceipt as string) ?? "Sale recorded");
+    toastSuccess(t("saleRecorded"));
+    setReceipt((data.digitalReceipt as string) ?? t("saleRecorded"));
     setLines([]);
     setProofPaths([]);
     setProofPreviews([]);
@@ -151,28 +163,33 @@ export default function SellPage() {
 
   return (
     <section className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        title="Sell"
-        description="Record a sale and attach payment proof screenshots."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
 
-      <section className="section-card space-y-4">
-        <ProductSelect value={productId} onChange={setProductId} />
-        <Input
-          type="number"
-          min={1}
-          step="1"
-          label="Quantity sold"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-        />
-        <Button type="button" variant="secondary" fullWidth onClick={() => void handleAddLine()}>
-          Add to sale
-        </Button>
-      </section>
+      <Card>
+        <div className="space-y-4">
+          <ProductSelect value={productId} onChange={setProductId} />
+          <Input
+            type="number"
+            min={1}
+            step="1"
+            label={t("quantitySold")}
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => void handleAddLine()}
+          >
+            {t("addToSale")}
+          </Button>
+        </div>
+      </Card>
 
-      <section className="section-card space-y-3">
-        <h2 className="text-sm font-semibold text-white/80">Payment proof (optional)</h2>
+      <Card>
+        <h2 className="text-sm font-semibold text-text-muted">
+          {t("paymentProof")}
+        </h2>
         <input
           type="file"
           accept="image/*"
@@ -180,29 +197,40 @@ export default function SellPage() {
           multiple
           disabled={uploading}
           onChange={(e) => void handleProofUpload(e.target.files)}
-          className="w-full text-sm text-white/70"
+          className="mt-3 w-full text-sm text-text-muted"
         />
         {proofPreviews.length > 0 ? (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="mt-3 flex flex-wrap gap-2">
             {proofPreviews.map((url) => (
               <li
                 key={url}
-                className="relative h-16 w-16 overflow-hidden rounded-[var(--radius-md)] border border-white/10"
+                className="relative size-16 overflow-hidden rounded-lg border border-border"
               >
-                <Image src={url} alt="Payment proof" fill className="object-cover" unoptimized />
+                <Image
+                  src={url}
+                  alt="Payment proof"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
               </li>
             ))}
           </ul>
         ) : null}
-      </section>
+      </Card>
 
       {lines.length > 0 ? (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <section className="section-card">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-white/60">This sale</h2>
+          <Card>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+              {t("thisSale")}
+            </h2>
             <ul className="mt-4 space-y-3">
               {lines.map((l) => (
-                <li key={l.productId} className="flex items-center justify-between text-sm text-white">
+                <li
+                  key={l.productId}
+                  className="flex items-center justify-between text-sm text-text"
+                >
                   <span>
                     {l.name} × {l.quantity}
                   </span>
@@ -212,30 +240,36 @@ export default function SellPage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-4 flex justify-between border-t border-white/10 pt-4 text-lg font-semibold text-white">
-              <span>Total</span>
+            <div className="mt-4 flex justify-between border-t border-border pt-4 text-lg font-semibold text-text">
+              <span>{t("total")}</span>
               <span className="tabular-nums">{total.toFixed(2)}</span>
             </div>
-          </section>
-          <section className="section-card">
+          </Card>
+
+          <Card>
             <PaymentMethodField
               method={paymentMethod}
               onMethodChange={setPaymentMethod}
               reference={paymentReference}
               onReferenceChange={setPaymentReference}
             />
-          </section>
+          </Card>
+
           <Button type="submit" fullWidth disabled={submitting}>
-            {submitting ? "Recording…" : "Record sale"}
+            {submitting ? t("recording") : t("recordSale")}
           </Button>
         </form>
       ) : null}
 
       {receipt ? (
-        <section className="section-card">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-white/45">Receipt</h2>
-          <pre className="mt-3 whitespace-pre-wrap text-xs text-white/80">{receipt}</pre>
-        </section>
+        <Card>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+            {t("receipt")}
+          </h2>
+          <pre className="mt-3 whitespace-pre-wrap text-xs text-text">
+            {receipt}
+          </pre>
+        </Card>
       ) : null}
     </section>
   );

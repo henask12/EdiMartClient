@@ -14,7 +14,7 @@ export const PageSizeSelect = ({
   options = [12, 24, 48],
 }: Props) => (
   <div className="flex items-center gap-2">
-    <span className="text-xs text-white/55">Per page</span>
+    <span className="text-xs text-text-muted">Per page</span>
     <Select
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}

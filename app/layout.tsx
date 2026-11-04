@@ -1,21 +1,27 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Noto_Sans_Ethiopic } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/Toaster";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const notoEthiopic = Noto_Sans_Ethiopic({
+  subsets: ["ethiopic"],
+  variable: "--font-noto-ethiopic",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Edi's Collection",
-  description: "Inventory, stock, and sales for Edi's Collection mart",
+  description: "Inventory, stock, and sales for Edi's Collection",
   icons: { icon: "/logo.png", apple: "/logo.png" },
 };
 
@@ -25,19 +31,28 @@ export const viewport = {
   viewportFit: "cover" as const,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang={locale} className="h-full" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} app-bg min-h-full text-[oklch(0.96_0.01_95)] antialiased`}
+        className={`${inter.variable} ${notoEthiopic.variable} min-h-full antialiased`}
         suppressHydrationWarning
       >
-        {children}
-        <Toaster />
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            <QueryProvider>
+              {children}
+              <Toaster />
+            </QueryProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -2,119 +2,69 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ComponentType } from "react";
-import { BrandLogo } from "./BrandLogo";
-import { IconButton } from "@/components/ui/IconButton";
-import { Button } from "@/components/ui/Button";
+import { useEffect, useState, useCallback } from "react";
+import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import {
-  Calendar,
-  ClipboardList,
   LayoutDashboard,
   LogOut,
-  Mail,
-  MoreVertical,
+  Menu,
+  Moon,
   Package,
-  Receipt,
-  Shield,
+  Search,
   ShoppingCart,
-  Tag,
-  Users,
-  Warehouse,
-} from "@/lib/icons";
+  Sun,
+  Monitor,
+  X,
+  ScanLine,
+  MoreHorizontal,
+} from "lucide-react";
 import { AccessDenied } from "@/components/AccessDenied";
+import { CommandPalette } from "@/components/CommandPalette";
 import { PermissionProvider, type Me } from "@/components/PermissionProvider";
-import { meetsRequirement, missingFrom, permissionName, requirementForPath } from "@/lib/permissions";
+import { Sidebar } from "@/components/Sidebar";
+import { Kbd } from "@/components/ui/Kbd";
+import {
+  meetsRequirement,
+  missingFrom,
+  permissionName,
+  requirementForPath,
+  isOwnerRole,
+} from "@/lib/permissions";
 import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon?: ComponentType<{ className?: string }>;
-};
-
-const primaryNav: NavItem[] = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/sell", label: "Sell", icon: ShoppingCart },
-  { href: "/sales", label: "Sales", icon: Receipt },
-];
-
-const moreNav: NavItem[] = [
-  { href: "/add-stock", label: "Stocks", icon: Warehouse },
-  { href: "/expiry", label: "Expiry", icon: Calendar },
-  { href: "/reservations", label: "Reservations", icon: ClipboardList },
-  { href: "/stock-history", label: "History", icon: ClipboardList },
-  { href: "/categories", label: "Categories", icon: Tag },
-  { href: "/settings/users", label: "Users", icon: Users },
-  { href: "/settings/roles", label: "Roles", icon: Shield },
-  { href: "/settings/emails", label: "Alert emails", icon: Mail },
-];
-
-const desktopNav: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/add-stock", label: "Stocks", icon: Warehouse },
-  { href: "/expiry", label: "Expiry", icon: Calendar },
-  { href: "/sell", label: "Sell", icon: ShoppingCart },
-  { href: "/sales", label: "Sales", icon: Receipt },
-  { href: "/reservations", label: "Reservations", icon: ClipboardList },
-  { href: "/stock-history", label: "History", icon: ClipboardList },
-  { href: "/categories", label: "Categories", icon: Tag },
-  { href: "/settings/users", label: "Users", icon: Users },
-  { href: "/settings/roles", label: "Roles", icon: Shield },
-  { href: "/settings/emails", label: "Emails", icon: Mail },
-];
-
-// One source of truth: a link is shown exactly when its page would open (lib/permissions.ts).
-const canSeeNavItem = (item: NavItem, me: Me | null) =>
-  Boolean(me) && meetsRequirement(me!.permissions, requirementForPath(item.href));
-
-const filterNav = (items: NavItem[], me: Me | null) =>
-  items.filter((item) => canSeeNavItem(item, me));
-
-const NavLink = ({
-  item,
-  active,
-  compact,
-  onClick,
-}: {
-  item: NavItem;
-  active: boolean;
-  compact?: boolean;
-  onClick?: () => void;
-}) => {
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 rounded-[var(--radius-md)] font-medium transition focus-ring",
-        compact
-          ? "flex-1 flex-col gap-0.5 py-2 text-[10px]"
-          : "px-3 py-2 text-sm",
-        active
-          ? "bg-[var(--brand-yellow)]/15 text-[var(--accent)]"
-          : "text-white/70 hover:bg-white/5 hover:text-white",
-      )}
-    >
-      {Icon ? <Icon className={compact ? "size-5" : "size-4 shrink-0"} /> : null}
-      <span>{item.label}</span>
-    </Link>
-  );
-};
+const SIDEBAR_KEY = "edimart-sidebar-collapsed";
 
 export const Shell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const tShell = useTranslations("Shell");
+  const tAuth = useTranslations("Auth");
   const [me, setMe] = useState<Me | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Any API call answered with 401 means the login is no longer valid (the proxy has already
-  // cleared the cookie): go to the sign-in page and come back here afterwards. A 403 with
-  // PASSWORD_CHANGE_REQUIRED sends the person to the account page instead.
+  // Restore sidebar state
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_KEY);
+      if (saved === "true") setCollapsed(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleToggleCollapse = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_KEY, String(next));
+      } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  // Intercept 401/403 from proxy calls
   useEffect(() => {
     const originalFetch = window.fetch;
     let redirecting = false;
@@ -123,7 +73,11 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
       const res = await originalFetch(...args);
       const input = args[0];
       const url =
-        typeof input === "string" ? input : input instanceof URL ? input.pathname : input.url;
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.pathname
+            : input.url;
       if (!redirecting && url.includes("/api/proxy/")) {
         if (res.status === 401) {
           redirecting = true;
@@ -135,11 +89,10 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
             redirecting = true;
             window.location.assign("/settings/account");
           } else if (!String(body?.code ?? "").startsWith("APPROVAL_")) {
-            // never a silent failure: say plainly that this person is not allowed (once per few seconds)
             const now = Date.now();
             if (now - lastDeniedToast > 4000) {
               lastDeniedToast = now;
-              toastError("You don't have access to do that.");
+              toastError(tAuth("noAccess"));
             }
           }
         }
@@ -149,8 +102,9 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     return () => {
       window.fetch = originalFetch;
     };
-  }, []);
+  }, [tAuth]);
 
+  // Load session
   useEffect(() => {
     const load = async () => {
       try {
@@ -161,20 +115,26 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         const data = (await res.json()) as Me;
-        if (data.mustChangePassword && window.location.pathname !== "/settings/account") {
+        if (
+          data.mustChangePassword &&
+          window.location.pathname !== "/settings/account"
+        ) {
           router.replace("/settings/account");
         }
         setMe({
           ...data,
           permissions: Array.isArray(data.permissions) ? data.permissions : [],
         });
+        // Set locale cookie from user preference
+        if (data.locale && data.locale !== "en") {
+          document.cookie = `NEXT_LOCALE=${data.locale};path=/;max-age=31536000`;
+        }
       } catch {
-        const { toastError } = await import("@/lib/toast");
-        toastError("Could not load session");
+        toastError(tAuth("networkError"));
       }
     };
     void load();
-  }, [router]);
+  }, [router, tAuth]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -182,124 +142,219 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     router.refresh();
   };
 
+  const handleSetLocale = async (locale: string) => {
+    document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
+    await fetch("/api/proxy/auth/me", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale }),
+    });
+    window.location.reload();
+  };
+
+  // Loading state
   if (!me) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-        <p className="text-sm text-white/70">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-sm text-text-muted">{tShell("commandPaletteHint") ? "Loading…" : "Loading…"}</div>
       </div>
     );
   }
 
   const pageRequirement = requirementForPath(pathname);
   const pageAllowed = meetsRequirement(me.permissions, pageRequirement);
-  const visibleDesktop = filterNav(desktopNav, me);
-  const visibleMore = filterNav(moreNav, me);
   const initials = (me.displayName ?? me.email).slice(0, 1).toUpperCase();
-
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  const cycleTheme = () => {
+    if (theme === "dark") setTheme("light");
+    else if (theme === "light") setTheme("system");
+    else setTheme("dark");
+  };
+  const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
 
   return (
-    <div className="app-bg flex min-h-screen flex-col pb-20 lg:pb-0">
-      <header className="sticky top-0 z-30 border-b border-[var(--brand-yellow)]/15 bg-[color:var(--brand-charcoal-deep)]/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <BrandLogo size="sm" linked />
-          <nav className="hidden flex-1 flex-wrap items-center justify-center gap-0.5 lg:flex" aria-label="Primary">
-            {visibleDesktop.map((item) => (
-              <NavLink key={item.href} item={item} active={isActive(item.href)} />
-            ))}
-          </nav>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/settings/account"
-              className="inline-flex size-10 items-center justify-center rounded-[var(--radius-md)] border border-white/15 bg-white/5 text-sm font-bold text-[var(--accent)] focus-ring"
-              aria-label="Account settings"
-            >
-              {initials}
-            </Link>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="hidden lg:inline-flex"
-              icon={<LogOut className="size-4" />}
-              onClick={() => void handleLogout()}
-            >
-              Log out
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="flex min-h-screen">
+      {/* Desktop sidebar */}
+      <Sidebar
+        me={me}
+        collapsed={collapsed}
+        onToggleCollapse={handleToggleCollapse}
+      />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">
-        <PermissionProvider me={me}>
-          {pageRequirement && !pageAllowed ? (
-            <AccessDenied
-              needs={missingFrom(me.permissions, pageRequirement).map(permissionName)}
-            />
-          ) : (
-            children
-          )}
-        </PermissionProvider>
-      </main>
-
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[color:var(--brand-charcoal-deep)]/95 backdrop-blur-md lg:hidden"
-        aria-label="Mobile"
-      >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
-          {filterNav(primaryNav, me).map((item) => (
-            <NavLink key={item.href} item={item} active={isActive(item.href)} compact />
-          ))}
-          <button
-            type="button"
-            onClick={() => setMoreOpen((o) => !o)}
-            className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold focus-ring",
-              moreOpen ? "text-[var(--accent)]" : "text-white/55",
-            )}
-            aria-expanded={moreOpen}
-            aria-label="More menu"
-          >
-            <MoreVertical className="size-5" aria-hidden />
-            More
-          </button>
-        </div>
-      </nav>
-
-      {moreOpen ? (
-        <div
-          className="fixed inset-0 z-40 lg:hidden"
-          role="presentation"
-          onClick={() => setMoreOpen(false)}
-        >
-          <div className="absolute inset-0 bg-black/50" />
+      {/* Mobile sidebar overlay */}
+      {mobileMenuOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden">
           <div
-            className="absolute bottom-16 left-0 right-0 mx-4 max-h-[60vh] overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-2 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {visibleMore.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={isActive(item.href)}
-                onClick={() => setMoreOpen(false)}
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-72 bg-surface shadow-xl">
+            <div className="flex h-16 items-center justify-between border-b border-border px-4">
+              <span className="text-lg font-bold text-text">Edi&apos;s</span>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-md p-1 text-text-muted hover:text-text"
+                aria-label="Close menu"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-3">
+              <Sidebar
+                me={me}
+                collapsed={false}
+                onToggleCollapse={() => setMobileMenuOpen(false)}
               />
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                setMoreOpen(false);
-                void handleLogout();
-              }}
-              className="mt-1 flex w-full items-center gap-2 rounded-[var(--radius-md)] px-4 py-3 text-sm font-medium text-rose-200 hover:bg-white/5"
-            >
-              <LogOut className="size-4" />
-              Log out
-            </button>
+            </div>
           </div>
         </div>
       ) : null}
+
+      {/* Main area */}
+      <div className="flex flex-1 flex-col">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="rounded-md p-1.5 text-text-muted hover:text-text lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="size-5" />
+          </button>
+
+          {/* Command palette trigger */}
+          <button
+            type="button"
+            onClick={() =>
+              document.dispatchEvent(
+                new KeyboardEvent("keydown", {
+                  key: "k",
+                  metaKey: true,
+                  bubbles: true,
+                }),
+              )
+            }
+            className="hidden flex-1 items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text-muted transition hover:border-border-strong sm:flex"
+          >
+            <Search className="size-4" />
+            <span className="flex-1 text-left">{tShell("commandPalette")}</span>
+            <Kbd>⌘K</Kbd>
+          </button>
+          <div className="flex-1 sm:hidden" />
+
+          {/* Shift placeholder */}
+          <span className="hidden text-xs text-text-muted md:inline">
+            {tShell("noShift")}
+          </span>
+
+          {/* Theme toggle */}
+          <button
+            type="button"
+            onClick={cycleTheme}
+            className="rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            aria-label={tShell("theme")}
+            title={tShell("theme")}
+          >
+            <ThemeIcon className="size-4" />
+          </button>
+
+          {/* Language toggle */}
+          <button
+            type="button"
+            onClick={() => handleSetLocale(me.locale === "am" ? "en" : "am")}
+            className="rounded-md px-2 py-1 text-xs font-medium text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            aria-label={tShell("language")}
+          >
+            {(me as Me & { locale?: string }).locale === "am" ? "EN" : "አማ"}
+          </button>
+
+          {/* User */}
+          <Link
+            href="/settings/account"
+            className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring"
+            aria-label={me.displayName ?? me.email}
+          >
+            {initials}
+          </Link>
+
+          {/* Logout */}
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="hidden rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring lg:block"
+            aria-label={tShell("logOut")}
+            title={tShell("logOut")}
+          >
+            <LogOut className="size-4" />
+          </button>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 sm:p-6">
+          <div className="mx-auto max-w-7xl">
+            <PermissionProvider me={me}>
+              {pageRequirement && !pageAllowed ? (
+                <AccessDenied
+                  needs={missingFrom(me.permissions, pageRequirement).map(
+                    permissionName,
+                  )}
+                />
+              ) : (
+                children
+              )}
+            </PermissionProvider>
+          </div>
+        </main>
+      </div>
+
+      {/* Mobile bottom nav */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 backdrop-blur-md lg:hidden"
+        aria-label="Mobile"
+      >
+        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-safe">
+          {[
+            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/sell", label: "Sell", icon: ShoppingCart },
+            { href: "#scan", label: tShell("scan"), icon: ScanLine, center: true },
+            { href: "/products", label: "Products", icon: Package },
+            { href: "#more", label: "More", icon: MoreHorizontal },
+          ].map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isMore = item.href === "#more";
+            const isScan = item.href === "#scan";
+            return (
+              <Link
+                key={item.href}
+                href={isMore || isScan ? "#" : item.href}
+                onClick={(e) => {
+                  if (isMore) {
+                    e.preventDefault();
+                    setMobileMenuOpen(true);
+                  }
+                }}
+                className={cn(
+                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition",
+                  isScan
+                    ? "text-primary"
+                    : active
+                      ? "text-primary"
+                      : "text-text-muted hover:text-text",
+                )}
+              >
+                <item.icon className={cn("size-5", isScan && "size-6")} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+      <div className="h-16 lg:hidden" />
+
+      {/* Command palette */}
+      <CommandPalette me={me} />
     </div>
   );
 };

@@ -123,11 +123,11 @@ export default function RolesPage() {
         <button
           type="button"
           onClick={() => setSelectedId(r.id)}
-          className={`text-left font-medium ${selectedId === r.id ? "text-[var(--accent)]" : "text-white"}`}
+          className={`text-left font-medium ${selectedId === r.id ? "text-accent" : "text-text"}`}
         >
           {r.name}
           {r.isProtected ? (
-            <span className="ml-2 text-[10px] font-normal text-white/40">protected</span>
+            <span className="ml-2 text-[10px] font-normal text-text-muted">protected</span>
           ) : null}
         </button>
       ),
@@ -163,8 +163,8 @@ export default function RolesPage() {
       header: "User",
       render: (u) => (
         <div>
-          <p className="font-medium text-white">{u.displayName ?? u.email}</p>
-          <p className="text-xs text-white/45">{u.email}</p>
+          <p className="font-medium text-text">{u.displayName ?? u.email}</p>
+          <p className="text-xs text-text-muted">{u.email}</p>
         </div>
       ),
     },
@@ -182,9 +182,9 @@ export default function RolesPage() {
   if (forbidden) {
     return (
       <div className="mx-auto max-w-lg space-y-4 text-center">
-        <h1 className="text-2xl font-semibold text-white">Roles</h1>
-        <p className="text-sm text-white/60">
-          You need the <strong className="text-white">Manage roles</strong> permission.
+        <h1 className="text-2xl font-semibold text-text">Roles</h1>
+        <p className="text-sm text-text-muted">
+          You need the <strong className="text-text">Manage roles</strong> permission.
         </p>
       </div>
     );
@@ -199,7 +199,7 @@ export default function RolesPage() {
 
       <form
         onSubmit={(e) => void handleCreate(e)}
-        className="section-card flex flex-wrap gap-3 sm:items-end"
+        className="rounded-xl border border-border bg-surface p-5 shadow-sm flex flex-wrap gap-3 sm:items-end"
       >
         <Input
           required
@@ -214,7 +214,7 @@ export default function RolesPage() {
         </Button>
       </form>
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <PermissionMatrix roles={roles} onSaved={loadRoles} focusRoleId={selectedId} />
 
@@ -230,9 +230,9 @@ export default function RolesPage() {
       ) : null}
 
       {selectedRole ? (
-        <section className="section-card">
-          <h2 className="text-lg font-semibold text-white">People with the {selectedRole.name} role</h2>
-          <p className="mt-1 text-xs text-white/50">Choose another role in the table above to see who has it.</p>
+        <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-text">People with the {selectedRole.name} role</h2>
+          <p className="mt-1 text-xs text-text-muted">Choose another role in the table above to see who has it.</p>
           <div className="mt-4">
             <DataTable
               columns={userColumns}

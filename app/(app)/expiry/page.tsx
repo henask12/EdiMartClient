@@ -65,8 +65,8 @@ export default function ExpiryPage() {
       header: "Product",
       render: (r) => (
         <div>
-          <p className="font-medium text-white">{r.productName}</p>
-          <p className="text-xs text-white/45">{r.categoryName}</p>
+          <p className="font-medium text-text">{r.productName}</p>
+          <p className="text-xs text-text-muted">{r.categoryName}</p>
         </div>
       ),
     },
@@ -88,7 +88,7 @@ export default function ExpiryPage() {
       key: "source",
       header: "Source",
       render: (r) => (
-        <span className="text-xs text-white/45">{r.source === "batch" ? "Batch" : "Product"}</span>
+        <span className="text-xs text-text-muted">{r.source === "batch" ? "Batch" : "Product"}</span>
       ),
     },
     {
@@ -132,7 +132,7 @@ export default function ExpiryPage() {
         ))}
       </div>
 
-      {loading ? <p className="text-sm text-white/50">Loading…</p> : null}
+      {loading ? <p className="text-sm text-text-muted">Loading…</p> : null}
 
       {!loading ? (
         <DataTable
@@ -145,15 +145,15 @@ export default function ExpiryPage() {
           }}
           emptyMessage="No items match this filter."
           mobileCard={(r) => (
-            <div className="card-surface space-y-3 p-4 text-sm">
+            <div className="space-y-3 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-medium text-white">{r.productName}</p>
-                  <p className="text-xs text-white/45">{r.categoryName}</p>
+                  <p className="font-medium text-text">{r.productName}</p>
+                  <p className="text-xs text-text-muted">{r.categoryName}</p>
                 </div>
                 {statusBadge(r)}
               </div>
-              <p className="text-white/70">
+              <p className="text-text-muted">
                 {r.qtyRemaining} on hand · expires {r.expiryDate}
               </p>
               <Link href={`/products/${r.productId}/edit`}>

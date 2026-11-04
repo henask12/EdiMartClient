@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { ExportMenu } from "@/components/ExportMenu";
@@ -10,10 +11,11 @@ import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
-import { formatBirr } from "@/lib/format-price";
+import { formatMoney } from "@/lib/format-money";
 import { usePermission } from "@/components/PermissionProvider";
 import { paymentLabel } from "@/lib/payment-methods";
 import { toastError } from "@/lib/toast";
+import { formatDate } from "@/lib/date-helpers";
 
 type Attachment = { id: string; imageUrl: string };
 type SaleLine = {
@@ -60,7 +62,9 @@ const flattenSales = (sales: Sale[]): SaleLineRow[] =>
       item: line.product.name,
       salesDate: sale.createdAt,
       cashier: sale.createdBy.displayName ?? sale.createdBy.email,
-      payment: (sale.payments ?? []).map((p) => paymentLabel(p.method)).join(" + ") || "—",
+      payment:
+        (sale.payments ?? []).map((p) => paymentLabel(p.method)).join(" + ") ||
+        "—",
       unitPrice: line.unitPrice,
       quantity: line.quantity,
       lineTotal: line.lineTotal,
@@ -72,6 +76,7 @@ const flattenSales = (sales: Sale[]): SaleLineRow[] =>
 export default function SalesPage() {
   const searchParams = useSearchParams();
   const { can, canSeeCost } = usePermission();
+  const t = useTranslations("Sales");
   const urlFrom = searchParams.get("from") ?? "";
   const urlTo = searchParams.get("to") ?? "";
 
@@ -92,13 +97,18 @@ export default function SalesPage() {
   const lineRows = useMemo(() => flattenSales(items), [items]);
 
   const pageSubtotals = useMemo(() => {
-    const lineTotal = lineRows.reduce((sum, r) => sum + Number(r.lineTotal), 0);
-    const netProfit = lineRows.reduce((sum, r) => sum + Number(r.netProfit ?? 0), 0);
+    const lineTotal = lineRows.reduce(
+      (sum, r) => sum + Number(r.lineTotal),
+      0,
+    );
+    const netProfit = lineRows.reduce(
+      (sum, r) => sum + Number(r.netProfit ?? 0),
+      0,
+    );
     return { lineTotal, netProfit };
   }, [lineRows]);
 
   useEffect(() => {
-    // the filter lists come from the product catalogue, which needs "View products"
     if (!can("PRODUCTS_VIEW")) return;
     void Promise.all([
       fetch("/api/proxy/categories", { cache: "no-store" }),
@@ -122,7 +132,9 @@ export default function SalesPage() {
       if (to) params.set("to", to);
       if (productId) params.set("productId", productId);
       if (categoryId) params.set("categoryId", categoryId);
-      const res = await fetch(`/api/proxy/sales?${params}`, { cache: "no-store" });
+      const res = await fetch(`/api/proxy/sales?${params}`, {
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error("Failed to load sales");
       const data = (await res.json()) as { items: Sale[]; total: number };
       setItems(data.items);
@@ -138,7 +150,7 @@ export default function SalesPage() {
 
   const handleApplyDates = () => {
     if (draftFrom && draftTo && draftFrom > draftTo) {
-      setDateError("“From” must be on or before “To”.");
+      setDateError(t("dateError"));
       return;
     }
     setDateError(null);
@@ -150,53 +162,45 @@ export default function SalesPage() {
   const columns: DataTableColumn<SaleLineRow>[] = [
     {
       key: "item",
-      header: "Item",
-      render: (r) => <span className="font-medium text-white">{r.item}</span>,
+      header: t("item"),
+      render: (r) => <span className="font-medium text-text">{r.item}</span>,
     },
     {
       key: "date",
-      header: "Sales date",
-      render: (r) => new Date(r.salesDate).toLocaleString(),
+      header: t("salesDate"),
+      render: (r) => formatDate(r.salesDate),
     },
-    {
-      key: "cashier",
-      header: "Cashier",
-      render: (r) => r.cashier,
-    },
-    {
-      key: "payment",
-      header: "Payment",
-      render: (r) => r.payment,
-    },
+    { key: "cashier", header: t("cashier"), render: (r) => r.cashier },
+    { key: "payment", header: t("payment"), render: (r) => r.payment },
     {
       key: "unitPrice",
-      header: "Unit price",
+      header: t("unitPrice"),
       className: "tabular-nums",
-      render: (r) => formatBirr(r.unitPrice),
+      render: (r) => formatMoney(r.unitPrice),
     },
     {
       key: "quantity",
-      header: "Quantity",
+      header: t("quantity"),
       className: "tabular-nums",
       render: (r) => r.quantity,
     },
     {
       key: "lineTotal",
-      header: "Total price",
+      header: t("totalPrice"),
       className: "tabular-nums",
-      render: (r) => formatBirr(r.lineTotal),
+      render: (r) => formatMoney(r.lineTotal),
     },
     ...(canSeeCost
       ? [
           {
             key: "netProfit",
-            header: "Net profit",
+            header: t("netProfit"),
             className: "tabular-nums",
             render: (r: SaleLineRow) => {
               const profit = Number(r.netProfit ?? 0);
               return (
-                <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
-                  {formatBirr(r.netProfit ?? "0")}
+                <span className={profit >= 0 ? "text-success" : "text-danger"}>
+                  {formatMoney(r.netProfit ?? "0")}
                 </span>
               );
             },
@@ -205,7 +209,7 @@ export default function SalesPage() {
       : []),
     {
       key: "proof",
-      header: "Proof",
+      header: t("proof"),
       render: (r) =>
         r.attachments.length > 0 ? (
           <ul className="flex flex-wrap gap-1">
@@ -215,26 +219,29 @@ export default function SalesPage() {
                   href={a.imageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="relative block h-10 w-10 overflow-hidden rounded border border-white/10"
+                  className="relative block size-10 overflow-hidden rounded border border-border"
                   aria-label="View payment proof"
                 >
-                  <Image src={a.imageUrl} alt="" fill className="object-cover" unoptimized />
+                  <Image
+                    src={a.imageUrl}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
                 </a>
               </li>
             ))}
           </ul>
         ) : (
-          <span className="text-xs text-white/40">—</span>
+          <span className="text-xs text-text-muted">—</span>
         ),
     },
   ];
 
   return (
     <section className="space-y-6">
-      <PageHeader
-        title="Sales history"
-        description="One row per line item — unit price, quantity, profit, and payment proof."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <DateRangeFilter
         from={draftFrom}
@@ -243,18 +250,20 @@ export default function SalesPage() {
         onToChange={setDraftTo}
         onApply={handleApplyDates}
       />
-      {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
+      {dateError ? (
+        <p className="text-sm text-danger">{dateError}</p>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Select
-          label="Category"
+          label={t("category")}
           value={categoryId}
           onChange={(e) => {
             setCategoryId(e.target.value);
             setPage(1);
           }}
         >
-          <option value="">All categories</option>
+          <option value="">{t("allCategories")}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -262,14 +271,14 @@ export default function SalesPage() {
           ))}
         </Select>
         <Select
-          label="Product"
+          label={t("product")}
           value={productId}
           onChange={(e) => {
             setProductId(e.target.value);
             setPage(1);
           }}
         >
-          <option value="">All products</option>
+          <option value="">{t("allProducts")}</option>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -295,32 +304,40 @@ export default function SalesPage() {
         footer={{
           label: "Page subtotal",
           cells: {
-            lineTotal: formatBirr(String(pageSubtotals.lineTotal)),
-            ...(canSeeCost ? { netProfit: formatBirr(String(pageSubtotals.netProfit)) } : {}),
+            lineTotal: formatMoney(String(pageSubtotals.lineTotal)),
+            ...(canSeeCost
+              ? {
+                  netProfit: formatMoney(String(pageSubtotals.netProfit)),
+                }
+              : {}),
           },
         }}
-        emptyMessage="No sales in this range."
+        emptyMessage={t("noSales")}
         mobileCard={(r) => {
           const profit = Number(r.netProfit ?? 0);
           return (
-            <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/80 p-4 text-sm">
+            <div className="text-sm">
               <div className="flex justify-between gap-2">
-                <p className="font-medium text-white">{r.item}</p>
-                <p className="font-semibold tabular-nums text-[var(--accent)]">
-                  {formatBirr(r.lineTotal)}
+                <p className="font-medium text-text">{r.item}</p>
+                <p className="font-semibold tabular-nums text-primary">
+                  {formatMoney(r.lineTotal)}
                 </p>
               </div>
-              <p className="mt-1 text-xs text-white/50">
-                {new Date(r.salesDate).toLocaleString()} · {r.cashier} · {r.payment}
+              <p className="mt-1 text-xs text-text-muted">
+                {formatDate(r.salesDate)} · {r.cashier} · {r.payment}
               </p>
-              <p className="mt-2 text-xs text-white/60">
-                {r.quantity} × {formatBirr(r.unitPrice)}
+              <p className="mt-2 text-xs text-text-muted">
+                {r.quantity} × {formatMoney(r.unitPrice)}
                 {canSeeCost ? (
                   <>
                     {" "}
                     · Profit{" "}
-                    <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
-                      {formatBirr(r.netProfit ?? "0")}
+                    <span
+                      className={
+                        profit >= 0 ? "text-success" : "text-danger"
+                      }
+                    >
+                      {formatMoney(r.netProfit ?? "0")}
                     </span>
                   </>
                 ) : null}
@@ -329,9 +346,19 @@ export default function SalesPage() {
                 <ul className="mt-3 flex flex-wrap gap-2">
                   {r.attachments.map((a) => (
                     <li key={a.id}>
-                      <a href={a.imageUrl} target="_blank" rel="noopener noreferrer">
-                        <span className="relative block h-12 w-12 overflow-hidden rounded-lg border border-white/10">
-                          <Image src={a.imageUrl} alt="Proof" fill className="object-cover" unoptimized />
+                      <a
+                        href={a.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <span className="relative block size-12 overflow-hidden rounded-lg border border-border">
+                          <Image
+                            src={a.imageUrl}
+                            alt="Proof"
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
                         </span>
                       </a>
                     </li>
@@ -352,7 +379,12 @@ export default function SalesPage() {
             setPage(1);
           }}
         />
-        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+        />
       </footer>
     </section>
   );
