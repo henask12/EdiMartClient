@@ -26,6 +26,10 @@ import {
   X,
 } from "lucide-react";
 import { ManagerApprovalDialog, type ApprovalAction } from "@/components/ManagerApprovalDialog";
+import {
+  PosCustomerChip,
+  PosCustomerPicker,
+} from "@/components/pos/PosCustomerPicker";
 import { PosPaymentSheet } from "@/components/pos/PosPaymentSheet";
 import { PosSuccessPanel } from "@/components/pos/PosSuccessPanel";
 import { useHidScanner } from "@/components/pos/useHidScanner";
@@ -48,6 +52,11 @@ import {
   SheetTitle,
 } from "@/components/ui/Sheet";
 import { cn } from "@/lib/cn";
+import {
+  parseLoyaltySettings,
+  type Customer,
+  type LoyaltySettings,
+} from "@/lib/customers";
 import { formatMoney } from "@/lib/format-money";
 import { newIdempotencyKey, shouldRotateKey } from "@/lib/idempotency";
 import { playScannerBeep } from "@/lib/pos-beep";
@@ -140,6 +149,11 @@ export const PosClient = () => {
   const [hydrated, setHydrated] = useState(false);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [requireOpenShift, setRequireOpenShift] = useState(true);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [loyaltyPointsToRedeem, setLoyaltyPointsToRedeem] = useState("");
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings | null>(null);
 
   const index = useMemo(() => {
     const ms = new MiniSearch<PosProduct>({
@@ -215,6 +229,7 @@ export const PosClient = () => {
         const data = (await settingsRes.json()) as Record<string, unknown>;
         setSettings(parsePosSettings(data));
         setRequireOpenShift(parseShiftSettings(data).requireOpenShift);
+        setLoyaltySettings(parseLoyaltySettings(data));
       } else {
         setSettings(parsePosSettings(null));
       }
@@ -599,6 +614,11 @@ export const PosClient = () => {
       paymentMethod: primary?.method,
       paymentReference: primary?.reference,
       proofImagePaths: proofImagePaths.length ? proofImagePaths : undefined,
+      customerId: customer?.id,
+      couponCode: couponCode.trim() || undefined,
+      loyaltyPointsToRedeem: loyaltyPointsToRedeem.trim()
+        ? Number(loyaltyPointsToRedeem)
+        : undefined,
     };
   };
 
@@ -670,6 +690,9 @@ export const PosClient = () => {
       cartDiscount: cart.cartDiscount,
     });
     setPaymentOpen(false);
+    setCustomer(null);
+    setCouponCode("");
+    setLoyaltyPointsToRedeem("");
     await clearCart();
     persist(emptyCart());
     attemptKey.current = newIdempotencyKey();
@@ -678,6 +701,9 @@ export const PosClient = () => {
 
   const handleNewSale = () => {
     setSuccess(null);
+    setCustomer(null);
+    setCouponCode("");
+    setLoyaltyPointsToRedeem("");
     searchRef.current?.focus();
   };
 
@@ -702,6 +728,11 @@ export const PosClient = () => {
       if (e.key === "F2") {
         e.preventDefault();
         searchRef.current?.focus();
+        return;
+      }
+      if (e.key === "F3") {
+        e.preventDefault();
+        setCustomerPickerOpen(true);
         return;
       }
       if (e.key === "F4") {
@@ -847,10 +878,14 @@ export const PosClient = () => {
 
   const cartPanel = (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-text">{t("walkIn")}</p>
-          <p className="text-xs text-text-muted">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <PosCustomerChip
+            customer={customer}
+            onOpen={() => setCustomerPickerOpen(true)}
+            onClear={() => setCustomer(null)}
+          />
+          <p className="mt-1 text-xs text-text-muted">
             {t("linesCount", { count: cart.lines.length })}
           </p>
         </div>
@@ -1237,8 +1272,22 @@ export const PosClient = () => {
         amountDue={totals.total}
         denominations={settings.denominations}
         submitting={submitting}
+        customer={customer}
+        loyaltySettings={loyaltySettings}
+        couponCode={couponCode}
+        loyaltyPointsToRedeem={loyaltyPointsToRedeem}
+        onCouponCodeChange={setCouponCode}
+        onLoyaltyPointsChange={setLoyaltyPointsToRedeem}
         onClose={() => setPaymentOpen(false)}
         onComplete={(payments) => void handleComplete(payments)}
+      />
+
+      <PosCustomerPicker
+        open={customerPickerOpen}
+        selected={customer}
+        canManage={can("CUSTOMERS_MANAGE")}
+        onClose={() => setCustomerPickerOpen(false)}
+        onSelect={setCustomer}
       />
 
       {pendingApproval ? (
@@ -1385,6 +1434,7 @@ export const PosClient = () => {
           <ul className="space-y-2 text-sm">
             {[
               ["/", "F2", t("shortcutSearch")],
+              ["F3", "", t("shortcutCustomer")],
               ["F4", "", t("shortcutDiscount")],
               ["F6", "", t("shortcutHold")],
               ["F7", "", t("shortcutParked")],

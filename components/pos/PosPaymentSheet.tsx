@@ -11,14 +11,22 @@ import {
   DialogTitle,
 } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
+import {
+  creditAvailable,
+  loyaltyRedeemValue,
+  type Customer,
+  type LoyaltySettings,
+} from "@/lib/customers";
 import { formatMoney } from "@/lib/format-money";
 import {
-  PAYMENT_METHODS,
+  STANDARD_PAYMENT_METHODS,
   methodHasReference,
+  paymentLabel,
   type PaymentMethod,
 } from "@/lib/payment-methods";
 import {
   addMoney,
+  clampMoney,
   compareMoney,
   isZeroMoney,
   moneyString,
@@ -34,6 +42,12 @@ type Props = {
   amountDue: string;
   denominations: string[];
   submitting: boolean;
+  customer: Customer | null;
+  loyaltySettings?: LoyaltySettings | null;
+  couponCode: string;
+  loyaltyPointsToRedeem: string;
+  onCouponCodeChange: (value: string) => void;
+  onLoyaltyPointsChange: (value: string) => void;
   onClose: () => void;
   onComplete: (payments: PosPaymentLine[]) => void;
 };
@@ -48,6 +62,12 @@ export const PosPaymentSheet = ({
   amountDue,
   denominations,
   submitting,
+  customer,
+  loyaltySettings,
+  couponCode,
+  loyaltyPointsToRedeem,
+  onCouponCodeChange,
+  onLoyaltyPointsChange,
   onClose,
   onComplete,
 }: Props) => {
@@ -59,6 +79,21 @@ export const PosPaymentSheet = ({
   const [proofPaths, setProofPaths] = useState<string[]>([]);
   const [proofPreviews, setProofPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  const storeCreditBal = customer?.storeCreditBalance ?? "0";
+  const accountAvailable = customer ? creditAvailable(customer) : "0.00";
+  const canStoreCredit =
+    Boolean(customer) && compareMoney(storeCreditBal, "0") > 0;
+  const canPayLater =
+    Boolean(customer) && compareMoney(accountAvailable, "0") > 0;
+
+  const loyaltyHint =
+    customer && loyaltySettings?.enabled
+      ? loyaltyRedeemValue(
+          Number(loyaltyPointsToRedeem) || 0,
+          loyaltySettings.birrPerRedeemPoint,
+        )
+      : "0.00";
 
   const paid = useMemo(
     () => payments.reduce((sum, p) => addMoney(sum, p.amount), "0.00"),
@@ -115,14 +150,39 @@ export const PosPaymentSheet = ({
     }
   };
 
+  const maxForMethod = (m: PaymentMethod, rem: string): string => {
+    if (m === "STORE_CREDIT") {
+      return compareMoney(storeCreditBal, rem) < 0 ? storeCreditBal : rem;
+    }
+    if (m === "CUSTOMER_ACCOUNT") {
+      return compareMoney(accountAvailable, rem) < 0 ? accountAvailable : rem;
+    }
+    return rem;
+  };
+
   const appendPayment = (amount: string) => {
     if (compareMoney(amount, "0") <= 0) {
       toastError(t("enterAmount"));
       return;
     }
+    if ((method === "STORE_CREDIT" || method === "CUSTOMER_ACCOUNT") && !customer) {
+      toastError(t("customerRequiredForCredit"));
+      return;
+    }
     let payAmount = moneyString(Number(amount));
-    if (method !== "CASH" && compareMoney(payAmount, remaining) > 0) {
-      payAmount = remaining;
+    const cap = maxForMethod(method, remaining);
+    if (method !== "CASH" && compareMoney(payAmount, cap) > 0) {
+      payAmount = cap;
+    }
+    if (compareMoney(payAmount, "0") <= 0) {
+      toastError(
+        method === "STORE_CREDIT"
+          ? t("noStoreCredit")
+          : method === "CUSTOMER_ACCOUNT"
+            ? t("noCreditAvailable")
+            : t("enterAmount"),
+      );
+      return;
     }
     const line: PosPaymentLine = {
       id: newPaymentId(),
@@ -152,11 +212,24 @@ export const PosPaymentSheet = ({
         toastError(t("enterAmount"));
         return;
       }
+      if ((method === "STORE_CREDIT" || method === "CUSTOMER_ACCOUNT") && !customer) {
+        toastError(t("customerRequiredForCredit"));
+        return;
+      }
+      const cap = maxForMethod(method, remaining);
+      const payAmount =
+        method === "CASH"
+          ? moneyString(Number(amount))
+          : clampMoney(cashInput || remaining, "0", cap);
+      if (compareMoney(payAmount, "0") <= 0) {
+        toastError(t("enterAmount"));
+        return;
+      }
       finalPayments = [
         {
           id: newPaymentId(),
           method,
-          amount: method === "CASH" ? moneyString(Number(amount)) : remaining,
+          amount: payAmount,
           reference: reference.trim() || undefined,
           proofPaths: proofPaths.length ? proofPaths : undefined,
         },
@@ -188,6 +261,22 @@ export const PosPaymentSheet = ({
     });
   };
 
+  const methodTiles: Array<{ value: PaymentMethod; label: string; disabled?: boolean }> = [
+    ...STANDARD_PAYMENT_METHODS.map((m) => ({ value: m.value, label: m.label })),
+  ];
+  if (customer) {
+    methodTiles.push({
+      value: "STORE_CREDIT",
+      label: `${t("storeCredit")} (${formatMoney(storeCreditBal)})`,
+      disabled: !canStoreCredit,
+    });
+    methodTiles.push({
+      value: "CUSTOMER_ACCOUNT",
+      label: `${t("payLater")} (${formatMoney(accountAvailable)})`,
+      disabled: !canPayLater,
+    });
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && handleClose()}>
       <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto">
@@ -208,16 +297,46 @@ export const PosPaymentSheet = ({
                 {t("paidSoFar")}: {formatMoney(paid)}
               </p>
             ) : null}
+            {customer ? (
+              <p className="mt-2 text-xs text-text-muted">
+                {customer.name} · {customer.phone}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input
+              label={t("couponCode")}
+              value={couponCode}
+              onChange={(e) => onCouponCodeChange(e.target.value)}
+              placeholder={t("couponCodeHint")}
+            />
+            {customer && loyaltySettings?.enabled ? (
+              <Input
+                label={t("loyaltyPointsRedeem")}
+                value={loyaltyPointsToRedeem}
+                onChange={(e) =>
+                  onLoyaltyPointsChange(e.target.value.replace(/[^\d]/g, ""))
+                }
+                inputMode="numeric"
+                hint={
+                  Number(loyaltyPointsToRedeem) > 0
+                    ? `${t("approxDiscount")}: ${formatMoney(loyaltyHint)} · ${t("pointsAvailable")}: ${customer.loyaltyPoints ?? 0}`
+                    : `${t("pointsAvailable")}: ${customer.loyaltyPoints ?? 0}`
+                }
+              />
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {PAYMENT_METHODS.map((m) => (
+            {methodTiles.map((m) => (
               <button
                 key={m.value}
                 type="button"
+                disabled={m.disabled}
                 onClick={() => setMethod(m.value)}
                 className={cn(
-                  "min-h-14 rounded-xl border px-3 py-2 text-sm font-semibold focus-ring",
+                  "min-h-14 rounded-xl border px-3 py-2 text-sm font-semibold focus-ring disabled:cursor-not-allowed disabled:opacity-40",
                   method === m.value
                     ? "border-primary bg-primary-soft text-primary"
                     : "border-border bg-surface text-text hover:bg-surface-muted",
@@ -280,7 +399,7 @@ export const PosPaymentSheet = ({
                 value={cashInput}
                 onChange={(e) => setCashInput(e.target.value.replace(/[^\d.]/g, ""))}
                 inputMode="decimal"
-                placeholder={remaining}
+                placeholder={maxForMethod(method, remaining)}
               />
               {methodHasReference(method) ? (
                 <Input
@@ -290,15 +409,17 @@ export const PosPaymentSheet = ({
                   placeholder={t("referenceHint")}
                 />
               ) : null}
-              <PaymentProofUpload
-                proofPreviews={proofPreviews}
-                uploading={uploading}
-                onUpload={handleProofUpload}
-                onRemove={(index) => {
-                  setProofPaths((p) => p.filter((_, i) => i !== index));
-                  setProofPreviews((p) => p.filter((_, i) => i !== index));
-                }}
-              />
+              {method !== "STORE_CREDIT" && method !== "CUSTOMER_ACCOUNT" ? (
+                <PaymentProofUpload
+                  proofPreviews={proofPreviews}
+                  uploading={uploading}
+                  onUpload={handleProofUpload}
+                  onRemove={(index) => {
+                    setProofPaths((p) => p.filter((_, i) => i !== index));
+                    setProofPreviews((p) => p.filter((_, i) => i !== index));
+                  }}
+                />
+              ) : null}
             </div>
           )}
 
@@ -307,7 +428,7 @@ export const PosPaymentSheet = ({
               {payments.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2">
                   <span>
-                    {PAYMENT_METHODS.find((m) => m.value === p.method)?.label ?? p.method}
+                    {paymentLabel(p.method)}
                     {p.reference ? ` · ${p.reference}` : ""}
                   </span>
                   <span className="tabular-nums font-medium">{formatMoney(p.amount)}</span>

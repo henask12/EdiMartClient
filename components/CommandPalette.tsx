@@ -27,6 +27,9 @@ import {
   RotateCcw,
   Wallet,
   Truck,
+  UserRound,
+  Percent,
+  Heart,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
 import { meetsRequirement, requirementForPath, isOwnerRole } from "@/lib/permissions";
@@ -44,7 +47,10 @@ const PAGES: PageEntry[] = [
   { href: "/pos", labelKey: "sell", icon: ShoppingCart, group: "Sell" },
   { href: "/sales", labelKey: "sales", icon: Receipt, group: "Sell" },
   { href: "/shifts", labelKey: "shifts", icon: Clock3, group: "Sell" },
+  { href: "/customers", labelKey: "customers", icon: UserRound, group: "Sell" },
+  { href: "/promotions", labelKey: "promotions", icon: Percent, group: "Sell" },
   { href: "/settings/pos", labelKey: "posSettings", icon: Settings, group: "Settings" },
+  { href: "/settings/loyalty", labelKey: "loyaltySettings", icon: Heart, group: "Settings" },
   { href: "/inventory", labelKey: "overview", icon: Warehouse, group: "Inventory" },
   { href: "/products", labelKey: "products", icon: Package, group: "Inventory" },
   { href: "/stock-lookup", labelKey: "stockLookup", icon: Search, group: "Inventory" },

@@ -6,9 +6,16 @@ export const PAYMENT_METHODS = [
   { value: "MPESA", label: "M-Pesa" },
   { value: "BANK_TRANSFER", label: "Bank transfer" },
   { value: "CARD", label: "Card (bank terminal)" },
+  { value: "STORE_CREDIT", label: "Store credit" },
+  { value: "CUSTOMER_ACCOUNT", label: "Pay later" },
 ] as const;
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]["value"];
+
+/** Standard till methods shown for every sale. */
+export const STANDARD_PAYMENT_METHODS = PAYMENT_METHODS.filter(
+  (m) => m.value !== "STORE_CREDIT" && m.value !== "CUSTOMER_ACCOUNT",
+);
 
 const LABELS: Record<string, string> = {
   ...Object.fromEntries(PAYMENT_METHODS.map((m) => [m.value, m.label])),
@@ -18,4 +25,5 @@ const LABELS: Record<string, string> = {
 export const paymentLabel = (method: string) => LABELS[method] ?? method;
 
 /** Methods where the customer has a transaction ID worth recording. */
-export const methodHasReference = (method: PaymentMethod) => method !== "CASH";
+export const methodHasReference = (method: PaymentMethod) =>
+  method !== "CASH" && method !== "STORE_CREDIT" && method !== "CUSTOMER_ACCOUNT";

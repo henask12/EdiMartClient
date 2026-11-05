@@ -29,6 +29,9 @@ import {
   FileText,
   RotateCcw,
   Wallet,
+  UserRound,
+  Percent,
+  Heart,
   type LucideIcon,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
@@ -61,6 +64,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/pos", labelKey: "sell", icon: ShoppingCart },
       { href: "/sales", labelKey: "sales", icon: Receipt },
       { href: "/shifts", labelKey: "shifts", icon: Clock3 },
+      { href: "/customers", labelKey: "customers", icon: UserRound },
+      { href: "/promotions", labelKey: "promotions", icon: Percent },
     ],
   },
   {
@@ -95,6 +100,7 @@ const NAV_GROUPS: NavGroup[] = [
 const BOTTOM_ITEMS: NavItem[] = [
   { href: "/settings/pos", labelKey: "posSettings", icon: ShoppingCart },
   { href: "/settings/purchasing", labelKey: "purchasingSettings", icon: Truck },
+  { href: "/settings/loyalty", labelKey: "loyaltySettings", icon: Heart },
   { href: "/settings/locations", labelKey: "locations", icon: Warehouse },
   { href: "/settings/users", labelKey: "users", icon: Users },
   { href: "/settings/roles", labelKey: "roles", icon: Shield },

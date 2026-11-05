@@ -1,5 +1,28 @@
 # Changelog
 
+## Phase 7 — Customers, loyalty and promotions (client)
+
+### Added
+- Permissions/routes: `CUSTOMERS_VIEW`, `CUSTOMERS_MANAGE`, `CUSTOMER_CREDIT_MANAGE`,
+  `PROMOTIONS_MANAGE` in `lib/permissions.ts` + Sell-group nav (Customers, Promotions)
+  and settings link `/settings/loyalty`.
+- Pages: `/customers` (search + create), `/customers/[id]` (profile, ledger, repay,
+  statement print), `/customers/overdue`, `/promotions` (CRUD), `/settings/loyalty`.
+- Helpers `lib/customers.ts`, `lib/promotions.ts`; payment methods `STORE_CREDIT` /
+  `CUSTOMER_ACCOUNT` in `lib/payment-methods.ts`.
+- POS: F3 customer picker (`PosCustomerPicker`), coupon + loyalty redeem fields,
+  store-credit / pay-later tiles when a customer is selected; checkout sends
+  `customerId`, `couponCode`, `loyaltyPointsToRedeem`.
+- i18n keys for customers / promotions / loyalty (en + am).
+
+### Defaults
+- Matches API: 1 pt / Br 10; 100 pts = Br 10; credit limit default 0; no BYOX UI.
+
+### Known gaps
+- Promo PRODUCT/CATEGORY targets use raw IDs (no picker).
+- POS does not preview coupon evaluate before pay (API applies on checkout).
+- Depends on API Phase 7 migration locally.
+
 ## Phase 6 — Purchasing (client)
 
 ### Added
