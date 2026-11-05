@@ -1,79 +1,61 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePermission } from "@/components/PermissionProvider";
 import { SalesPeriodModal } from "@/components/SalesPeriodModal";
+import { PeriodPresetBar } from "@/components/reporting/PeriodPresetBar";
+import { SalesByHourChart } from "@/components/reporting/SalesByHourChart";
+import { SimpleReportChart } from "@/components/reporting/SimpleReportChart";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, StatCard } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import {
+  formatDateShort,
+  formatEthiopianDate,
+  toDateInput,
+} from "@/lib/date-helpers";
 import { formatMoney } from "@/lib/format-money";
-import { toastError } from "@/lib/toast";
+import { paymentLabel } from "@/lib/payment-methods";
 import type { PeriodKey } from "@/lib/period-bounds";
 import { requirementForPath } from "@/lib/permissions";
+import {
+  dashboardKpis,
+  dashboardNeedsAttention,
+  fetchDashboard,
+  resolvePresetRange,
+  type DashboardPayload,
+  type ReportPreset,
+} from "@/lib/reporting";
+import { toastError } from "@/lib/toast";
+import { cn } from "@/lib/cn";
 
-type PeriodSummary = {
-  grandTotal: string;
-  saleCount: number;
-  netProfit?: string;
+const severityVariant = (severity?: string): "danger" | "warning" | "info" | "neutral" => {
+  if (severity === "danger") return "danger";
+  if (severity === "warning") return "warning";
+  if (severity === "info") return "info";
+  return "neutral";
 };
 
-type RestockItem = {
-  id: string;
-  name: string;
-  quantityOnHand: string;
-  available: string;
-  reserved: string;
-  restockAt: number;
-  restockQty: number;
-  status: "OUT" | "LOW";
-};
-
-type Expiring = {
-  id: string;
-  productName: string;
-  qtyRemaining: string;
-  expiryDate: string | null;
-};
-
-type OpenReservation = {
-  id: string;
-  productName: string;
-  quantity: string;
-  customerName: string | null;
-};
-
-type Dashboard = {
-  today: PeriodSummary;
-  week: PeriodSummary;
-  month: PeriodSummary;
-  year: PeriodSummary;
-  needsRestock: RestockItem[];
-  expiringSoon: Expiring[];
-  openReservations: OpenReservation[];
-  productCount: number;
-};
-
-const PERIOD_CARDS: {
-  key: PeriodKey;
-  labelKey: string;
-  dataKey: keyof Pick<Dashboard, "today" | "week" | "month" | "year">;
-}[] = [
-  { key: "today", labelKey: "today", dataKey: "today" },
-  { key: "week", labelKey: "thisWeek", dataKey: "week" },
-  { key: "month", labelKey: "thisMonth", dataKey: "month" },
-  { key: "year", labelKey: "thisYear", dataKey: "year" },
-];
+const kpiIsMoney = (key: string) =>
+  !["transactions", "saleCount", "count", "skuCount"].includes(key);
 
 export default function DashboardPage() {
-  const { can, canAny, meets, me } = usePermission();
+  const { can, canAny, canSeeCost, meets, me } = usePermission();
   const t = useTranslations("Dashboard");
+  const tReports = useTranslations("Reports");
   const canReport = can("REPORTING_VIEW");
   const canDrill = canAny("SALES_VIEW", "SALES_VIEW_OWN", "SALES_VIEW_ALL");
-  const [data, setData] = useState<Dashboard | null>(null);
+
+  const [preset, setPreset] = useState<ReportPreset>("today");
+  const [from, setFrom] = useState(() => toDateInput(new Date()));
+  const [to, setTo] = useState(() => toDateInput(new Date()));
+  const [customApplied, setCustomApplied] = useState({ from: "", to: "" });
+  const [data, setData] = useState<DashboardPayload | null>(null);
+  const [loading, setLoading] = useState(true);
   const [periodModal, setPeriodModal] = useState<{
     period: PeriodKey;
     total: string;
@@ -81,21 +63,63 @@ export default function DashboardPage() {
     count: number;
   } | null>(null);
 
-  useEffect(() => {
+  const range = useMemo(() => {
+    if (preset === "custom") {
+      return resolvePresetRange("custom", {
+        from: customApplied.from || from,
+        to: customApplied.to || to,
+      });
+    }
+    return resolvePresetRange(preset);
+  }, [preset, customApplied, from, to]);
+
+  const load = useCallback(async () => {
     if (!canReport) return;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/proxy/reporting/dashboard", {
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error("Failed to load dashboard");
-        setData((await res.json()) as Dashboard);
-      } catch (e) {
-        toastError(e instanceof Error ? e.message : "Error loading dashboard");
+    setLoading(true);
+    try {
+      const payload = await fetchDashboard({
+        preset,
+        from: range.from,
+        to: range.to,
+      });
+      if (!payload) {
+        toastError(t("loadFailed"));
+        setData(null);
+        return;
       }
-    };
+      setData(payload);
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : t("loadFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }, [canReport, preset, range.from, range.to, t]);
+
+  useEffect(() => {
     void load();
-  }, [canReport]);
+  }, [load]);
+
+  const handlePresetChange = (next: ReportPreset) => {
+    setPreset(next);
+    if (next !== "custom") {
+      const r = resolvePresetRange(next);
+      setFrom(r.from);
+      setTo(r.to);
+    }
+  };
+
+  const businessDate = data?.businessDate ?? toDateInput(new Date());
+  const ethiopian = formatEthiopianDate(businessDate);
+  const greetingName = me.displayName ?? me.email;
+
+  const kpis = data
+    ? dashboardKpis(data, { includeProfit: canSeeCost, preset })
+    : [];
+  const needsAttention = data ? dashboardNeedsAttention(data) : [];
+  const paymentChart = (data?.paymentsByMethod ?? []).map((p) => ({
+    name: p.label ?? paymentLabel(p.method) ?? p.method,
+    value: Number(p.amount) || 0,
+  }));
 
   if (!canReport) {
     const places = [
@@ -111,7 +135,7 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={t("welcome", { name: me.displayName ?? me.email })}
+          title={t("welcome", { name: greetingName })}
           description={t("pickAction")}
         />
         {places.length === 0 ? (
@@ -133,26 +157,22 @@ export default function DashboardPage() {
     );
   }
 
-  if (!data) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title={t("title")} description={t("description")} />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t("title")}
-        description={t("description")}
+        title={t("greeting", { name: greetingName })}
+        description={
+          ethiopian
+            ? `${formatDateShort(businessDate)} · ${ethiopian}`
+            : formatDateShort(businessDate)
+        }
         actions={
           <>
+            {can("REPORTING_VIEW") ? (
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/reports">{tReports("title")}</Link>
+              </Button>
+            ) : null}
             {can("SALES_CREATE") ? (
               <Button asChild size="sm">
                 <Link href="/sell">{t("recordSale")}</Link>
@@ -167,126 +187,238 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {PERIOD_CARDS.map((p) => {
-          const summary = data[p.dataKey];
-          return (
-            <StatCard
-              key={p.key}
-              label={t(p.labelKey)}
-              value={formatMoney(summary.grandTotal)}
-              detail={`${summary.saleCount} sales`}
-              onClick={
-                canDrill
-                  ? () =>
-                      setPeriodModal({
-                        period: p.key,
-                        total: summary.grandTotal,
-                        netProfit: summary.netProfit,
-                        count: summary.saleCount,
-                      })
-                  : undefined
-              }
-            />
-          );
-        })}
-      </div>
+      <PeriodPresetBar
+        preset={preset}
+        from={from}
+        to={to}
+        onPresetChange={handlePresetChange}
+        onFromChange={setFrom}
+        onToChange={setTo}
+        onApplyCustom={() => {
+          setCustomApplied({ from, to });
+        }}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
-            {t("restockSoon", { count: data.needsRestock.length })}
-          </h2>
-          {data.needsRestock.length === 0 ? (
-            <p className="mt-4 text-sm text-text-muted">{t("allAboveAlert")}</p>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {data.needsRestock.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-text">{item.name}</span>
-                    <Badge
-                      variant={item.status === "OUT" ? "danger" : "warning"}
-                    >
-                      {item.status === "OUT" ? "OUT of Stock" : "Low"}
-                    </Badge>
-                  </div>
-                  <span className="text-text-muted">
-                    {item.available} {t("available")} · {t("reorder")}{" "}
-                    {item.restockQty}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
-              {t("expiringSoon", { count: data.expiringSoon.length })}
-            </h2>
-            <Link href="/expiry" className="text-xs font-semibold text-primary">
-              {/* View all */}
-            </Link>
-          </div>
-          {data.expiringSoon.length === 0 ? (
-            <p className="mt-4 text-sm text-text-muted">
-              {t("noBatchesExpiring")}
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {data.expiringSoon.map((b) => (
-                <li
-                  key={b.id}
-                  className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-text"
-                >
-                  {b.productName} · {b.qtyRemaining} {t("left")} ·{" "}
-                  {b.expiryDate ?? "—"}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-
-      <Card>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
-            {t("openReservations", {
-              count: data.openReservations.length,
-            })}
-          </h2>
-          <Link
-            href="/reservations"
-            className="text-xs font-semibold text-primary"
-          >
-            {/* View all */}
-          </Link>
+      {loading && !data ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
-        {data.openReservations.length === 0 ? (
-          <p className="mt-4 text-sm text-text-muted">{t("noReservations")}</p>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {data.openReservations.map((r) => (
-              <li
-                key={r.id}
-                className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-text"
-              >
-                {r.productName} · qty {r.quantity}
-                {r.customerName ? ` · ${r.customerName}` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      ) : null}
 
-      <p className="text-sm text-text-muted">
-        {t("productsTracked", { count: data.productCount })}
-      </p>
+      {data ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {kpis.map((kpi) => {
+              const display = kpiIsMoney(kpi.key)
+                ? formatMoney(String(kpi.value))
+                : String(kpi.value);
+              const drillPeriod: PeriodKey | null =
+                kpi.key === "sales"
+                  ? preset === "this_week"
+                    ? "week"
+                    : preset === "this_month" || preset === "last_month"
+                      ? "month"
+                      : "today"
+                  : null;
+              const summary =
+                drillPeriod === "week"
+                  ? data.week
+                  : drillPeriod === "month"
+                    ? data.month
+                    : data.today;
+              return (
+                <StatCard
+                  key={kpi.key}
+                  label={kpi.label ?? kpi.key}
+                  value={display}
+                  deltaPct={kpi.deltaPct}
+                  onClick={
+                    canDrill && drillPeriod && summary
+                      ? () =>
+                          setPeriodModal({
+                            period: drillPeriod,
+                            total: summary.grandTotal,
+                            netProfit: summary.netProfit,
+                            count: summary.saleCount,
+                          })
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </div>
+
+          {/* Legacy period cards when new KPIs missing but legacy present */}
+          {kpis.length === 0 && data.today ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {(
+                [
+                  ["today", data.today, "today"],
+                  ["week", data.week, "thisWeek"],
+                  ["month", data.month, "thisMonth"],
+                  ["year", data.year, "thisYear"],
+                ] as const
+              ).map(([period, summary, labelKey]) =>
+                summary ? (
+                  <StatCard
+                    key={period}
+                    label={t(labelKey)}
+                    value={formatMoney(summary.grandTotal)}
+                    detail={`${summary.saleCount} ${t("salesCount")}`}
+                    deltaPct={summary.deltaPct}
+                    onClick={
+                      canDrill
+                        ? () =>
+                            setPeriodModal({
+                              period,
+                              total: summary.grandTotal,
+                              netProfit: summary.netProfit,
+                              count: summary.saleCount,
+                            })
+                        : undefined
+                    }
+                  />
+                ) : null,
+              )}
+            </div>
+          ) : null}
+
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Card className="lg:col-span-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+                {t("salesByHour")}
+              </h2>
+              <div className="mt-4">
+                <SalesByHourChart
+                  data={data.salesByHour ?? []}
+                  emptyLabel={t("noHourlySales")}
+                />
+              </div>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+                {t("paymentsByMethod")}
+              </h2>
+              <div className="mt-4">
+                <SimpleReportChart
+                  kind="pie"
+                  data={paymentChart}
+                  emptyLabel={t("noPayments")}
+                />
+              </div>
+              {(data.paymentsByMethod ?? []).length > 0 ? (
+                <ul className="mt-2 space-y-1.5">
+                  {data.paymentsByMethod!.map((p) => (
+                    <li
+                      key={p.method}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-text-muted">
+                        {p.label ?? paymentLabel(p.method) ?? p.method}
+                      </span>
+                      <span className="tabular-nums font-medium text-text">
+                        {formatMoney(p.amount)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </Card>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card padding={false} className="overflow-hidden">
+              <div className="border-b border-border px-5 py-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+                  {t("topProducts")}
+                </h2>
+              </div>
+              {(data.topProducts ?? []).length === 0 ? (
+                <p className="px-5 py-8 text-sm text-text-muted">{t("noTopProducts")}</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-muted">
+                        <th className="px-5 py-2 font-semibold">{t("product")}</th>
+                        <th className="px-3 py-2 text-right font-semibold">{t("qty")}</th>
+                        <th className="px-5 py-2 text-right font-semibold">{t("revenue")}</th>
+                        {canSeeCost ? (
+                          <th className="px-5 py-2 text-right font-semibold">{t("profit")}</th>
+                        ) : null}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.topProducts!.map((row, i) => (
+                        <tr key={row.productId ?? `${row.name}-${i}`} className="border-b border-border last:border-0">
+                          <td className="px-5 py-2.5 font-medium text-text">{row.name}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums text-text-muted">
+                            {row.quantity ?? "—"}
+                          </td>
+                          <td className="px-5 py-2.5 text-right tabular-nums text-text">
+                            {row.revenue ? formatMoney(row.revenue) : "—"}
+                          </td>
+                          {canSeeCost ? (
+                            <td className="px-5 py-2.5 text-right tabular-nums text-text">
+                              {row.profit ? formatMoney(row.profit) : "—"}
+                            </td>
+                          ) : null}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted">
+                  {t("needsAttention")}
+                </h2>
+                {needsAttention.length > 0 ? (
+                  <Badge variant="warning">{needsAttention.length}</Badge>
+                ) : null}
+              </div>
+              {needsAttention.length === 0 ? (
+                <p className="mt-4 text-sm text-text-muted">{t("allClear")}</p>
+              ) : (
+                <ul className="mt-4 space-y-2">
+                  {needsAttention.map((item) => (
+                    <li key={`${item.kind}-${item.href}`}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "tap flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm transition hover:border-primary/30 hover:bg-surface",
+                        )}
+                      >
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className="font-medium text-text">{item.title}</span>
+                          <Badge variant={severityVariant(item.severity)}>
+                            {item.count}
+                          </Badge>
+                        </div>
+                        <span className="shrink-0 text-xs font-semibold text-primary">
+                          {t("open")}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </div>
+
+          {data.productCount != null ? (
+            <p className="text-sm text-text-muted">
+              {t("productsTracked", { count: data.productCount })}
+            </p>
+          ) : null}
+        </>
+      ) : null}
 
       {periodModal ? (
         <SalesPeriodModal

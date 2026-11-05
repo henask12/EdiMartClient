@@ -196,13 +196,18 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
           </button>
         </div>
 
-        {/* Dashboard link */}
+        {/* Dashboard + Reports */}
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
           <div className="space-y-1">
             {renderItem({
               href: "/dashboard",
               labelKey: "dashboard",
               icon: LayoutDashboard,
+            })}
+            {renderItem({
+              href: "/reports",
+              labelKey: "reports",
+              icon: BarChart3,
             })}
           </div>
 

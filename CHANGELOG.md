@@ -1,5 +1,25 @@
 # Changelog
 
+## Phase 8 — Dashboards and reports (client)
+
+### Added
+- Redesigned `/dashboard`: period presets, KPI StatCards with `deltaPct`, sales-by-hour
+  (Recharts), payment split, top products, Needs-attention links; legacy
+  today/week/month/year still supported as fallback.
+- `/reports` hub (`?report=…`) for Sales / Inventory / Purchasing reports with
+  date filters, chart + table, CSV export (`format=csv`).
+- Inventory overview optional KPIs from `/reporting/inventory-dashboard`
+  (turnover, DOI, ABC, shrinkage, accuracy, dead stock).
+- Helpers `lib/reporting.ts`; nav Reports next to Dashboard; `REPORTING_VIEW` gate.
+- i18n Dashboard / Reports keys (en + am).
+
+### Defaults
+- CSV only · no XYZ · cost columns gated by `REPORTS_VIEW_COST_PROFIT`.
+
+### Known gaps
+- Excel/PDF and scheduled email not built (Phase 8 default).
+- Sync-error attention items wait for Phase 9 offline.
+
 ## Phase 7 — Customers, loyalty and promotions (client)
 
 ### Added

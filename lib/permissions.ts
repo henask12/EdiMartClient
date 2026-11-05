@@ -113,6 +113,7 @@ export const ROUTE_REQUIREMENTS: { prefix: string; requires: Requirement }[] = [
   { prefix: "/supplier-bills", requires: { all: ["SUPPLIER_PAYMENTS_MANAGE"] } },
   { prefix: "/suppliers", requires: { any: ["SUPPLIERS_MANAGE", "PRODUCTS_VIEW"] } },
   { prefix: "/add-stock", requires: { all: ["STOCK_RECEIVE", "PRODUCTS_VIEW"] } },
+  { prefix: "/reports", requires: { all: ["REPORTING_VIEW"] } },
   { prefix: "/inventory", requires: { all: ["STOCK_VIEW"] } },
   { prefix: "/stock-lookup", requires: { all: ["STOCK_VIEW"] } },
   { prefix: "/transfers", requires: { all: ["STOCK_TRANSFER"] } },

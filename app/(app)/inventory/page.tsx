@@ -8,6 +8,10 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { formatMoney } from "@/lib/format-money";
 import { usePermission } from "@/components/PermissionProvider";
+import {
+  fetchInventoryDashboard,
+  type InventoryDashboardPayload,
+} from "@/lib/reporting";
 import { parseApiMessage, toastError, toastSuccess } from "@/lib/toast";
 
 type Overview = {
@@ -35,9 +39,15 @@ type ReplenishItem = {
   toLocationId: string;
 };
 
+const formatPct = (n: number | null | undefined) => {
+  if (n == null || Number.isNaN(n)) return null;
+  return `${Math.round(n * 10) / 10}%`;
+};
+
 const InventoryOverviewPage = () => {
   const { can, canSeeCost } = usePermission();
   const [data, setData] = useState<Overview | null>(null);
+  const [reporting, setReporting] = useState<InventoryDashboardPayload | null>(null);
   const [replenish, setReplenish] = useState<ReplenishItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingId, setCreatingId] = useState<string | null>(null);
@@ -45,9 +55,10 @@ const InventoryOverviewPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [oRes, rRes] = await Promise.all([
+        const [oRes, rRes, invDash] = await Promise.all([
           fetch("/api/proxy/inventory/overview", { cache: "no-store" }),
           fetch("/api/proxy/inventory/replenishment", { cache: "no-store" }),
+          fetchInventoryDashboard().catch(() => null),
         ]);
         if (!oRes.ok) throw new Error("Could not load inventory overview");
         setData(await oRes.json());
@@ -55,6 +66,7 @@ const InventoryOverviewPage = () => {
           const rJson = await rRes.json();
           setReplenish(Array.isArray(rJson) ? rJson : rJson.items ?? []);
         }
+        if (invDash) setReporting(invDash);
       } catch (e) {
         toastError(e instanceof Error ? e.message : "Could not load inventory overview");
       } finally {
@@ -91,10 +103,22 @@ const InventoryOverviewPage = () => {
     }
   };
 
-  const skuCount = data?.skuCount ?? data?.activeSkus ?? 0;
-  const valueAtCost = data?.valueAtCost ?? data?.stockValueAtCost ?? null;
-  const valueAtRetail = data?.valueAtRetail ?? data?.stockValueAtRetail ?? null;
+  const skuCount = data?.skuCount ?? data?.activeSkus ?? reporting?.skuCount ?? 0;
+  const valueAtCost =
+    data?.valueAtCost ?? data?.stockValueAtCost ?? reporting?.valueAtCost ?? null;
+  const valueAtRetail =
+    data?.valueAtRetail ?? data?.stockValueAtRetail ?? reporting?.valueAtRetail ?? null;
   const quarantined = data?.quarantinedQty ?? data?.quarantineOnHand ?? "0";
+  const turnover = reporting?.turnover;
+  const doi = reporting?.daysOfInventory ?? reporting?.doi;
+  const shrinkage = reporting?.shrinkageThisMonth ?? reporting?.shrinkage;
+  const accuracy = reporting?.accuracyPct ?? reporting?.inventoryAccuracyPct;
+  const abc = reporting?.abc;
+  const abcLabel = abc
+    ? `A ${abc.A ?? 0} · B ${abc.B ?? 0} · C ${abc.C ?? 0}`
+    : reporting?.abcSplit && reporting.abcSplit.length > 0
+      ? reporting.abcSplit.map((r) => `${r.class} ${r.skuCount ?? ""}`).join(" · ")
+      : null;
 
   return (
     <div className="space-y-6">
@@ -103,6 +127,11 @@ const InventoryOverviewPage = () => {
         description="Stock value, SKUs, low/out counts, and floor replenishment."
         actions={
           <div className="flex flex-wrap gap-2 text-sm">
+            {can("REPORTING_VIEW") ? (
+              <Link href="/reports?report=stock-on-hand" className="text-primary hover:underline">
+                Reports
+              </Link>
+            ) : null}
             <Link href="/stock-lookup" className="text-primary hover:underline">
               Stock lookup
             </Link>
@@ -132,8 +161,8 @@ const InventoryOverviewPage = () => {
       ) : data ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="SKUs tracked" value={String(skuCount)} />
-          <StatCard label="Low stock" value={String(data.lowStockCount ?? 0)} />
-          <StatCard label="Out of stock" value={String(data.outOfStockCount ?? 0)} />
+          <StatCard label="Low stock" value={String(data.lowStockCount ?? reporting?.lowStockCount ?? 0)} />
+          <StatCard label="Out of stock" value={String(data.outOfStockCount ?? reporting?.outOfStockCount ?? 0)} />
           <StatCard label="In quarantine" value={quarantined} />
           {canSeeCost && valueAtCost != null ? (
             <StatCard label="Value at cost" value={formatMoney(valueAtCost)} />
@@ -143,6 +172,22 @@ const InventoryOverviewPage = () => {
           ) : null}
           {canSeeCost && data.expiringValue30d != null ? (
             <StatCard label="Expiring ≤30 days" value={formatMoney(data.expiringValue30d)} />
+          ) : null}
+          {turnover != null ? (
+            <StatCard label="Turnover" value={String(turnover)} />
+          ) : null}
+          {doi != null ? (
+            <StatCard label="Days of inventory" value={String(doi)} />
+          ) : null}
+          {abcLabel ? <StatCard label="ABC split" value={abcLabel} /> : null}
+          {canSeeCost && shrinkage != null ? (
+            <StatCard label="Shrinkage (month)" value={formatMoney(shrinkage)} />
+          ) : null}
+          {formatPct(accuracy) ? (
+            <StatCard label="Count accuracy" value={formatPct(accuracy)!} />
+          ) : null}
+          {canSeeCost && reporting?.deadStockValue != null ? (
+            <StatCard label="Dead stock value" value={formatMoney(reporting.deadStockValue)} />
           ) : null}
         </div>
       ) : (

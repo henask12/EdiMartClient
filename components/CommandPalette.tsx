@@ -30,6 +30,7 @@ import {
   UserRound,
   Percent,
   Heart,
+  BarChart3,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
 import { meetsRequirement, requirementForPath, isOwnerRole } from "@/lib/permissions";
@@ -44,6 +45,7 @@ type PageEntry = {
 
 const PAGES: PageEntry[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, group: "Pages" },
+  { href: "/reports", labelKey: "reports", icon: BarChart3, group: "Pages" },
   { href: "/pos", labelKey: "sell", icon: ShoppingCart, group: "Sell" },
   { href: "/sales", labelKey: "sales", icon: Receipt, group: "Sell" },
   { href: "/shifts", labelKey: "shifts", icon: Clock3, group: "Sell" },
