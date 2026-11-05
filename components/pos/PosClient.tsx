@@ -59,6 +59,10 @@ import {
 } from "@/lib/customers";
 import { formatMoney } from "@/lib/format-money";
 import { newIdempotencyKey, shouldRotateKey } from "@/lib/idempotency";
+import {
+  enqueueSaleCheckout,
+  pendingSaleLabel,
+} from "@/lib/offline/outbox";
 import { playScannerBeep } from "@/lib/pos-beep";
 import {
   clearCart,
@@ -87,7 +91,10 @@ import type {
   PosProduct,
   PosSettings,
 } from "@/lib/pos-types";
-import { registerHeaders } from "@/lib/register-device";
+import {
+  getStoredRegisterCode,
+  registerHeaders,
+} from "@/lib/register-device";
 import {
   fetchCurrentShift,
   parseShiftSettings,
@@ -588,7 +595,14 @@ export const PosClient = () => {
     toastSuccess(t("parkResumed"));
   };
 
-  const buildCheckoutBody = (payments: PosPaymentLine[]) => {
+  const buildCheckoutBody = (
+    payments: PosPaymentLine[],
+    extras: {
+      clientSaleId: string;
+      createdOffline: boolean;
+      registerCode: string;
+    },
+  ) => {
     const primary = payments[0];
     const proofImagePaths = [
       ...new Set(payments.flatMap((p) => p.proofPaths ?? [])),
@@ -619,7 +633,61 @@ export const PosClient = () => {
       loyaltyPointsToRedeem: loyaltyPointsToRedeem.trim()
         ? Number(loyaltyPointsToRedeem)
         : undefined,
+      clientSaleId: extras.clientSaleId,
+      createdOffline: extras.createdOffline,
+      registerCode: extras.registerCode,
     };
+  };
+
+  const finishLocalSuccess = async (
+    payments: PosPaymentLine[],
+    result: CheckoutResult,
+  ) => {
+    const tendered = payments.reduce((s, p) => addMoney(s, p.amount), "0.00");
+    const changeDue =
+      compareMoney(tendered, totals.total) > 0
+        ? subMoney(tendered, totals.total)
+        : "0.00";
+    setSuccess({
+      result,
+      changeDue,
+      lines: cart.lines,
+      cartDiscount: cart.cartDiscount,
+    });
+    setPaymentOpen(false);
+    setCustomer(null);
+    setCouponCode("");
+    setLoyaltyPointsToRedeem("");
+    await clearCart();
+    persist(emptyCart());
+    attemptKey.current = newIdempotencyKey();
+    void loadCatalog();
+  };
+
+  const queueOfflineSale = async (
+    payments: PosPaymentLine[],
+    clientSaleId: string,
+    body: unknown,
+    headers: Record<string, string>,
+  ) => {
+    const label = pendingSaleLabel(clientSaleId);
+    await enqueueSaleCheckout({
+      clientSaleId,
+      idempotencyKey: attemptKey.current,
+      body,
+      headers: {
+        ...headers,
+      },
+      label,
+    });
+    toastSuccess(t("queuedOffline"));
+    await finishLocalSuccess(payments, {
+      id: clientSaleId,
+      saleNumber: label,
+      pendingSync: true,
+      grandTotal: totals.total,
+      total: totals.total,
+    });
   };
 
   const handleComplete = async (payments: PosPaymentLine[], approvalToken?: string) => {
@@ -632,6 +700,19 @@ export const PosClient = () => {
       setSubmitting(false);
       return;
     }
+
+    const clientSaleId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : newIdempotencyKey();
+    const registerCode = getStoredRegisterCode();
+    const createdOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    const body = buildCheckoutBody(payments, {
+      clientSaleId,
+      createdOffline,
+      registerCode,
+    });
+
     const headers: Record<string, string> = {
       "content-type": "application/json",
       "idempotency-key": attemptKey.current,
@@ -639,15 +720,26 @@ export const PosClient = () => {
     };
     if (approvalToken) headers["x-approval-token"] = approvalToken;
 
+    if (createdOffline) {
+      await queueOfflineSale(payments, clientSaleId, body, headers);
+      setSubmitting(false);
+      return;
+    }
+
     let res: Response;
     try {
       res = await fetch("/api/proxy/sales/checkout", {
         method: "POST",
         headers,
-        body: JSON.stringify(buildCheckoutBody(payments)),
+        body: JSON.stringify(body),
       });
     } catch {
-      toastError(t("noConnection"));
+      const offlineBody = buildCheckoutBody(payments, {
+        clientSaleId,
+        createdOffline: true,
+        registerCode,
+      });
+      await queueOfflineSale(payments, clientSaleId, offlineBody, headers);
       setSubmitting(false);
       return;
     }
@@ -656,6 +748,15 @@ export const PosClient = () => {
     setSubmitting(false);
 
     if (!res.ok) {
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        const offlineBody = buildCheckoutBody(payments, {
+          clientSaleId,
+          createdOffline: true,
+          registerCode,
+        });
+        await queueOfflineSale(payments, clientSaleId, offlineBody, headers);
+        return;
+      }
       if (shouldRotateKey(res.status)) attemptKey.current = newIdempotencyKey();
       const code = String((data as { code?: string }).code ?? "");
       if (code === "SHIFT_REQUIRED") {
@@ -677,26 +778,7 @@ export const PosClient = () => {
       return;
     }
 
-    const result = data as CheckoutResult;
-    const tendered = payments.reduce((s, p) => addMoney(s, p.amount), "0.00");
-    const changeDue =
-      compareMoney(tendered, totals.total) > 0
-        ? subMoney(tendered, totals.total)
-        : "0.00";
-    setSuccess({
-      result,
-      changeDue,
-      lines: cart.lines,
-      cartDiscount: cart.cartDiscount,
-    });
-    setPaymentOpen(false);
-    setCustomer(null);
-    setCouponCode("");
-    setLoyaltyPointsToRedeem("");
-    await clearCart();
-    persist(emptyCart());
-    attemptKey.current = newIdempotencyKey();
-    void loadCatalog();
+    await finishLocalSuccess(payments, data as CheckoutResult);
   };
 
   const handleNewSale = () => {

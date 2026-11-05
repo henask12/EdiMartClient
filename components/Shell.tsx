@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { AccessDenied } from "@/components/AccessDenied";
 import { CommandPalette } from "@/components/CommandPalette";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { PermissionProvider, type Me } from "@/components/PermissionProvider";
 import { Sidebar } from "@/components/Sidebar";
 import { Kbd } from "@/components/ui/Kbd";
@@ -32,6 +33,7 @@ import {
   requirementForPath,
   isOwnerRole,
 } from "@/lib/permissions";
+import { useOutboxStatus } from "@/lib/offline/use-outbox-status";
 import { isTillRegistered } from "@/lib/register-device";
 import { fetchCurrentShift, openerName, type Shift } from "@/lib/shifts";
 import { toastError } from "@/lib/toast";
@@ -51,6 +53,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const [online, setOnline] = useState(true);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [tillRegistered, setTillRegistered] = useState(false);
+  const outbox = useOutboxStatus();
 
   // Restore sidebar state
   useEffect(() => {
@@ -250,6 +253,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   if (isPosFocus) {
     return (
       <div className="flex min-h-screen flex-col bg-bg">
+        <OfflineBanner compact />
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-3 sm:px-4">
           <Link
             href="/dashboard"
@@ -264,6 +268,14 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
             </span>
           ) : null}
           <div className="flex-1" />
+          {outbox.pendingSales > 0 || outbox.needsAttention > 0 ? (
+            <Link
+              href="/sync-review"
+              className="hidden rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning sm:inline-flex"
+            >
+              {tShell("offlineWaiting", { count: outbox.pendingSales || outbox.needsAttention })}
+            </Link>
+          ) : null}
           <span
             className={cn(
               "hidden items-center gap-1.5 text-xs font-medium sm:inline-flex",
@@ -355,6 +367,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main area */}
       <div className="flex flex-1 flex-col">
+        <OfflineBanner />
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
           {/* Mobile hamburger */}

@@ -32,10 +32,14 @@ import {
   UserRound,
   Percent,
   Heart,
+  RefreshCw,
+  KeyRound,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 import { type Me } from "@/components/PermissionProvider";
 import { meetsRequirement, requirementForPath, isOwnerRole } from "@/lib/permissions";
+import { useOutboxStatus } from "@/lib/offline/use-outbox-status";
 import { cn } from "@/lib/cn";
 import {
   Tooltip,
@@ -102,6 +106,8 @@ const BOTTOM_ITEMS: NavItem[] = [
   { href: "/settings/purchasing", labelKey: "purchasingSettings", icon: Truck },
   { href: "/settings/loyalty", labelKey: "loyaltySettings", icon: Heart },
   { href: "/settings/locations", labelKey: "locations", icon: Warehouse },
+  { href: "/settings/security", labelKey: "security", icon: KeyRound },
+  { href: "/audit", labelKey: "audit", icon: ScrollText },
   { href: "/settings/users", labelKey: "users", icon: Users },
   { href: "/settings/roles", labelKey: "roles", icon: Shield },
   { href: "/settings/emails", labelKey: "alertEmails", icon: Mail },
@@ -116,6 +122,8 @@ type SidebarProps = {
 export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
   const pathname = usePathname();
   const t = useTranslations("Nav");
+  const outbox = useOutboxStatus();
+  const syncBadge = outbox.pendingSales + outbox.needsAttention;
 
   const canSee = (item: NavItem) =>
     !item.disabled && meetsRequirement(me.permissions, requirementForPath(item.href));
@@ -130,6 +138,7 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
     const Icon = item.icon;
     const active = isActive(item.href);
     const label = t(item.labelKey);
+    const badge = item.badge;
 
     const link = (
       <Link
@@ -144,7 +153,16 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
         aria-current={active ? "page" : undefined}
       >
         <Icon className="size-5 shrink-0" />
-        {!collapsed ? <span className="truncate">{label}</span> : null}
+        {!collapsed ? (
+          <>
+            <span className="truncate flex-1">{label}</span>
+            {badge && badge > 0 ? (
+              <span className="rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-warning">
+                {badge}
+              </span>
+            ) : null}
+          </>
+        ) : null}
       </Link>
     );
 
@@ -209,6 +227,14 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
               labelKey: "reports",
               icon: BarChart3,
             })}
+            {syncBadge > 0
+              ? renderItem({
+                  href: "/sync-review",
+                  labelKey: "syncReview",
+                  icon: RefreshCw,
+                  badge: syncBadge,
+                })
+              : null}
           </div>
 
           {/* Grouped nav */}

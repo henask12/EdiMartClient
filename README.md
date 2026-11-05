@@ -16,6 +16,10 @@ browser -> Next /api/proxy/*      -> API /*            (cookie -> Authorization:
 - Seeded, admin-created and admin-reset accounts must choose a new password on first sign-in.
 - Selling sends an `Idempotency-Key` per attempt (`lib/idempotency.ts`), so a retry after a dropped
   connection can never record the same sale twice.
+- **PWA / offline POS (Phase 9):** installable via `manifest.webmanifest` + `public/sw.js`.
+  While offline, checkout (and stock-count lines / goods receipts) go into an IndexedDB outbox
+  and sync when the browser is online again. Nothing is silently dropped — conflicts open on
+  `/sync-review`. Mutating proxy calls require a matching Origin/Referer (CSRF).
 
 ## Run
 
@@ -29,6 +33,11 @@ npm run build && npm start
 `next start` / Vercel refuse `localhost` / `127.0.0.1` as `API_INTERNAL_URL` on purpose (it catches
 a forgotten environment variable on deploy). To test a production build against a local API use
 another loopback address such as `http://127.0.0.2:4000`.
+
+```bash
+npx tsc --noEmit
+npm run check:colors
+```
 
 ## Environment
 

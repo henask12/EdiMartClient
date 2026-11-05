@@ -14,6 +14,8 @@ export default function LoginForm() {
   const next = searchParams.get("next") ?? "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [totpRequired, setTotpRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,9 +27,22 @@ export default function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          ...(totpRequired && totpCode.trim()
+            ? { totpCode: totpCode.trim() }
+            : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
+
+      if (data?.code === "TOTP_REQUIRED") {
+        setTotpRequired(true);
+        setError(null);
+        return;
+      }
+
       if (!res.ok) {
         setError(
           typeof data.message === "string" ? data.message : t("loginFailed"),
@@ -71,6 +86,7 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={totpRequired}
             />
             <Input
               type="password"
@@ -79,15 +95,52 @@ export default function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={totpRequired}
             />
+            {totpRequired ? (
+              <Input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                label={t("totpCode")}
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                required
+                autoFocus
+                aria-label={t("totpCode")}
+              />
+            ) : null}
             {error ? (
               <p className="text-sm text-danger" role="alert">
                 {error}
               </p>
             ) : null}
+            {totpRequired && !error ? (
+              <p className="text-sm text-text-muted" role="status">
+                {t("totpHint")}
+              </p>
+            ) : null}
             <Button type="submit" disabled={loading} fullWidth>
-              {loading ? t("signingIn") : t("signIn")}
+              {loading
+                ? t("signingIn")
+                : totpRequired
+                  ? t("verifyTotp")
+                  : t("signIn")}
             </Button>
+            {totpRequired ? (
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                onClick={() => {
+                  setTotpRequired(false);
+                  setTotpCode("");
+                  setError(null);
+                }}
+              >
+                {t("backToLogin")}
+              </Button>
+            ) : null}
           </form>
         </div>
       </div>

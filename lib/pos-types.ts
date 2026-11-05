@@ -92,4 +92,6 @@ export type CheckoutResult = {
   lines?: unknown[];
   createdAt?: string;
   replayed?: boolean;
+  /** Local offline queue — server assigns the final sale number on sync. */
+  pendingSync?: boolean;
 };

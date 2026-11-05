@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { csrfOriginAllowed } from "@/lib/csrf";
 
 const apiBase = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:4000";
 const cookieName = process.env.AUTH_COOKIE_NAME ?? "edisims_access";
@@ -16,11 +17,22 @@ const clearSessionCookie = (res: NextResponse) => {
   return res;
 };
 
+const csrfGuard = (req: NextRequest): NextResponse | null => {
+  if (csrfOriginAllowed(req)) return null;
+  return NextResponse.json(
+    { message: "Forbidden origin", code: "CSRF_ORIGIN_MISMATCH" },
+    { status: 403 },
+  );
+};
+
 const forward = async (
   req: NextRequest,
   params: Promise<{ path: string[] }>,
   method: string,
 ) => {
+  const blocked = csrfGuard(req);
+  if (blocked) return blocked;
+
   const { path } = await params;
   const targetPath = `/${path.join("/")}`;
   const targetUrl = new URL(`${targetPath}${req.nextUrl.search}`, apiBase);

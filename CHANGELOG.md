@@ -1,5 +1,27 @@
 # Changelog
 
+## Phase 9 — Offline, reliability and security (client)
+
+### Added
+- PWA: `public/manifest.webmanifest`, lightweight `public/sw.js` (app shell +
+  `/api/proxy/products` catalog cache), registered from the root layout;
+  `/offline` fallback; middleware allows SW/manifest/logo without login redirect.
+- Offline outbox (`lib/offline/outbox.ts`): IndexedDB queue for sales, stock-count
+  lines, and goods receipts; FIFO flush on `online`; conflicts never silently dropped.
+- POS checkout sends `clientSaleId`, `registerCode`, `createdOffline` + existing
+  Idempotency-Key; network/offline failures enqueue and show a pending sale number.
+- Banner + nav badge: “Offline — N sales waiting to sync”; `/sync-review` for local
+  queue + remote `/sync/conflicts` (404-tolerant).
+- Security UI `/settings/security`: password change, TOTP setup/enable/disable,
+  session list + revoke; login TOTP_REQUIRED step; CSRF Origin/Referer check on
+  proxy + login; `/audit` filterable viewer (`AUDIT_VIEW`).
+- CI: `.github/workflows/ci.yml` (`tsc --noEmit` + `scripts/check-hardcoded-colors.mjs`).
+
+### Known gaps
+- Depends on API Phase 9 for TOTP, sessions, audit list, and sync conflicts —
+  UI degrades gracefully on 404.
+- Sentry / structured logs / backup tooling are API/ops-side (brief Phase 9).
+
 ## Phase 8 — Dashboards and reports (client)
 
 ### Added

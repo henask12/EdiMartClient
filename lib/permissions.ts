@@ -128,6 +128,11 @@ export const ROUTE_REQUIREMENTS: { prefix: string; requires: Requirement }[] = [
   { prefix: "/settings/users", requires: { all: ["USERS_MANAGE"] } },
   { prefix: "/settings/roles", requires: { all: ["ROLES_MANAGE"] } },
   { prefix: "/settings/emails", requires: { all: ["SETTINGS_EMAILS"] } },
+  { prefix: "/settings/security", requires: {} },
+  { prefix: "/settings/audit", requires: { all: ["AUDIT_VIEW"] } },
+  { prefix: "/audit", requires: { all: ["AUDIT_VIEW"] } },
+  // Any signed-in seller / staff — Shell already requires auth.
+  { prefix: "/sync-review", requires: {} },
   { prefix: "/design", requires: { all: ["ROLES_MANAGE"] } },
 ];
 
@@ -174,6 +179,7 @@ const NAMES: Partial<Record<Permission, string>> = {
   PURCHASING_MANAGE: "Manage purchasing",
   PURCHASE_APPROVE: "Approve purchase orders",
   SUPPLIER_PAYMENTS_MANAGE: "Manage supplier payments",
+  AUDIT_VIEW: "View the audit log",
 };
 
 export const permissionName = (key: Permission) => NAMES[key] ?? key;

@@ -76,8 +76,13 @@ export const PosSuccessPanel = ({
           <Check className="size-10" strokeWidth={3} aria-hidden />
         </div>
         <div>
-          <h2 className="text-2xl font-semibold text-text">{t("saleComplete")}</h2>
+          <h2 className="text-2xl font-semibold text-text">
+            {result.pendingSync ? t("saleQueued") : t("saleComplete")}
+          </h2>
           <p className="mt-1 text-sm text-text-muted">{saleNumber}</p>
+          {result.pendingSync ? (
+            <p className="mt-2 text-xs text-warning">{t("pendingSyncHint")}</p>
+          ) : null}
         </div>
         {Number(changeDue) > 0 ? (
           <div>

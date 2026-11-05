@@ -266,11 +266,42 @@ export const postGoodsReceipt = async (body: {
   purchaseOrderId: string;
   notes?: string;
   lines: GoodsReceiptLineInput[];
-}): Promise<{ id: string; receiptNumber: string }> => {
-  const res = await purchasingFetch("/goods-receipts", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+}): Promise<{ id: string; receiptNumber: string; queuedOffline?: boolean }> => {
+  const offline =
+    typeof navigator !== "undefined" && !navigator.onLine;
+  if (offline) {
+    const { enqueueGoodsReceipt } = await import("@/lib/offline/outbox");
+    const row = await enqueueGoodsReceipt({ body });
+    return {
+      id: row.id,
+      receiptNumber: row.label ?? `PENDING-${row.id.slice(0, 8)}`,
+      queuedOffline: true,
+    };
+  }
+  let res: Response;
+  try {
+    res = await purchasingFetch("/goods-receipts", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  } catch {
+    const { enqueueGoodsReceipt } = await import("@/lib/offline/outbox");
+    const row = await enqueueGoodsReceipt({ body });
+    return {
+      id: row.id,
+      receiptNumber: row.label ?? `PENDING-${row.id.slice(0, 8)}`,
+      queuedOffline: true,
+    };
+  }
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    const { enqueueGoodsReceipt } = await import("@/lib/offline/outbox");
+    const row = await enqueueGoodsReceipt({ body });
+    return {
+      id: row.id,
+      receiptNumber: row.label ?? `PENDING-${row.id.slice(0, 8)}`,
+      queuedOffline: true,
+    };
+  }
   if (!res.ok) throw new Error(await readError(res, "Could not post goods receipt"));
   return (await res.json()) as { id: string; receiptNumber: string };
 };

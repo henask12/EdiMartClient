@@ -67,13 +67,35 @@ const StockCountDetailPage = () => {
       return;
     }
     setSaving(productId);
+    const body = { productId, countedQty };
+    const endpoint = `/api/proxy/stock-counts/${id}/lines`;
     try {
-      const res = await fetch(`/api/proxy/stock-counts/${id}/lines`, {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const { enqueueStockCount } = await import("@/lib/offline/outbox");
+        await enqueueStockCount({
+          endpoint,
+          body,
+          label: `Count line ${productId.slice(0, 8)}`,
+        });
+        toastSuccess("Line queued offline");
+        return;
+      }
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ productId, countedQty }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        const { enqueueStockCount } = await import("@/lib/offline/outbox");
+        await enqueueStockCount({
+          endpoint,
+          body,
+          label: `Count line ${productId.slice(0, 8)}`,
+        });
+        toastSuccess("Line queued offline");
+        return;
+      }
       if (!res.ok) {
         toastError(parseApiMessage(data, "Could not save line"));
         return;
@@ -81,7 +103,13 @@ const StockCountDetailPage = () => {
       toastSuccess("Line saved");
       await load();
     } catch {
-      toastError("Network error");
+      const { enqueueStockCount } = await import("@/lib/offline/outbox");
+      await enqueueStockCount({
+        endpoint,
+        body,
+        label: `Count line ${productId.slice(0, 8)}`,
+      });
+      toastSuccess("Line queued offline");
     } finally {
       setSaving(null);
     }

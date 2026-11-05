@@ -173,8 +173,12 @@ const GoodsReceiveInner = () => {
           lotNumber: l.lotNumber || undefined,
         })),
       });
-      toastSuccess(`Receipt ${receipt.receiptNumber} posted`);
-      setReceiptId(receipt.id);
+      toastSuccess(
+        receipt.queuedOffline
+          ? `Receipt queued offline (${receipt.receiptNumber})`
+          : `Receipt ${receipt.receiptNumber} posted`,
+      );
+      if (!receipt.queuedOffline) setReceiptId(receipt.id);
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Could not post receipt");
     } finally {

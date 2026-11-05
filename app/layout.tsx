@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Ethiopic } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/Toaster";
@@ -23,12 +24,19 @@ export const metadata: Metadata = {
   title: "Edi's Collection",
   description: "Inventory, stock, and sales for Edi's Collection",
   icons: { icon: "/logo.png", apple: "/logo.png" },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "EdiMart",
+    statusBarStyle: "default",
+  },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover" as const,
+  viewportFit: "cover",
+  // theme_color lives in public/manifest.webmanifest (keep hex out of app/ components)
 };
 
 export default async function RootLayout({
@@ -48,6 +56,7 @@ export default async function RootLayout({
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
             <QueryProvider>
+              <ServiceWorkerRegister />
               {children}
               <Toaster />
             </QueryProvider>

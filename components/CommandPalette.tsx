@@ -75,6 +75,9 @@ const PAGES: PageEntry[] = [
   { href: "/settings/users", labelKey: "users", icon: Users, group: "Settings" },
   { href: "/settings/roles", labelKey: "roles", icon: Shield, group: "Settings" },
   { href: "/settings/emails", labelKey: "alertEmails", icon: Mail, group: "Settings" },
+  { href: "/settings/security", labelKey: "security", icon: Shield, group: "Settings" },
+  { href: "/audit", labelKey: "audit", icon: ClipboardList, group: "Settings" },
+  { href: "/sync-review", labelKey: "syncReview", icon: ClipboardCheck, group: "Settings" },
   { href: "/settings/account", labelKey: "account", icon: Settings, group: "Settings" },
 ];
 

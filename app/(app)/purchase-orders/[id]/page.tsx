@@ -240,12 +240,32 @@ export default function PurchaseOrderDetailPage() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={{ borderBottom: "1px solid #ccc", textAlign: "left", padding: 6 }}>
+              <th
+                style={{
+                  borderBottom: "1px solid rgba(0,0,0,0.25)",
+                  textAlign: "left",
+                  padding: 6,
+                }}
+              >
                 Product
               </th>
-              <th style={{ borderBottom: "1px solid #ccc", textAlign: "right", padding: 6 }}>Qty</th>
+              <th
+                style={{
+                  borderBottom: "1px solid rgba(0,0,0,0.25)",
+                  textAlign: "right",
+                  padding: 6,
+                }}
+              >
+                Qty
+              </th>
               {canSeeCost ? (
-                <th style={{ borderBottom: "1px solid #ccc", textAlign: "right", padding: 6 }}>
+                <th
+                  style={{
+                    borderBottom: "1px solid rgba(0,0,0,0.25)",
+                    textAlign: "right",
+                    padding: 6,
+                  }}
+                >
                   Unit cost
                 </th>
               ) : null}
@@ -254,14 +274,26 @@ export default function PurchaseOrderDetailPage() {
           <tbody>
             {(po.lines ?? []).map((line) => (
               <tr key={line.id}>
-                <td style={{ borderBottom: "1px solid #eee", padding: 6 }}>
+                <td style={{ borderBottom: "1px solid rgba(0,0,0,0.12)", padding: 6 }}>
                   {line.product?.name ?? line.productId}
                 </td>
-                <td style={{ borderBottom: "1px solid #eee", padding: 6, textAlign: "right" }}>
+                <td
+                  style={{
+                    borderBottom: "1px solid rgba(0,0,0,0.12)",
+                    padding: 6,
+                    textAlign: "right",
+                  }}
+                >
                   {line.quantityOrdered}
                 </td>
                 {canSeeCost ? (
-                  <td style={{ borderBottom: "1px solid #eee", padding: 6, textAlign: "right" }}>
+                  <td
+                    style={{
+                      borderBottom: "1px solid rgba(0,0,0,0.12)",
+                      padding: 6,
+                      textAlign: "right",
+                    }}
+                  >
                     {line.unitCost != null ? formatMoney(line.unitCost) : "—"}
                   </td>
                 ) : null}
