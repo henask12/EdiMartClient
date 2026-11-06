@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { formatMoney } from "@/lib/format-money";
 import type { MartProduct } from "@/components/ProductCard";
+import { ProductImage } from "@/components/ProductImage";
 
 type Props = {
   product: MartProduct | null;
@@ -24,21 +24,14 @@ export const ProductDetailModal = ({ product, onClose }: Props) => {
         className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative aspect-[4/3] bg-surface-muted">
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-cover"
-              sizes="400px"
-              unoptimized
-            />
-          ) : (
-            <div className="flex h-full min-h-[160px] items-center justify-center text-5xl text-text-muted/30">
-              â—†
-            </div>
-          )}
+        <div className="relative aspect-[4/3]">
+          <ProductImage
+            imageUrl={product.imageUrl}
+            alt={product.name}
+            className="absolute inset-0 h-full w-full"
+            iconClassName="size-14"
+            sizes="400px"
+          />
         </div>
 
         <div className="p-5">

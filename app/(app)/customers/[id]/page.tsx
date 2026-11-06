@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePermission } from "@/components/PermissionProvider";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
@@ -204,9 +204,9 @@ export default function CustomerDetailPage() {
         description={profile.phone}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" asChild>
-              <Link href="/customers">Back</Link>
-            </Button>
+            <Link href="/customers" className={buttonVariants({ variant: "secondary" })}>
+              Back
+            </Link>
             {canManage ? (
               <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
                 Edit

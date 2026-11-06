@@ -77,7 +77,8 @@ export const DEFAULT_SHIFT_SETTINGS: ShiftSettings = {
   eodEmailEnabled: true,
 };
 
-export const DEFAULT_DENOMS = ["50", "100", "200", "500", "1000"];
+/** Circulating ETB notes commonly counted in a till float. */
+export const DEFAULT_DENOMS = ["1", "5", "10", "50", "100", "200"];
 
 export type DenomCounts = Record<string, number>;
 

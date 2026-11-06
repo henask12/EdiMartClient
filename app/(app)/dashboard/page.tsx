@@ -9,7 +9,7 @@ import { PeriodPresetBar } from "@/components/reporting/PeriodPresetBar";
 import { SalesByHourChart } from "@/components/reporting/SalesByHourChart";
 import { SimpleReportChart } from "@/components/reporting/SimpleReportChart";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Card, StatCard } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonCard } from "@/components/ui/Skeleton";
@@ -169,19 +169,25 @@ export default function DashboardPage() {
         actions={
           <>
             {can("REPORTING_VIEW") ? (
-              <Button variant="secondary" size="sm" asChild>
-                <Link href="/reports">{tReports("title")}</Link>
-              </Button>
+              <Link
+                href="/reports"
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
+              >
+                {tReports("title")}
+              </Link>
             ) : null}
             {can("SALES_CREATE") ? (
-              <Button asChild size="sm">
-                <Link href="/sell">{t("recordSale")}</Link>
-              </Button>
+              <Link href="/sell" className={buttonVariants({ size: "sm" })}>
+                {t("recordSale")}
+              </Link>
             ) : null}
             {can("STOCK_RECEIVE") ? (
-              <Button variant="secondary" size="sm" asChild>
-                <Link href="/add-stock">{t("stocks")}</Link>
-              </Button>
+              <Link
+                href="/add-stock"
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
+              >
+                {t("stocks")}
+              </Link>
             ) : null}
           </>
         }

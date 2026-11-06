@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { usePermission } from "@/components/PermissionProvider";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
@@ -109,9 +109,12 @@ export default function CustomersPage() {
         description="Profiles, credit, and loyalty."
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" asChild>
-              <Link href="/customers/overdue">Overdue credit</Link>
-            </Button>
+            <Link
+              href="/customers/overdue"
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              Overdue credit
+            </Link>
             {canManage ? (
               <Button
                 type="button"

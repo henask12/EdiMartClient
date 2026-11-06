@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { ProductPhotoField } from "@/components/ProductPhotoField";
 import { usePermission } from "@/components/PermissionProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -34,26 +35,30 @@ export default function NewProductPage() {
   const [description, setDescription] = useState("");
   const [originCountry, setOriginCountry] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!imageFile) {
+      setPhotoError(t("photoRequired"));
+      toastError(t("photoRequired"));
+      return;
+    }
+    setPhotoError("");
     setLoading(true);
     try {
-      let imagePath: string | undefined;
-      if (imageFile) {
-        const fd = new FormData();
-        fd.append("file", imageFile);
-        const up = await fetch("/api/proxy/uploads/product-image", {
-          method: "POST",
-          body: fd,
-        });
-        const upData = await up.json().catch(() => ({}));
-        if (!up.ok) {
-          toastError(parseApiMessage(upData, "Image upload failed"));
-          return;
-        }
-        imagePath = upData.path as string;
+      const fd = new FormData();
+      fd.append("file", imageFile);
+      const up = await fetch("/api/proxy/uploads/product-image", {
+        method: "POST",
+        body: fd,
+      });
+      const upData = await up.json().catch(() => ({}));
+      if (!up.ok) {
+        toastError(parseApiMessage(upData, "Image upload failed"));
+        return;
       }
+      const imagePath = upData.path as string;
 
       const hasOpeningStock = initialQuantity && Number(initialQuantity) > 0;
 
@@ -162,15 +167,15 @@ export default function NewProductPage() {
               onChange={(e) => setOriginCountry(e.target.value)}
               placeholder="e.g. USA 🇺🇸"
             />
-            <label className="block text-sm text-text-muted">
-              {t("photo")}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-                className="mt-2 w-full text-sm text-text-muted"
-              />
-            </label>
+            <ProductPhotoField
+              file={imageFile}
+              onChange={(f) => {
+                setImageFile(f);
+                if (f) setPhotoError("");
+              }}
+              required
+              error={photoError}
+            />
             <div className="grid grid-cols-2 gap-3">
               <Input
                 required

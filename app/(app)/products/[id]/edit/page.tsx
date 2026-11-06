@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { CategorySelect } from "@/components/CategorySelect";
 import { DateInput } from "@/components/DateInput";
+import { ProductPhotoField } from "@/components/ProductPhotoField";
 import { usePermission } from "@/components/PermissionProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -34,6 +35,7 @@ export default function EditProductPage() {
   const [description, setDescription] = useState("");
   const [originCountry, setOriginCountry] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [expiryDate, setExpiryDate] = useState("");
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function EditProductPage() {
         description?: string | null;
         originCountry?: string | null;
         expiryDate?: string | null;
+        imageUrl?: string | null;
         barcodes?: Array<{ barcode: string; isPrimary: boolean }>;
       };
       setName(p.name);
@@ -75,6 +78,7 @@ export default function EditProductPage() {
       setRestockQty(String(p.restockQty));
       setDescription(p.description ?? "");
       setOriginCountry(p.originCountry ?? "");
+      setCurrentImageUrl(p.imageUrl ?? null);
       setExpiryDate(
         p.expiryDate ? new Date(p.expiryDate).toISOString().slice(0, 10) : "",
       );
@@ -86,6 +90,10 @@ export default function EditProductPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentImageUrl && !imageFile) {
+      toastError(t("photoRequired"));
+      return;
+    }
     setLoading(true);
     try {
       let imagePath: string | undefined;
@@ -198,15 +206,12 @@ export default function EditProductPage() {
               value={originCountry}
               onChange={(e) => setOriginCountry(e.target.value)}
             />
-            <label className="block text-sm text-text-muted">
-              {t("newPhoto")}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-                className="mt-2 w-full text-sm text-text-muted"
-              />
-            </label>
+            <ProductPhotoField
+              currentUrl={currentImageUrl}
+              file={imageFile}
+              onChange={setImageFile}
+              required={!currentImageUrl}
+            />
             <DateInput
               label={t("expiryOptional")}
               value={expiryDate}

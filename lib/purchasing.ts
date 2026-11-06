@@ -113,13 +113,21 @@ export type SupplierBill = {
 };
 
 export type AgedPayables = {
+  asOf?: string;
   current?: string;
   days1to30?: string;
   days31to60?: string;
   days61to90?: string;
   over90?: string;
   total?: string;
-  buckets?: Array<{ label: string; amount: string }>;
+  /** API returns an object of named buckets; keep optional for older shapes. */
+  buckets?: {
+    current?: string;
+    days1to30?: string;
+    days31to60?: string;
+    days61to90?: string;
+    over90?: string;
+  };
 };
 
 export type SupplierReturn = {
@@ -401,9 +409,34 @@ export const fetchAgedPayables = async (): Promise<AgedPayables> => {
   if (!res.ok) {
     const alt = await purchasingFetch("/supplier-bills/aged");
     if (!alt.ok) throw new Error(await readError(res, "Could not load aged payables"));
-    return (await alt.json()) as AgedPayables;
+    return normalizeAgedPayables(await alt.json());
   }
-  return (await res.json()) as AgedPayables;
+  return normalizeAgedPayables(await res.json());
+};
+
+/** Flatten `{ buckets: { current, … } }` into top-level fields the UI expects. */
+const normalizeAgedPayables = (raw: unknown): AgedPayables => {
+  const data = (raw && typeof raw === "object" ? raw : {}) as AgedPayables & {
+    buckets?: AgedPayables["buckets"] | Array<{ label: string; amount: string }>;
+  };
+  const out: AgedPayables = {
+    asOf: data.asOf,
+    total: data.total,
+    current: data.current,
+    days1to30: data.days1to30,
+    days31to60: data.days31to60,
+    days61to90: data.days61to90,
+    over90: data.over90,
+  };
+  if (data.buckets && !Array.isArray(data.buckets)) {
+    out.current = out.current ?? data.buckets.current;
+    out.days1to30 = out.days1to30 ?? data.buckets.days1to30;
+    out.days31to60 = out.days31to60 ?? data.buckets.days31to60;
+    out.days61to90 = out.days61to90 ?? data.buckets.days61to90;
+    out.over90 = out.over90 ?? data.buckets.over90;
+    out.buckets = data.buckets;
+  }
+  return out;
 };
 
 export const listSupplierReturns = async (): Promise<SupplierReturn[]> => {

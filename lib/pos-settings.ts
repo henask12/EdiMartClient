@@ -68,10 +68,17 @@ export const parsePosSettings = (
     favLocal ??
     base.favourites;
 
-  const denominations =
+  const LEGACY_DENOMS = ["50", "100", "200", "500", "1000"];
+  const rawDenoms =
     asStringArray(getSetting(api, "pos.cashDenominations")) ??
     asStringArray(local.denominations) ??
     base.denominations;
+  // Migrate the old placeholder list (included non-circulating 500/1000) to ETB notes.
+  const denominations =
+    rawDenoms.length === LEGACY_DENOMS.length &&
+    rawDenoms.every((d, i) => d === LEGACY_DENOMS[i])
+      ? base.denominations
+      : rawDenoms;
 
   const scannerBeepRaw = getSetting(api, "pos.scannerBeep");
   const scannerBeep =

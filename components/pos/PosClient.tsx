@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   useCallback,
@@ -33,6 +32,7 @@ import {
 import { PosPaymentSheet } from "@/components/pos/PosPaymentSheet";
 import { PosSuccessPanel } from "@/components/pos/PosSuccessPanel";
 import { useHidScanner } from "@/components/pos/useHidScanner";
+import { ProductImage } from "@/components/ProductImage";
 import { usePermission } from "@/components/PermissionProvider";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -1258,20 +1258,14 @@ export const PosClient = () => {
                   onClick={() => void addProduct(p)}
                   className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition hover:border-primary/40 focus-ring"
                 >
-                  <div className="relative aspect-square bg-surface-muted">
-                    {p.imageUrl ? (
-                      <Image
-                        src={p.imageUrl}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-text-muted">
-                        {t("noImage")}
-                      </div>
-                    )}
+                  <div className="relative aspect-square">
+                    <ProductImage
+                      imageUrl={p.imageUrl}
+                      alt={p.name}
+                      className="absolute inset-0 h-full w-full"
+                      iconClassName="size-8"
+                      sizes="(max-width: 640px) 50vw, 20vw"
+                    />
                     <div className="absolute left-2 top-2">{stockBadge(p)}</div>
                   </div>
                   <div className="space-y-1 p-2.5">
@@ -1295,11 +1289,13 @@ export const PosClient = () => {
                     onClick={() => void addProduct(p)}
                     className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-muted focus-ring"
                   >
-                    <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-surface-muted">
-                      {p.imageUrl ? (
-                        <Image src={p.imageUrl} alt="" fill className="object-cover" unoptimized />
-                      ) : null}
-                    </div>
+                    <ProductImage
+                      imageUrl={p.imageUrl}
+                      alt={p.name}
+                      className="size-12 shrink-0 rounded-lg"
+                      iconClassName="size-5"
+                      sizes="48px"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-text">{p.name}</p>
                       <p className="text-xs text-text-muted">

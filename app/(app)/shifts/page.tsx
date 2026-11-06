@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Banknote, Lock, Printer, RefreshCw } from "lucide-react";
 import { ManagerApprovalDialog, type ApprovalAction } from "@/components/ManagerApprovalDialog";
@@ -30,6 +30,7 @@ import {
 } from "@/lib/register-device";
 import {
   closeShift,
+  DEFAULT_DENOMS,
   denomsPayload,
   emptyDenomCounts,
   fetchCurrentShift,
@@ -70,7 +71,7 @@ export default function ShiftsPage() {
   const [current, setCurrent] = useState<Shift | null>(null);
   const [selected, setSelected] = useState<Shift | null>(null);
   const [loading, setLoading] = useState(true);
-  const [denoms, setDenoms] = useState<string[]>(["50", "100", "200", "500", "1000"]);
+  const [denoms, setDenoms] = useState<string[]>(DEFAULT_DENOMS);
 
   const [openSheet, setOpenSheet] = useState(false);
   const [openRegisterId, setOpenRegisterId] = useState("");
@@ -340,8 +341,6 @@ export default function ShiftsPage() {
     }
   };
 
-  const openFloatTotal = useMemo(() => totalFromDenoms(openCounts), [openCounts]);
-
   return (
     <div className="space-y-6 print:hidden">
       <PageHeader
@@ -579,7 +578,7 @@ export default function ShiftsPage() {
           <SheetHeader>
             <SheetTitle>{t("openShift")}</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-4">
+          <div className="mt-4 space-y-4 px-6 pb-6">
             <Select
               label={t("register")}
               value={openRegisterId}
@@ -601,13 +600,8 @@ export default function ShiftsPage() {
               counts={openCounts}
               onChange={setOpenCounts}
               disabled={opening}
+              totalLabel={t("openingFloat")}
             />
-            <p className="text-sm text-text-muted">
-              {t("openingFloat")}:{" "}
-              <span className="font-semibold tabular-nums text-text">
-                {formatMoney(openFloatTotal)}
-              </span>
-            </p>
             <Button fullWidth onClick={() => void handleOpenShift()} disabled={opening || !canManage}>
               {opening ? t("opening") : t("openShift")}
             </Button>
@@ -621,7 +615,7 @@ export default function ShiftsPage() {
           <SheetHeader>
             <SheetTitle>{cashSheet === "in" ? t("cashIn") : t("cashOut")}</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-4">
+          <div className="mt-4 space-y-4 px-6 pb-6">
             <Input
               label={t("amount")}
               inputMode="decimal"
@@ -646,7 +640,7 @@ export default function ShiftsPage() {
           <SheetHeader>
             <SheetTitle>{t("closeShift")}</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-4">
+          <div className="mt-4 space-y-4 px-6 pb-6">
             <p className="text-sm text-text-muted">{t("blindCountHint")}</p>
             <DenominationCounter
               denominations={denoms}

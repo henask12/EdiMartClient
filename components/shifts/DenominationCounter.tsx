@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { formatMoney } from "@/lib/format-money";
 import { cn } from "@/lib/cn";
 import {
@@ -17,6 +16,8 @@ type Props = {
   onChange: (next: DenomCounts) => void;
   disabled?: boolean;
   className?: string;
+  /** Override the footer total label (defaults to "Counted total"). */
+  totalLabel?: string;
 };
 
 export const DenominationCounter = ({
@@ -25,6 +26,7 @@ export const DenominationCounter = ({
   onChange,
   disabled,
   className,
+  totalLabel,
 }: Props) => {
   const t = useTranslations("Shifts");
   const total = totalFromDenoms(counts);
@@ -40,41 +42,47 @@ export const DenominationCounter = ({
         {denominations.map((denom) => {
           const qty = counts[denom] ?? 0;
           const line = Number(denom) * qty;
+          const whole = Number(denom) % 1 === 0;
           return (
             <li
               key={denom}
-              className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted/40 px-3 py-2"
+              className="grid grid-cols-[5.75rem_minmax(0,1fr)_5.75rem] items-center gap-2 rounded-xl border border-border bg-surface-muted/40 px-3 py-2"
             >
-              <span className="w-20 font-semibold tabular-nums text-text">
-                {formatMoney(denom)}
+              <span className="truncate font-semibold tabular-nums text-text">
+                {formatMoney(denom, { decimals: !whole })}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center justify-center gap-1">
                 <Button
                   type="button"
                   variant="secondary"
                   size="icon"
-                  className="size-10"
+                  className="size-11 shrink-0"
                   disabled={disabled || qty <= 0}
                   onClick={() => handleSet(denom, qty - 1)}
                   aria-label={t("decrease")}
                 >
                   <Minus className="size-4" />
                 </Button>
-                <Input
-                  className="w-16 text-center tabular-nums"
+                <input
+                  className={cn(
+                    "h-11 w-14 shrink-0 rounded-lg border border-border-strong bg-surface px-1",
+                    "text-center text-sm tabular-nums text-text outline-none transition",
+                    "focus:border-primary focus:ring-1 focus:ring-primary/30",
+                    "disabled:cursor-not-allowed disabled:opacity-50",
+                  )}
                   inputMode="numeric"
                   value={String(qty)}
                   disabled={disabled}
                   onChange={(e) =>
                     handleSet(denom, Number(e.target.value.replace(/\D/g, "") || "0"))
                   }
-                  aria-label={`${formatMoney(denom)} ${t("count")}`}
+                  aria-label={`${formatMoney(denom, { decimals: !whole })} ${t("count")}`}
                 />
                 <Button
                   type="button"
                   variant="secondary"
                   size="icon"
-                  className="size-10"
+                  className="size-11 shrink-0"
                   disabled={disabled}
                   onClick={() => handleSet(denom, qty + 1)}
                   aria-label={t("increase")}
@@ -82,7 +90,7 @@ export const DenominationCounter = ({
                   <Plus className="size-4" />
                 </Button>
               </div>
-              <span className="ml-auto tabular-nums text-sm text-text-muted">
+              <span className="text-right tabular-nums text-sm text-text-muted">
                 {formatMoney(line)}
               </span>
             </li>
@@ -90,7 +98,9 @@ export const DenominationCounter = ({
         })}
       </ul>
       <div className="flex items-baseline justify-between border-t border-border pt-3">
-        <span className="text-sm font-medium text-text-muted">{t("countedTotal")}</span>
+        <span className="text-sm font-medium text-text-muted">
+          {totalLabel ?? t("countedTotal")}
+        </span>
         <span className="text-2xl font-semibold tabular-nums text-text">
           {formatMoney(total)}
         </span>

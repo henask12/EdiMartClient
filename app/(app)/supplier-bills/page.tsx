@@ -181,18 +181,12 @@ export default function SupplierBillsPage() {
             ["61–90", aged.days61to90],
             ["90+", aged.over90],
             ["Total", aged.total],
-          ].map(([label, value]) =>
-            value != null ? (
-              <div key={String(label)}>
-                <p className="text-xs text-text-muted">{label}</p>
-                <p className="tabular-nums font-medium text-text">{formatMoney(String(value))}</p>
-              </div>
-            ) : null,
-          )}
-          {(aged.buckets ?? []).map((b) => (
-            <div key={b.label}>
-              <p className="text-xs text-text-muted">{b.label}</p>
-              <p className="tabular-nums font-medium text-text">{formatMoney(b.amount)}</p>
+          ].map(([label, value]) => (
+            <div key={String(label)}>
+              <p className="text-xs text-text-muted">{label}</p>
+              <p className="tabular-nums font-medium text-text">
+                {formatMoney(String(value ?? "0"))}
+              </p>
             </div>
           ))}
         </Card>

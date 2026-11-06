@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import {
   canReserveProduct,
   canSellProduct,
 } from "@/lib/product-permissions";
 import { formatMoney } from "@/lib/format-money";
 import { ProductActionsMenu } from "@/components/ProductActionsMenu";
+import { ProductImage } from "@/components/ProductImage";
 import { Button } from "@/components/ui/Button";
 
 export type MartProduct = {
@@ -69,21 +69,13 @@ export const ProductCard = ({
         className="tap flex flex-col text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         aria-label={`View details for ${product.name}`}
       >
-        <div className="relative aspect-[4/3] shrink-0 overflow-hidden rounded-t-2xl bg-surface-muted">
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 50vw, 25vw"
-              unoptimized
-            />
-          ) : (
-            <div className="flex h-full min-h-[120px] items-center justify-center text-4xl text-text-muted/30">
-              ◆
-            </div>
-          )}
+        <div className="relative aspect-[4/3] shrink-0 overflow-hidden rounded-t-2xl">
+          <ProductImage
+            imageUrl={product.imageUrl}
+            alt={product.name}
+            className="absolute inset-0 h-full w-full"
+            sizes="(max-width: 640px) 50vw, 25vw"
+          />
           {out ? (
             <span className="absolute left-2 top-2 rounded-full bg-danger/90 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
               OUT of Stock

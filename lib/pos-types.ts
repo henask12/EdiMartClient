@@ -70,7 +70,7 @@ export const DEFAULT_POS_SETTINGS: PosSettings = {
   tin: "",
   scannerBeep: true,
   favourites: [],
-  denominations: ["50", "100", "200", "500", "1000"],
+  denominations: ["1", "5", "10", "50", "100", "200"],
 };
 
 export type ParkedSale = {

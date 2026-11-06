@@ -79,7 +79,9 @@
     "loyaltySettings": "ታማኝነት እና ክሬዲት",
     "security": "ደህንነት",
     "audit": "የኦዲት መዝገብ",
-    "syncReview": "የማመሳሰል ግምገማ"
+    "syncReview": "የማመሳሰል ግምገማ",
+    "collapse": "ጎን ማሳያውን ሰብስብ",
+    "expand": "ጎን ማሳያውን ዘርጋ"
   },
   "Shell": {
     "commandPalette": "ገጾችን፣ ምርቶችን፣ ድርጊቶችን ፈልግ…",
@@ -311,7 +313,11 @@
     "listingDetails": "የዝርዝር መረጃ",
     "origin": "መነሻ / ምንጭ",
     "photo": "ፎቶ",
-    "newPhoto": "አዲስ ፎቶ",
+    "newPhoto": "ፎቶ ቀይር",
+    "photoChoose": "የምርት ፎቶ ምረጥ",
+    "photoClear": "ምርጫ አስወግድ",
+    "photoRequired": "ከማስቀመጥ በፊት የምርት ፎቶ ያክሉ",
+    "photoHint": "JPEG፣ PNG፣ WebP ወይም GIF። በካታሎግ እና POS ይታያል፤ ከተስተናገደ በኋላ በመተግበሪያው በኩል ይቀርባል።",
     "sellPrice": "የሽያጭ ዋጋ",
     "costEach": "የእያንዳንዱ ወጪ",
     "cost": "ወጪ",

@@ -1,6 +1,6 @@
 /* EdiMart service worker — app shell + POS catalog cache (Phase 9). */
-const SHELL_CACHE = "edimart-shell-v1";
-const DATA_CACHE = "edimart-data-v1";
+const SHELL_CACHE = "edimart-shell-v2";
+const DATA_CACHE = "edimart-data-v2";
 
 const SHELL_URLS = [
   "/",
@@ -40,15 +40,17 @@ self.addEventListener("activate", (event) => {
 });
 
 const isCatalogRequest = (url) =>
-  url.origin === self.location.origin &&
-  url.pathname === CATALOG_PATH;
+  url.origin === self.location.origin && url.pathname === CATALOG_PATH;
 
+/** Logos + manifest only — never cache /_next (dev chunks are not content-hashed stably). */
 const isStaticAsset = (url) =>
   url.origin === self.location.origin &&
-  (url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/logo") ||
+  (url.pathname.startsWith("/logo") ||
     url.pathname === "/manifest.webmanifest" ||
     url.pathname === "/sw.js");
+
+const isNextAsset = (url) =>
+  url.origin === self.location.origin && url.pathname.startsWith("/_next/");
 
 const isDocumentNav = (request) =>
   request.mode === "navigate" ||
@@ -67,6 +69,9 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (url.origin !== self.location.origin) return;
+
+  // Always hit the network for Next bundles (avoids stale Button/Slot in local dev).
+  if (isNextAsset(url)) return;
 
   if (isCatalogRequest(url)) {
     event.respondWith(networkFirstData(request));

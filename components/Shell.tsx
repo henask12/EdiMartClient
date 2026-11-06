@@ -162,9 +162,16 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           ...data,
           permissions: Array.isArray(data.permissions) ? data.permissions : [],
         });
-        // Set locale cookie from user preference
-        if (data.locale && data.locale !== "en") {
-          document.cookie = `NEXT_LOCALE=${data.locale};path=/;max-age=31536000`;
+        // Default language is English; Amharic only when the user saved that preference.
+        const locale = data.locale === "am" ? "am" : "en";
+        const existing = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("NEXT_LOCALE="))
+          ?.split("=")[1];
+        document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
+        if (existing && existing !== locale) {
+          window.location.reload();
+          return;
         }
       } catch {
         toastError(tAuth("networkError"));

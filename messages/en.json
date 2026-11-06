@@ -79,7 +79,9 @@
     "loyaltySettings": "Loyalty & credit",
     "security": "Security",
     "audit": "Audit log",
-    "syncReview": "Sync review"
+    "syncReview": "Sync review",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "Shell": {
     "commandPalette": "Search pages, products, actions…",
@@ -319,8 +321,12 @@
     "productName": "Product name",
     "listingDetails": "Listing details (optional)",
     "origin": "Origin (optional)",
-    "photo": "Photo (optional)",
-    "newPhoto": "New photo (optional)",
+    "photo": "Photo",
+    "newPhoto": "Replace photo",
+    "photoChoose": "Choose product photo",
+    "photoClear": "Remove selection",
+    "photoRequired": "Add a product photo before saving",
+    "photoHint": "JPEG, PNG, WebP or GIF. Shown on the catalog and POS; served through this app after hosting.",
     "sellPrice": "Sell price",
     "costEach": "Cost each",
     "cost": "Cost",

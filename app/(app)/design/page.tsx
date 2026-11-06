@@ -254,7 +254,7 @@ export default function DesignPage() {
         <div className="flex flex-wrap items-center gap-4">
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
+              <TooltipTrigger>
                 <Button variant="secondary">Hover me</Button>
               </TooltipTrigger>
               <TooltipContent>This is a tooltip</TooltipContent>

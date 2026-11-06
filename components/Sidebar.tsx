@@ -41,13 +41,6 @@ import { type Me } from "@/components/PermissionProvider";
 import { meetsRequirement, requirementForPath, isOwnerRole } from "@/lib/permissions";
 import { useOutboxStatus } from "@/lib/offline/use-outbox-status";
 import { cn } from "@/lib/cn";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/Tooltip";
-
 type NavItem = {
   href: string;
   labelKey: string;
@@ -166,12 +159,12 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
       </Link>
     );
 
+    // Avoid TooltipTrigger asChild + Next Link (Radix Slot 1.5 breaks under React 19).
     if (collapsed) {
       return (
-        <Tooltip key={item.href}>
-          <TooltipTrigger asChild>{link}</TooltipTrigger>
-          <TooltipContent side="right">{label}</TooltipContent>
-        </Tooltip>
+        <div key={item.href} title={label}>
+          {link}
+        </div>
       );
     }
 
@@ -179,7 +172,6 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
   };
 
   return (
-    <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
           "sticky top-0 z-20 hidden h-screen flex-col border-r border-border bg-surface transition-[width] duration-200 lg:flex",
@@ -274,6 +266,5 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
           </div>
         </div>
       </aside>
-    </TooltipProvider>
   );
 };

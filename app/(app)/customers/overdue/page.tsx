@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -38,9 +38,9 @@ export default function OverdueCustomersPage() {
         description="Customers with an outstanding account balance."
         actions={
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" asChild>
-              <Link href="/customers">All customers</Link>
-            </Button>
+            <Link href="/customers" className={buttonVariants({ variant: "secondary" })}>
+              All customers
+            </Link>
             <Button type="button" variant="secondary" onClick={() => void load()}>
               Refresh
             </Button>
@@ -75,9 +75,12 @@ export default function OverdueCustomersPage() {
               <span className="tabular-nums font-semibold text-text">
                 {formatMoney(c.overdueAmount ?? c.creditBalance)}
               </span>
-              <Button type="button" size="sm" variant="secondary" asChild>
-                <Link href={`/customers/${c.id}`}>Open</Link>
-              </Button>
+              <Link
+                href={`/customers/${c.id}`}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
+              >
+                Open
+              </Link>
             </div>
           </Card>
         ))}

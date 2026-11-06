@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/cn";
 
@@ -36,7 +35,6 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants> & {
     icon?: ReactNode;
     fullWidth?: boolean;
-    asChild?: boolean;
   };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -46,31 +44,27 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size,
       icon,
       fullWidth,
-      asChild = false,
       className,
       children,
       type = "button",
       ...rest
     },
     ref,
-  ) => {
-    const Comp = asChild ? Slot : "button";
-    return (
-      <Comp
-        ref={ref}
-        type={asChild ? undefined : type}
-        className={cn(
-          buttonVariants({ variant, size }),
-          fullWidth && "w-full",
-          className,
-        )}
-        {...rest}
-      >
-        {icon ? <span className="shrink-0 [&>svg]:size-4">{icon}</span> : null}
-        {children}
-      </Comp>
-    );
-  },
+  ) => (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(
+        buttonVariants({ variant, size }),
+        fullWidth && "w-full",
+        className,
+      )}
+      {...rest}
+    >
+      {icon ? <span className="shrink-0 [&>svg]:size-4">{icon}</span> : null}
+      {children}
+    </button>
+  ),
 );
 
 Button.displayName = "Button";
