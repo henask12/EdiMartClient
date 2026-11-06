@@ -1,37 +1,27 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
-
-type Variant = "secondary" | "ghost" | "danger" | "primary";
+import { buttonVariants } from "./Button";
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   "aria-label": string;
-  variant?: Variant;
+  variant?: "primary" | "secondary" | "ghost" | "danger";
   icon: ReactNode;
   title?: string;
 };
 
-const variantClass: Record<Variant, string> = {
-  primary: "btn-primary",
-  secondary: "btn-secondary",
-  ghost: "btn-ghost",
-  danger: "btn-danger",
-};
-
-export const IconButton = ({
-  variant = "secondary",
-  icon,
-  className,
-  title,
-  ...rest
-}: Props) => (
-  <button
-    type="button"
-    title={title}
-    className={cn("btn-icon", variantClass[variant], className)}
-    {...rest}
-  >
-    <span className="[&>svg]:size-4">{icon}</span>
-  </button>
+export const IconButton = forwardRef<HTMLButtonElement, Props>(
+  ({ variant = "secondary", icon, className, ...rest }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      className={cn(buttonVariants({ variant, size: "icon" }), className)}
+      {...rest}
+    >
+      <span className="[&>svg]:size-4">{icon}</span>
+    </button>
+  ),
 );
+
+IconButton.displayName = "IconButton";

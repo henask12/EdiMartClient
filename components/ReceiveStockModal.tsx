@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { DateInput } from "@/components/DateInput";
 
 export type ReceiveStockProduct = {
@@ -74,18 +75,18 @@ export const ReceiveStockModal = ({ product, onClose, onSuccess }: Props) => {
       aria-modal="true"
       aria-labelledby="receive-stock-title"
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-5 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="receive-stock-title" className="text-lg font-semibold text-white">
+            <h2 id="receive-stock-title" className="text-lg font-semibold text-text">
               Add stock
             </h2>
-            <p className="mt-1 text-sm text-white/60">{product.name}</p>
+            <p className="mt-1 text-sm text-text-muted">{product.name}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="tap rounded-full border border-white/15 px-3 py-1 text-sm text-white/70"
+            className="tap rounded-full border border-border px-3 py-1 text-sm text-text-muted"
             aria-label="Close"
           >
             Close
@@ -93,27 +94,27 @@ export const ReceiveStockModal = ({ product, onClose, onSuccess }: Props) => {
         </div>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--brand-yellow)]/20 bg-[var(--brand-yellow)]/5 p-4 text-sm">
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-accent/20 bg-accent/5 p-4 text-sm">
             <div>
-              <p className="text-white/50">Previous on hand</p>
-              <p className="text-lg font-semibold tabular-nums text-white">{prevOnHand}</p>
+              <p className="text-text-muted">Previous on hand</p>
+              <p className="text-lg font-semibold tabular-nums text-text">{prevOnHand}</p>
             </div>
             <div>
-              <p className="text-white/50">Adding</p>
-              <p className="text-lg font-semibold tabular-nums text-[var(--accent)]">{addQty}</p>
+              <p className="text-text-muted">Adding</p>
+              <p className="text-lg font-semibold tabular-nums text-accent">{addQty}</p>
             </div>
             <div>
-              <p className="text-white/50">Total after</p>
-              <p className="text-lg font-semibold tabular-nums text-white">{totalAfter}</p>
+              <p className="text-text-muted">Total after</p>
+              <p className="text-lg font-semibold tabular-nums text-text">{totalAfter}</p>
             </div>
             <div>
-              <p className="text-white/50">Selling price</p>
-              <p className="text-lg font-semibold tabular-nums text-white">{product.sellingPrice}</p>
+              <p className="text-text-muted">Selling price</p>
+              <p className="text-lg font-semibold tabular-nums text-text">{product.sellingPrice}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm text-white/70">
+            <label className="text-sm text-text-muted">
               Quantity to add
               <input
                 required
@@ -122,10 +123,10 @@ export const ReceiveStockModal = ({ product, onClose, onSuccess }: Props) => {
                 step="any"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+                className="mt-2 w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-text"
               />
             </label>
-            <label className="text-sm text-white/70">
+            <label className="text-sm text-text-muted">
               Cost each
               <input
                 type="number"
@@ -133,7 +134,7 @@ export const ReceiveStockModal = ({ product, onClose, onSuccess }: Props) => {
                 step="any"
                 value={unitCost}
                 onChange={(e) => setUnitCost(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+                className="mt-2 w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-text"
               />
             </label>
           </div>
@@ -145,24 +146,20 @@ export const ReceiveStockModal = ({ product, onClose, onSuccess }: Props) => {
             onChange={setExpiryDate}
             required={false}
           />
-          <label className="block text-sm text-white/70">
+          <label className="block text-sm text-text-muted">
             Notes
             <input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+              className="mt-2 w-full rounded-xl border border-border bg-surface-muted px-3 py-2 text-text"
             />
           </label>
 
-          {status ? <p className="text-sm text-rose-200">{status}</p> : null}
+          {status ? <p className="text-sm text-danger">{status}</p> : null}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="btn btn-primary w-full disabled:opacity-50"
-          >
+          <Button type="submit" disabled={busy} fullWidth>
             {busy ? "Receiving…" : "Receive stock"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

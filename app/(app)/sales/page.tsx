@@ -3,15 +3,20 @@
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { ExportMenu } from "@/components/ExportMenu";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SaleDetailSheet } from "@/components/SaleDetailSheet";
 import { Select } from "@/components/ui/Select";
-import { formatBirr } from "@/lib/format-price";
+import { formatMoney } from "@/lib/format-money";
+import { usePermission } from "@/components/PermissionProvider";
+import { PAYMENT_METHODS, paymentLabel } from "@/lib/payment-methods";
 import { toastError } from "@/lib/toast";
+import { formatDate } from "@/lib/date-helpers";
 
 type Attachment = { id: string; imageUrl: string };
 type SaleLine = {
@@ -20,7 +25,7 @@ type SaleLine = {
   unitPrice: string;
   lineTotal: string;
   unitCostAtSale: string;
-  netProfit: string;
+  netProfit?: string;
   product: { name: string; category?: { name: string } };
 };
 type Sale = {
@@ -29,6 +34,7 @@ type Sale = {
   createdAt: string;
   lines: SaleLine[];
   attachments?: Attachment[];
+  payments?: { method: string; reference: string | null }[];
   createdBy: { displayName: string | null; email: string };
 };
 
@@ -38,10 +44,11 @@ type SaleLineRow = {
   item: string;
   salesDate: string;
   cashier: string;
+  payment: string;
   unitPrice: string;
   quantity: string;
   lineTotal: string;
-  netProfit: string;
+  netProfit?: string;
   attachments: Attachment[];
 };
 
@@ -56,6 +63,9 @@ const flattenSales = (sales: Sale[]): SaleLineRow[] =>
       item: line.product.name,
       salesDate: sale.createdAt,
       cashier: sale.createdBy.displayName ?? sale.createdBy.email,
+      payment:
+        (sale.payments ?? []).map((p) => paymentLabel(p.method)).join(" + ") ||
+        "—",
       unitPrice: line.unitPrice,
       quantity: line.quantity,
       lineTotal: line.lineTotal,
@@ -66,8 +76,11 @@ const flattenSales = (sales: Sale[]): SaleLineRow[] =>
 
 export default function SalesPage() {
   const searchParams = useSearchParams();
+  const { can, canSeeCost } = usePermission();
+  const t = useTranslations("Sales");
   const urlFrom = searchParams.get("from") ?? "";
   const urlTo = searchParams.get("to") ?? "";
+  const urlSaleId = searchParams.get("saleId");
 
   const [items, setItems] = useState<Sale[]>([]);
   const [from, setFrom] = useState(urlFrom);
@@ -77,21 +90,43 @@ export default function SalesPage() {
   const [dateError, setDateError] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [productId, setProductId] = useState("");
+  const [cashier, setCashier] = useState("");
+  const [method, setMethod] = useState("");
+  const [status, setStatus] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [total, setTotal] = useState(0);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(urlSaleId);
+
+  useEffect(() => {
+    if (urlSaleId) setSelectedSaleId(urlSaleId);
+  }, [urlSaleId]);
+
+  const cashiers = useMemo(() => {
+    const names = new Set(
+      items.map((s) => s.createdBy.displayName ?? s.createdBy.email),
+    );
+    return [...names].sort();
+  }, [items]);
 
   const lineRows = useMemo(() => flattenSales(items), [items]);
 
   const pageSubtotals = useMemo(() => {
-    const lineTotal = lineRows.reduce((sum, r) => sum + Number(r.lineTotal), 0);
-    const netProfit = lineRows.reduce((sum, r) => sum + Number(r.netProfit), 0);
+    const lineTotal = lineRows.reduce(
+      (sum, r) => sum + Number(r.lineTotal),
+      0,
+    );
+    const netProfit = lineRows.reduce(
+      (sum, r) => sum + Number(r.netProfit ?? 0),
+      0,
+    );
     return { lineTotal, netProfit };
   }, [lineRows]);
 
   useEffect(() => {
+    if (!can("PRODUCTS_VIEW")) return;
     void Promise.all([
       fetch("/api/proxy/categories", { cache: "no-store" }),
       fetch("/api/proxy/products?take=300", { cache: "no-store" }),
@@ -102,7 +137,7 @@ export default function SalesPage() {
         setProducts(data.items);
       }
     });
-  }, []);
+  }, [can]);
 
   const load = useCallback(async () => {
     try {
@@ -114,7 +149,12 @@ export default function SalesPage() {
       if (to) params.set("to", to);
       if (productId) params.set("productId", productId);
       if (categoryId) params.set("categoryId", categoryId);
-      const res = await fetch(`/api/proxy/sales?${params}`, { cache: "no-store" });
+      if (cashier) params.set("cashier", cashier);
+      if (method) params.set("method", method);
+      if (status) params.set("status", status);
+      const res = await fetch(`/api/proxy/sales?${params}`, {
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error("Failed to load sales");
       const data = (await res.json()) as { items: Sale[]; total: number };
       setItems(data.items);
@@ -122,7 +162,7 @@ export default function SalesPage() {
     } catch (e) {
       toastError(e instanceof Error ? e.message : "Failed to load sales");
     }
-  }, [from, to, productId, categoryId, page, pageSize]);
+  }, [from, to, productId, categoryId, cashier, method, status, page, pageSize]);
 
   useEffect(() => {
     void load();
@@ -130,7 +170,7 @@ export default function SalesPage() {
 
   const handleApplyDates = () => {
     if (draftFrom && draftTo && draftFrom > draftTo) {
-      setDateError("“From” must be on or before “To”.");
+      setDateError(t("dateError"));
       return;
     }
     setDateError(null);
@@ -142,53 +182,62 @@ export default function SalesPage() {
   const columns: DataTableColumn<SaleLineRow>[] = [
     {
       key: "item",
-      header: "Item",
-      render: (r) => <span className="font-medium text-white">{r.item}</span>,
+      header: t("item"),
+      render: (r) => (
+        <button
+          type="button"
+          className="font-medium text-primary underline-offset-2 hover:underline focus-ring rounded"
+          onClick={() => setSelectedSaleId(r.saleId)}
+        >
+          {r.item}
+        </button>
+      ),
     },
     {
       key: "date",
-      header: "Sales date",
-      render: (r) => new Date(r.salesDate).toLocaleString(),
+      header: t("salesDate"),
+      render: (r) => formatDate(r.salesDate),
     },
-    {
-      key: "cashier",
-      header: "Cashier",
-      render: (r) => r.cashier,
-    },
+    { key: "cashier", header: t("cashier"), render: (r) => r.cashier },
+    { key: "payment", header: t("payment"), render: (r) => r.payment },
     {
       key: "unitPrice",
-      header: "Unit price",
+      header: t("unitPrice"),
       className: "tabular-nums",
-      render: (r) => formatBirr(r.unitPrice),
+      render: (r) => formatMoney(r.unitPrice),
     },
     {
       key: "quantity",
-      header: "Quantity",
+      header: t("quantity"),
       className: "tabular-nums",
       render: (r) => r.quantity,
     },
     {
       key: "lineTotal",
-      header: "Total price",
+      header: t("totalPrice"),
       className: "tabular-nums",
-      render: (r) => formatBirr(r.lineTotal),
+      render: (r) => formatMoney(r.lineTotal),
     },
-    {
-      key: "netProfit",
-      header: "Net profit",
-      className: "tabular-nums",
-      render: (r) => {
-        const profit = Number(r.netProfit);
-        return (
-          <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
-            {formatBirr(r.netProfit)}
-          </span>
-        );
-      },
-    },
+    ...(canSeeCost
+      ? [
+          {
+            key: "netProfit",
+            header: t("netProfit"),
+            className: "tabular-nums",
+            render: (r: SaleLineRow) => {
+              const profit = Number(r.netProfit ?? 0);
+              return (
+                <span className={profit >= 0 ? "text-success" : "text-danger"}>
+                  {formatMoney(r.netProfit ?? "0")}
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: "proof",
-      header: "Proof",
+      header: t("proof"),
       render: (r) =>
         r.attachments.length > 0 ? (
           <ul className="flex flex-wrap gap-1">
@@ -198,26 +247,29 @@ export default function SalesPage() {
                   href={a.imageUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="relative block h-10 w-10 overflow-hidden rounded border border-white/10"
+                  className="relative block size-10 overflow-hidden rounded border border-border"
                   aria-label="View payment proof"
                 >
-                  <Image src={a.imageUrl} alt="" fill className="object-cover" unoptimized />
+                  <Image
+                    src={a.imageUrl}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
                 </a>
               </li>
             ))}
           </ul>
         ) : (
-          <span className="text-xs text-white/40">—</span>
+          <span className="text-xs text-text-muted">—</span>
         ),
     },
   ];
 
   return (
     <section className="space-y-6">
-      <PageHeader
-        title="Sales history"
-        description="One row per line item — unit price, quantity, profit, and payment proof."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <DateRangeFilter
         from={draftFrom}
@@ -226,18 +278,20 @@ export default function SalesPage() {
         onToChange={setDraftTo}
         onApply={handleApplyDates}
       />
-      {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
+      {dateError ? (
+        <p className="text-sm text-danger">{dateError}</p>
+      ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Select
-          label="Category"
+          label={t("category")}
           value={categoryId}
           onChange={(e) => {
             setCategoryId(e.target.value);
             setPage(1);
           }}
         >
-          <option value="">All categories</option>
+          <option value="">{t("allCategories")}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -245,19 +299,62 @@ export default function SalesPage() {
           ))}
         </Select>
         <Select
-          label="Product"
+          label={t("product")}
           value={productId}
           onChange={(e) => {
             setProductId(e.target.value);
             setPage(1);
           }}
         >
-          <option value="">All products</option>
+          <option value="">{t("allProducts")}</option>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
+        </Select>
+        <Select
+          label={t("cashier")}
+          value={cashier}
+          onChange={(e) => {
+            setCashier(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{t("cashier")}: {t("allStatuses")}</option>
+          {cashiers.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label={t("method")}
+          value={method}
+          onChange={(e) => {
+            setMethod(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{t("allMethods")}</option>
+          {PAYMENT_METHODS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label={t("status")}
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{t("allStatuses")}</option>
+          <option value="COMPLETED">COMPLETED</option>
+          <option value="VOIDED">VOIDED</option>
+          <option value="RETURNED">RETURNED</option>
         </Select>
       </div>
 
@@ -278,46 +375,75 @@ export default function SalesPage() {
         footer={{
           label: "Page subtotal",
           cells: {
-            lineTotal: formatBirr(String(pageSubtotals.lineTotal)),
-            netProfit: formatBirr(String(pageSubtotals.netProfit)),
+            lineTotal: formatMoney(String(pageSubtotals.lineTotal)),
+            ...(canSeeCost
+              ? {
+                  netProfit: formatMoney(String(pageSubtotals.netProfit)),
+                }
+              : {}),
           },
         }}
-        emptyMessage="No sales in this range."
+        emptyMessage={t("noSales")}
         mobileCard={(r) => {
-          const profit = Number(r.netProfit);
+          const profit = Number(r.netProfit ?? 0);
           return (
-            <div className="rounded-xl border border-white/10 bg-[color:var(--surface)]/80 p-4 text-sm">
+            <button
+              type="button"
+              className="w-full text-left text-sm focus-ring rounded-lg"
+              onClick={() => setSelectedSaleId(r.saleId)}
+            >
               <div className="flex justify-between gap-2">
-                <p className="font-medium text-white">{r.item}</p>
-                <p className="font-semibold tabular-nums text-[var(--accent)]">
-                  {formatBirr(r.lineTotal)}
+                <p className="font-medium text-text">{r.item}</p>
+                <p className="font-semibold tabular-nums text-primary">
+                  {formatMoney(r.lineTotal)}
                 </p>
               </div>
-              <p className="mt-1 text-xs text-white/50">
-                {new Date(r.salesDate).toLocaleString()} · {r.cashier}
+              <p className="mt-1 text-xs text-text-muted">
+                {formatDate(r.salesDate)} · {r.cashier} · {r.payment}
               </p>
-              <p className="mt-2 text-xs text-white/60">
-                {r.quantity} × {formatBirr(r.unitPrice)} · Profit{" "}
-                <span className={profit >= 0 ? "text-[var(--accent)]" : "text-rose-300"}>
-                  {formatBirr(r.netProfit)}
-                </span>
+              <p className="mt-2 text-xs text-text-muted">
+                {r.quantity} × {formatMoney(r.unitPrice)}
+                {canSeeCost ? (
+                  <>
+                    {" "}
+                    · Profit{" "}
+                    <span
+                      className={
+                        profit >= 0 ? "text-success" : "text-danger"
+                      }
+                    >
+                      {formatMoney(r.netProfit ?? "0")}
+                    </span>
+                  </>
+                ) : null}
               </p>
               {r.attachments.length > 0 ? (
                 <ul className="mt-3 flex flex-wrap gap-2">
                   {r.attachments.map((a) => (
                     <li key={a.id}>
-                      <a href={a.imageUrl} target="_blank" rel="noopener noreferrer">
-                        <span className="relative block h-12 w-12 overflow-hidden rounded-lg border border-white/10">
-                          <Image src={a.imageUrl} alt="Proof" fill className="object-cover" unoptimized />
-                        </span>
-                      </a>
+                      <span className="relative block size-12 overflow-hidden rounded-lg border border-border">
+                        <Image
+                          src={a.imageUrl}
+                          alt="Proof"
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </span>
                     </li>
                   ))}
                 </ul>
               ) : null}
-            </div>
+            </button>
           );
         }}
+      />
+
+      <SaleDetailSheet
+        saleId={selectedSaleId}
+        open={!!selectedSaleId}
+        onClose={() => setSelectedSaleId(null)}
+        onChanged={() => void load()}
       />
 
       <footer className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
@@ -329,7 +455,12 @@ export default function SalesPage() {
             setPage(1);
           }}
         />
-        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+        />
       </footer>
     </section>
   );

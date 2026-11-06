@@ -167,8 +167,8 @@ export default function UsersAdminPage() {
       header: "Email",
       render: (u) => (
         <div>
-          <p className="font-medium text-white">{u.displayName ?? u.email}</p>
-          <p className="text-xs text-white/45">{u.email}</p>
+          <p className="font-medium text-text">{u.displayName ?? u.email}</p>
+          <p className="text-xs text-text-muted">{u.email}</p>
         </div>
       ),
     },
@@ -217,7 +217,7 @@ export default function UsersAdminPage() {
               onClick={() => void handleToggle(u.id, u.isActive, u.role.name)}
             />
           ) : (
-            <span className="text-[10px] text-white/40">Protected</span>
+            <span className="text-[10px] text-text-muted">Protected</span>
           )}
           <IconButton
             variant="secondary"
@@ -264,9 +264,9 @@ export default function UsersAdminPage() {
         }}
         emptyMessage="No users yet. Add your first team member."
         mobileCard={(u) => (
-          <div className="card-surface space-y-3 p-4 text-sm">
-            <p className="font-medium text-white">{u.displayName ?? u.email}</p>
-            <p className="text-xs text-white/50">{u.email}</p>
+          <div className="space-y-3 text-sm">
+            <p className="font-medium text-text">{u.displayName ?? u.email}</p>
+            <p className="text-xs text-text-muted">{u.email}</p>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={u.isActive ? "success" : "neutral"}>
                 {u.isActive ? "Active" : "Inactive"}
@@ -321,8 +321,8 @@ export default function UsersAdminPage() {
 
       {addOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
-          <div className="w-full max-w-md space-y-4 rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6">
-            <h2 className="text-lg font-semibold text-white">Add user</h2>
+          <div className="w-full max-w-md space-y-4 rounded-xl border border-border bg-surface p-6">
+            <h2 className="text-lg font-semibold text-text">Add user</h2>
             <form onSubmit={(e) => void handleCreate(e)} className="space-y-4">
               <Input
                 required
@@ -378,8 +378,8 @@ export default function UsersAdminPage() {
 
       {resetId ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
-          <div className="w-full max-w-sm space-y-4 rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6">
-            <h3 className="font-semibold text-white">Reset password</h3>
+          <div className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-surface p-6">
+            <h3 className="font-semibold text-text">Reset password</h3>
             <Input
               type="password"
               label="New password"

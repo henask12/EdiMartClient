@@ -1,0 +1,82 @@
+/* 80mm thermal receipt — used with window.print() from the POS success screen */
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .pos-receipt,
+  .pos-receipt * {
+    visibility: visible !important;
+  }
+
+  .pos-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 72mm;
+    color: #000;
+    background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .pos-receipt-header {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .pos-receipt-header h1 {
+    font-size: 14px;
+    margin: 0 0 4px;
+  }
+
+  .pos-receipt-lines {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+  }
+
+  .pos-receipt-lines td {
+    padding: 2px 0;
+    vertical-align: top;
+  }
+
+  .pos-receipt-totals {
+    border-top: 1px dashed #000;
+    padding-top: 6px;
+    margin: 0;
+  }
+
+  .pos-receipt-totals > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .pos-receipt-grand {
+    font-weight: 700;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  .pos-receipt-footer {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 10px;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+}

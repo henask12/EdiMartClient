@@ -1,9 +1,28 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const apiUrl =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.PUBLIC_API_URL ??
   "http://127.0.0.1:4000";
+
+const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
+const imageHostPattern = (() => {
+  try {
+    if (!imageBaseUrl) return null;
+    const u = new URL(imageBaseUrl);
+    return {
+      protocol: u.protocol.replace(":", "") as "http" | "https",
+      hostname: u.hostname,
+      ...(u.port ? { port: u.port } : {}),
+      pathname: "/**",
+    };
+  } catch {
+    return null;
+  }
+})();
 
 const apiUploadPattern = (() => {
   try {
@@ -39,6 +58,7 @@ const nextConfig: NextConfig = {
         pathname: "/uploads/**",
       },
       ...(apiUploadPattern ? [apiUploadPattern] : []),
+      ...(imageHostPattern ? [imageHostPattern] : []),
     ],
   },
   env: {
@@ -46,4 +66,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

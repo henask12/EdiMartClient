@@ -73,7 +73,7 @@ export const AddStockFilters = ({
       </div>
 
       {open ? (
-        <div className="grid gap-3 rounded-[var(--radius-md)] border border-white/10 bg-[color:var(--surface)]/60 p-4 sm:grid-cols-2">
+        <div className="grid gap-3 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2">
           <Select
             label="Category"
             value={categoryId}
@@ -108,8 +108,8 @@ export const AddStockFilters = ({
               type="button"
               onClick={chip.onClear}
               className={cn(
-                "inline-flex items-center gap-1 rounded-[var(--radius-full)] border border-[var(--brand-yellow)]/30",
-                "bg-[var(--brand-yellow)]/10 px-3 py-1 text-xs font-medium text-[var(--accent)] focus-ring",
+                "inline-flex items-center gap-1 rounded-full border border-accent/30",
+                "bg-accent/10 px-3 py-1 text-xs font-medium text-accent focus-ring",
               )}
             >
               {chip.label}
@@ -122,7 +122,7 @@ export const AddStockFilters = ({
               onCategoryChange("");
               onStockStatusChange("");
             }}
-            className="text-xs text-white/50 underline-offset-2 hover:underline"
+            className="text-xs text-text-muted underline-offset-2 hover:underline"
           >
             Clear all
           </button>

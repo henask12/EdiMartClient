@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { formatBirr } from "@/lib/format-price";
+import { formatMoney } from "@/lib/format-money";
 import { toastError } from "@/lib/toast";
 import { periodBounds, type PeriodKey } from "@/lib/period-bounds";
 
@@ -12,7 +12,7 @@ type SaleLine = {
   quantity: string;
   unitPrice: string;
   lineTotal: string;
-  netProfit: string;
+  netProfit?: string;
   product: { name: string };
 };
 
@@ -28,7 +28,7 @@ type Sale = {
 type Props = {
   period: PeriodKey;
   summaryTotal: string;
-  summaryNetProfit: string;
+  summaryNetProfit?: string;
   summaryCount: number;
   onClose: () => void;
 };
@@ -54,7 +54,9 @@ export const SalesPeriodModal = ({
           take: "100",
           skip: "0",
         });
-        const res = await fetch(`/api/proxy/sales?${params}`, { cache: "no-store" });
+        const res = await fetch(`/api/proxy/sales?${params}`, {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Failed to load sales");
         const data = (await res.json()) as { items: Sale[] };
         setItems(data.items);
@@ -84,17 +86,22 @@ export const SalesPeriodModal = ({
       aria-modal="true"
       aria-labelledby="sales-period-title"
     >
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)]">
-        <div className="flex items-start justify-between gap-3 border-b border-white/10 p-5">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="flex items-start justify-between gap-3 border-b border-border p-5">
           <div>
-            <h2 id="sales-period-title" className="text-lg font-semibold text-white">
+            <h2
+              id="sales-period-title"
+              className="text-lg font-semibold text-text"
+            >
               {bounds.label} sales
             </h2>
-            <p className="mt-1 text-sm text-white/55">
-              {summaryCount} sales · {formatBirr(summaryTotal)} · Profit{" "}
-              {formatBirr(summaryNetProfit)}
+            <p className="mt-1 text-sm text-text-muted">
+              {summaryCount} sales · {formatMoney(summaryTotal)}
+              {summaryNetProfit !== undefined
+                ? ` · Profit ${formatMoney(summaryNetProfit)}`
+                : null}
             </p>
-            <p className="mt-0.5 text-xs text-white/40">
+            <p className="mt-0.5 text-xs text-text-muted">
               {bounds.from} — {bounds.to}
             </p>
           </div>
@@ -105,39 +112,48 @@ export const SalesPeriodModal = ({
 
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
-            <p className="text-sm text-white/50">Loading sales…</p>
+            <p className="text-sm text-text-muted">Loading sales…</p>
           ) : items.length === 0 ? (
-            <p className="text-sm text-white/50">No sales in this period.</p>
+            <p className="text-sm text-text-muted">
+              No sales in this period.
+            </p>
           ) : (
             <ul className="space-y-3">
               {items.map((sale) => (
                 <li
                   key={sale.id}
-                  className="rounded-[var(--radius-md)] border border-white/10 bg-black/20 px-4 py-3 text-sm"
+                  className="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm"
                 >
                   <div className="flex justify-between gap-2">
                     <div>
-                      <p className="font-medium text-white">{sale.saleNumber}</p>
-                      <p className="text-xs text-white/45">
+                      <p className="font-medium text-text">
+                        {sale.saleNumber}
+                      </p>
+                      <p className="text-xs text-text-muted">
                         {new Date(sale.createdAt).toLocaleString()} ·{" "}
                         {sale.createdBy.displayName ?? sale.createdBy.email}
                       </p>
                     </div>
-                    <p className="shrink-0 font-semibold tabular-nums text-[var(--accent)]">
-                      {formatBirr(sale.grandTotal)}
+                    <p className="shrink-0 font-semibold tabular-nums text-accent">
+                      {formatMoney(sale.grandTotal)}
                     </p>
                   </div>
-                  <ul className="mt-2 space-y-1 border-t border-white/10 pt-2 text-white/75">
+                  <ul className="mt-2 space-y-1 border-t border-border pt-2 text-text-muted">
                     {sale.lines.map((line) => (
-                      <li key={line.id} className="flex justify-between gap-2">
+                      <li
+                        key={line.id}
+                        className="flex justify-between gap-2"
+                      >
                         <span>
                           {line.product.name} × {line.quantity}
                         </span>
-                        <span className="shrink-0 text-right tabular-nums text-white/55">
-                          {formatBirr(line.lineTotal)}
-                          <span className="block text-[10px] text-[var(--accent)]">
-                            Profit {formatBirr(line.netProfit ?? "0")}
-                          </span>
+                        <span className="shrink-0 text-right tabular-nums text-text-muted">
+                          {formatMoney(line.lineTotal)}
+                          {line.netProfit !== undefined ? (
+                            <span className="block text-[10px] text-accent">
+                              Profit {formatMoney(line.netProfit)}
+                            </span>
+                          ) : null}
                         </span>
                       </li>
                     ))}
@@ -148,7 +164,7 @@ export const SalesPeriodModal = ({
           )}
         </div>
 
-        <div className="flex gap-3 border-t border-white/10 p-4">
+        <div className="flex gap-3 border-t border-border p-4">
           <Link href={salesHref} className="flex-1">
             <Button type="button" variant="secondary" fullWidth>
               Open in Sales history

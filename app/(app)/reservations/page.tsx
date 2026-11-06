@@ -22,13 +22,10 @@ type Reservation = {
   status: string;
   customerName: string | null;
   createdAt: string;
-  reservedDate: string;
-  expiresAt: string | null;
-  reservationEndDate: string | null;
   product: { id: string; name: string; category: { name: string } };
 };
 
-const STATUS_FILTERS = ["RESERVED", "COMPLETED", "CANCELLED", "EXPIRED"] as const;
+const STATUS_FILTERS = ["RESERVED", "COMPLETED", "CANCELLED"] as const;
 
 export default function ReservationsPage() {
   const [items, setItems] = useState<Reservation[]>([]);
@@ -39,7 +36,6 @@ export default function ReservationsPage() {
   const [editTarget, setEditTarget] = useState<Reservation | null>(null);
   const [editQty, setEditQty] = useState("");
   const [editCustomer, setEditCustomer] = useState("");
-  const [editEndDate, setEditEndDate] = useState("");
   const [editOnHand, setEditOnHand] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
@@ -72,7 +68,6 @@ export default function ReservationsPage() {
     setEditTarget(r);
     setEditQty(r.quantity);
     setEditCustomer(r.customerName ?? "");
-    setEditEndDate(r.expiresAt ? r.expiresAt.slice(0, 10) : "");
     setEditOnHand(null);
     const res = await fetch(`/api/proxy/products/${r.product.id}`, { cache: "no-store" });
     if (res.ok) {
@@ -96,7 +91,6 @@ export default function ReservationsPage() {
     const { ok, data } = await patchReservation(editTarget.id, {
       quantity: editQty,
       customerName: editCustomer,
-      expiresAt: editEndDate || null,
     });
     if (!ok) {
       toastError(reservationErrorMessage(data, "Update failed"));
@@ -137,7 +131,6 @@ export default function ReservationsPage() {
   const statusBadge = (s: string) => {
     if (s === "RESERVED") return <Badge variant="warning">Reserved</Badge>;
     if (s === "COMPLETED") return <Badge variant="success">Completed</Badge>;
-    if (s === "EXPIRED") return <Badge variant="danger">Expired</Badge>;
     return <Badge variant="neutral">Cancelled</Badge>;
   };
 
@@ -170,7 +163,7 @@ export default function ReservationsPage() {
         />
       </ActionGroup>
     ) : (
-      <span className="text-xs text-white/40">—</span>
+      <span className="text-xs text-text-muted">—</span>
     );
 
   const columns: DataTableColumn<Reservation>[] = [
@@ -179,16 +172,15 @@ export default function ReservationsPage() {
       header: "Product",
       render: (r) => (
         <div>
-          <p className="font-medium text-white">{r.product.name}</p>
-          <p className="text-xs text-white/45">{r.product.category.name}</p>
+          <p className="font-medium text-text">{r.product.name}</p>
+          <p className="text-xs text-text-muted">{r.product.category.name}</p>
         </div>
       ),
     },
     { key: "qty", header: "Qty", className: "tabular-nums", render: (r) => r.quantity },
     { key: "customer", header: "Customer", render: (r) => r.customerName ?? "—" },
     { key: "status", header: "Status", render: (r) => statusBadge(r.status) },
-    { key: "reservedDate", header: "Reserved date", render: (r) => new Date(r.reservedDate).toLocaleDateString() },
-    { key: "endDate", header: "Reservation end date", render: (r) => (r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : "—") },
+    { key: "date", header: "Date", render: (r) => new Date(r.createdAt).toLocaleString() },
     { key: "actions", header: "", className: "text-right", render: rowActions },
   ];
 
@@ -206,10 +198,10 @@ export default function ReservationsPage() {
               setPage(1);
             }}
             className={cn(
-              "rounded-[var(--radius-full)] px-4 py-2 text-xs font-semibold transition focus-ring",
+              "rounded-full px-4 py-2 text-xs font-semibold transition focus-ring",
               status === s
-                ? "bg-[var(--brand-yellow)]/20 text-[var(--accent)]"
-                : "bg-white/5 text-white/60 hover:bg-white/10",
+                ? "bg-accent/20 text-accent"
+                : "bg-surface-muted text-text-muted hover:bg-surface-muted/80",
             )}
           >
             {s.charAt(0) + s.slice(1).toLowerCase()}
@@ -227,14 +219,10 @@ export default function ReservationsPage() {
           <div className="space-y-3 text-sm">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-medium text-white">{r.product.name}</p>
-                <p className="text-xs text-white/50">
+                <p className="font-medium text-text">{r.product.name}</p>
+                <p className="text-xs text-text-muted">
                   Qty {r.quantity}
                   {r.customerName ? ` · ${r.customerName}` : ""}
-                </p>
-                <p className="mt-1 text-[11px] text-white/50">
-                  Reserved: {new Date(r.reservedDate).toLocaleDateString()} · End:{" "}
-                  {r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : "—"}
                 </p>
               </div>
               {statusBadge(r.status)}
@@ -247,17 +235,17 @@ export default function ReservationsPage() {
       <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
 
       {editTarget ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
           <div
-            className="w-full max-w-md rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
+            className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-reservation-title"
           >
-            <h2 id="edit-reservation-title" className="text-lg font-semibold text-white">
+            <h2 id="edit-reservation-title" className="text-lg font-semibold text-text">
               Edit reservation
             </h2>
-            <p className="mt-1 text-sm text-white/55">{editTarget.product.name}</p>
+            <p className="mt-1 text-sm text-text-muted">{editTarget.product.name}</p>
 
             <div className="mt-4 space-y-3">
               <Input
@@ -276,12 +264,6 @@ export default function ReservationsPage() {
                 value={editCustomer}
                 onChange={(e) => setEditCustomer(e.target.value)}
                 placeholder="Optional"
-              />
-              <Input
-                label="Reservation end date"
-                type="date"
-                value={editEndDate}
-                onChange={(e) => setEditEndDate(e.target.value)}
               />
             </div>
 

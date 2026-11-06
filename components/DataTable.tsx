@@ -33,7 +33,11 @@ export const DataTable = <T,>({
   footer,
 }: Props<T>) => {
   if (rows.length === 0) {
-    return <p className="py-10 text-center text-sm text-white/50">{emptyMessage}</p>;
+    return (
+      <p className="py-10 text-center text-sm text-text-muted">
+        {emptyMessage}
+      </p>
+    );
   }
 
   const footerCells = footer?.cells ?? {};
@@ -41,14 +45,14 @@ export const DataTable = <T,>({
   return (
     <>
       {footer && mobileCard ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] border border-white/10 bg-black/25 px-4 py-3 text-sm lg:hidden">
-          <span className="font-semibold text-white/70">{footer.label}</span>
-          <div className="flex flex-wrap gap-3 text-white/80">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm lg:hidden">
+          <span className="font-semibold text-text-muted">{footer.label}</span>
+          <div className="flex flex-wrap gap-3 text-text">
             {columns
               .filter((col) => footerCells[col.key] != null)
               .map((col) => (
                 <span key={col.key} className="tabular-nums">
-                  <span className="text-white/45">{col.header}: </span>
+                  <span className="text-text-muted">{col.header}: </span>
                   {footerCells[col.key]}
                 </span>
               ))}
@@ -59,7 +63,10 @@ export const DataTable = <T,>({
       {mobileCard ? (
         <ul className="space-y-3 lg:hidden">
           {rows.map((row) => (
-            <li key={rowKey(row)} className="card-surface p-4">
+            <li
+              key={rowKey(row)}
+              className="rounded-xl border border-border bg-surface p-4 shadow-sm"
+            >
               {mobileCard(row)}
             </li>
           ))}
@@ -68,18 +75,18 @@ export const DataTable = <T,>({
 
       <div
         className={cn(
-          "overflow-x-auto rounded-[var(--radius-md)] border border-white/10",
+          "overflow-x-auto rounded-lg border border-border shadow-sm",
           mobileCard && "hidden lg:block",
         )}
       >
-        <table className="w-full min-w-[640px] text-left text-sm text-white/80">
-          <thead className="sticky top-0 z-10 border-b border-white/10 bg-black/50">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead className="sticky top-0 z-10 border-b border-border bg-surface-muted">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-white/50",
+                    "px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted",
                     col.className,
                   )}
                 >
@@ -88,14 +95,20 @@ export const DataTable = <T,>({
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-surface">
             {rows.map((row) => (
               <tr
                 key={rowKey(row)}
-                className="border-b border-white/5 transition-colors hover:bg-white/[0.04]"
+                className="border-b border-border/50 transition-colors hover:bg-surface-muted/50"
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={cn("px-4 py-3 align-middle", col.className)}>
+                  <td
+                    key={col.key}
+                    className={cn(
+                      "px-4 py-3 align-middle text-text",
+                      col.className,
+                    )}
+                  >
                     {col.render(row)}
                   </td>
                 ))}
@@ -103,17 +116,19 @@ export const DataTable = <T,>({
             ))}
           </tbody>
           {footer ? (
-            <tfoot className="border-t border-white/15 bg-black/35">
+            <tfoot className="border-t border-border bg-surface-muted">
               <tr>
                 {columns.map((col, idx) => (
                   <td
                     key={col.key}
                     className={cn(
-                      "px-4 py-3 text-sm font-semibold text-white",
+                      "px-4 py-3 text-sm font-semibold text-text",
                       col.className,
                     )}
                   >
-                    {idx === 0 ? footer.label : (footerCells[col.key] ?? null)}
+                    {idx === 0
+                      ? footer.label
+                      : (footerCells[col.key] ?? null)}
                   </td>
                 ))}
               </tr>

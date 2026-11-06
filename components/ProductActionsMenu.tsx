@@ -31,7 +31,8 @@ export const ProductActionsMenu = ({
 
   const showEdit = canEditProduct(permissions);
   const showRestock = canRestockProduct(permissions) && Boolean(onRestock);
-  const showDeactivate = canDeactivateProduct(permissions) && Boolean(onDeactivate);
+  const showDeactivate =
+    canDeactivateProduct(permissions) && Boolean(onDeactivate);
 
   useEffect(() => {
     if (!open) return;
@@ -59,13 +60,13 @@ export const ProductActionsMenu = ({
         {open ? (
           <div
             role="menu"
-            className="absolute bottom-full right-0 z-50 mb-1 min-w-[10rem] rounded-[var(--radius-md)] border border-white/10 bg-[color:var(--surface)] py-1 shadow-xl"
+            className="absolute bottom-full right-0 z-50 mb-1 min-w-[10rem] rounded-lg border border-border bg-surface py-1 shadow-xl"
           >
             {showEdit ? (
               <Link
                 href={`/products/${product.id}/edit`}
                 role="menuitem"
-                className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm text-text hover:bg-surface-muted"
                 onClick={() => setOpen(false)}
               >
                 <Pencil className="size-4" />
@@ -76,7 +77,7 @@ export const ProductActionsMenu = ({
               <button
                 type="button"
                 role="menuitem"
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--accent)] hover:bg-white/5"
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-accent hover:bg-surface-muted"
                 onClick={() => {
                   setOpen(false);
                   onRestock?.(product);
@@ -90,7 +91,7 @@ export const ProductActionsMenu = ({
               <button
                 type="button"
                 role="menuitem"
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-rose-200 hover:bg-white/5"
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-danger hover:bg-surface-muted"
                 onClick={() => {
                   setOpen(false);
                   setConfirmDeactivate(true);

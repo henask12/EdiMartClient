@@ -1,0 +1,56 @@
+/* 80mm thermal X/Z report — used with window.print() */
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .shift-report,
+  .shift-report * {
+    visibility: visible !important;
+  }
+
+  .shift-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 72mm;
+    color: #000;
+    background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .shift-report-header {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .shift-report-header h1 {
+    font-size: 14px;
+    margin: 0 0 4px;
+  }
+
+  .shift-report-body,
+  .shift-report-methods,
+  .shift-report-totals {
+    border-top: 1px dashed #000;
+    padding-top: 6px;
+    margin-top: 6px;
+  }
+
+  .shift-report-section {
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}

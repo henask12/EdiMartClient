@@ -1,0 +1,296 @@
+# Changelog
+
+## Phase 9 — Offline, reliability and security (client)
+
+### Added
+- PWA: `public/manifest.webmanifest`, lightweight `public/sw.js` (app shell +
+  `/api/proxy/products` catalog cache), registered from the root layout;
+  `/offline` fallback; middleware allows SW/manifest/logo without login redirect.
+- Offline outbox (`lib/offline/outbox.ts`): IndexedDB queue for sales, stock-count
+  lines, and goods receipts; FIFO flush on `online`; conflicts never silently dropped.
+- POS checkout sends `clientSaleId`, `registerCode`, `createdOffline` + existing
+  Idempotency-Key; network/offline failures enqueue and show a pending sale number.
+- Banner + nav badge: “Offline — N sales waiting to sync”; `/sync-review` for local
+  queue + remote `/sync/conflicts` (404-tolerant).
+- Security UI `/settings/security`: password change, TOTP setup/enable/disable,
+  session list + revoke; login TOTP_REQUIRED step; CSRF Origin/Referer check on
+  proxy + login; `/audit` filterable viewer (`AUDIT_VIEW`).
+- CI: `.github/workflows/ci.yml` (`tsc --noEmit` + `scripts/check-hardcoded-colors.mjs`).
+
+### Known gaps
+- Depends on API Phase 9 for TOTP, sessions, audit list, and sync conflicts —
+  UI degrades gracefully on 404.
+- Sentry / structured logs / backup tooling are API/ops-side (brief Phase 9).
+
+## Phase 8 — Dashboards and reports (client)
+
+### Added
+- Redesigned `/dashboard`: period presets, KPI StatCards with `deltaPct`, sales-by-hour
+  (Recharts), payment split, top products, Needs-attention links; legacy
+  today/week/month/year still supported as fallback.
+- `/reports` hub (`?report=…`) for Sales / Inventory / Purchasing reports with
+  date filters, chart + table, CSV export (`format=csv`).
+- Inventory overview optional KPIs from `/reporting/inventory-dashboard`
+  (turnover, DOI, ABC, shrinkage, accuracy, dead stock).
+- Helpers `lib/reporting.ts`; nav Reports next to Dashboard; `REPORTING_VIEW` gate.
+- i18n Dashboard / Reports keys (en + am).
+
+### Defaults
+- CSV only · no XYZ · cost columns gated by `REPORTS_VIEW_COST_PROFIT`.
+
+### Known gaps
+- Excel/PDF and scheduled email not built (Phase 8 default).
+- Sync-error attention items wait for Phase 9 offline.
+
+## Phase 7 — Customers, loyalty and promotions (client)
+
+### Added
+- Permissions/routes: `CUSTOMERS_VIEW`, `CUSTOMERS_MANAGE`, `CUSTOMER_CREDIT_MANAGE`,
+  `PROMOTIONS_MANAGE` in `lib/permissions.ts` + Sell-group nav (Customers, Promotions)
+  and settings link `/settings/loyalty`.
+- Pages: `/customers` (search + create), `/customers/[id]` (profile, ledger, repay,
+  statement print), `/customers/overdue`, `/promotions` (CRUD), `/settings/loyalty`.
+- Helpers `lib/customers.ts`, `lib/promotions.ts`; payment methods `STORE_CREDIT` /
+  `CUSTOMER_ACCOUNT` in `lib/payment-methods.ts`.
+- POS: F3 customer picker (`PosCustomerPicker`), coupon + loyalty redeem fields,
+  store-credit / pay-later tiles when a customer is selected; checkout sends
+  `customerId`, `couponCode`, `loyaltyPointsToRedeem`.
+- i18n keys for customers / promotions / loyalty (en + am).
+
+### Defaults
+- Matches API: 1 pt / Br 10; 100 pts = Br 10; credit limit default 0; no BYOX UI.
+
+### Known gaps
+- Promo PRODUCT/CATEGORY targets use raw IDs (no picker).
+- POS does not preview coupon evaluate before pay (API applies on checkout).
+- Depends on API Phase 7 migration locally.
+
+## Phase 6 — Purchasing (client)
+
+### Added
+- Permissions/routes: `SUPPLIERS_MANAGE`, `PURCHASING_MANAGE`, `PURCHASE_APPROVE`,
+  `SUPPLIER_PAYMENTS_MANAGE` wired in `lib/permissions.ts` + nav requirements.
+- Purchasing nav group + command palette: Reorder, Purchase orders, Suppliers,
+  Supplier bills, Supplier returns; settings link `/settings/purchasing`.
+- Pages: `/suppliers`, `/purchase-orders`, `/purchase-orders/[id]` (approve/send/
+  cancel/close + `window.print` doc), `/goods-receipts/new` (receive + optional
+  landed cost), `/reorder`, `/supplier-bills` (create from receipts, pay, aged),
+  `/supplier-returns`, `/settings/purchasing` (`poApproveThreshold`, default 10000).
+- Shared client API helper `lib/purchasing.ts` against `/suppliers`,
+  `/purchase-orders`, `/goods-receipts`, `/supplier-bills`, `/supplier-returns`,
+  `/purchasing/reorder-suggestions`, `/purchasing/incoming`.
+- Stock lookup + product cards show **incoming** when the API returns it (lookup
+  also falls back to `GET /purchasing/incoming`).
+- Expiry centre: “Return to supplier” → `/supplier-returns` with product/qty query.
+- i18n `Purchasing` namespace (en + am). Unit costs gated by `canSeeCost`.
+
+### Defaults
+- No pack conversion · ETB · PO approve threshold Br 10k · incoming from open POs.
+
+### Known gaps / API alignment
+- Client assumes the Phase 6 API module paths above; if the API mounts bills aged
+  summary at `/supplier-bills/aged-payables` the client tries that as fallback.
+- Reorder create-pos accepts either `{ groups: [...] }` or a single
+  `{ supplierId, lines }` body (retry).
+- Seasonality uplift, pack/carton UOM, Telegram/WhatsApp PO send UI not built
+  (print/PDF via browser print only).
+- Three-way match flags and supplier performance metrics not shown yet.
+- Depends on API Phase 6 being deployed/migrated locally before screens work.
+
+## Phase 5 — Shifts and cash (client)
+
+### Added
+- Proxy forwards `x-register-id` (with existing `idempotency-key` / `x-approval-token`).
+- Route `/shifts` (`SHIFT_MANAGE` or `SHIFT_VIEW_ALL`); nav + command palette under Sell.
+- Shifts UI: list filters, open with denomination counter, cash in/out, no-sale drawer
+  (ManagerApprovalDialog `NO_SALE_DRAWER_OPEN` unless `CASH_DRAWER_OPEN`), X report, blind
+  close count then expected/counted/variance + `SHIFT_VARIANCE_OVER_LIMIT` retry, thermal
+  X/Z print CSS.
+- POS: loads `/shifts/current`, shift pill in Shell focus bar, blocks Charge when
+  `shifts.requireOpenShift` and no open shift (toast + link to `/shifts`); checkout sends
+  `x-register-id` from `localStorage` (`edimart-register-id`).
+- Device till toggle on `/settings/pos` (`edimart-till-registered`); Switch user → logout
+  to `/login?next=/pos` (no PIN login until API adds it).
+- Store settings aliases: `requireOpenShift`, `varianceApprovalThreshold`, `eodEmailEnabled`.
+
+### Defaults
+- One till REGISTER-1 · require open shift · blind close · no drawer hardware.
+
+### Known gaps vs API
+- Aligned to live `/registers`, `/shifts`, `/shifts/current`, `/shifts/open`,
+  `…/cash-in|cash-out|no-sale|close|x-report|z-report` (denoms-only open/close bodies).
+- No `POST /auth/pin-login` — Switch user logs out to `/login?next=/pos`.
+- `GET /shifts/current` needs `SHIFT_MANAGE` and is scoped to the opener; cashiers need
+  that permission (plus `SALES_CREATE`) for the POS pill / gate.
+- Variance close keeps expected blind until approved close succeeds (API design).
+- EOD email is API-side; client only toggles `eodEmailEnabled`.
+
+## Phase 4 — POS selling screen
+
+### Added (client)
+- Focus-mode `/pos` register: catalog search (MiniSearch), category chips, favourites,
+  product grid/list, Walk-in cart, Hold / Discount / Note, Charge → payment sheet.
+- HID barcode burst listener + optional beep; camera scan via `BarcodeDetector` when available.
+- Cart persisted in IndexedDB (`lib/pos-cart-db.ts`); park/hold against API with local fallback.
+- Payment sheet: method tiles, cash numpad + quick tenders, split payments, proof upload,
+  Idempotency-Key checkout (`payments[]` + legacy single-method fields).
+- `ManagerApprovalDialog` for DISCOUNT_OVER_LIMIT / PRICE_OVERRIDE / SALE_VOID /
+  REFUND_OUTSIDE_WINDOW via `/approvals`.
+- Success screen: change due, 80mm `receipt-print.css`, print/PDF/share, new sale.
+- `/sell` redirects to `/pos`. Shell hides sidebar on `/pos` (Exit, user, online).
+- Sales ledger: cashier/method/status filters, row → detail sheet with void/return;
+  `/sales/[id]` deep-link.
+- Thin `/settings/pos` — PATCH `/settings/store` with POS camelCase aliases.
+- i18n `Pos` + Sales extras (en + am). Nav / command palette point Sell → `/pos`.
+
+### Defaults in force
+- VAT 15% inclusive · Walk-in only · no store credit · HID + beep · 80mm print CSS · no cash drawer.
+
+### Known gaps
+- Payment-method requireReference/requireProof not enforced in the payment sheet yet.
+- One manager approval token covers one action (price override + over-limit discount in the
+  same cart still needs two approvals).
+- No QZ Tray / cash drawer; no store credit / CRM; no shifts (Phase 5).
+- Playwright critical POS flows still deferred.
+
+## Phase 3 — Inventory core (committed)
+
+### Added (client)
+- Inventory nav: Overview, Stock lookup, Transfers, Stock counts, Labels, Locations (settings).
+- Pages: `/inventory`, `/stock-lookup`, `/transfers`, `/stock-counts`, `/labels`,
+  `/settings/locations` — wired to the new Phase 3 API routes.
+- Route permission gates for the new pages (`STOCK_VIEW`, `STOCK_TRANSFER`, `STOCK_COUNT`,
+  `LABELS_PRINT`, `LOCATIONS_MANAGE`).
+
+### Follow-ups in this phase
+- Edit + create product: Amharic name, brand, barcode, track-batches, min/max.
+- Expiry centre: quarantine and write-off actions; 30/60/90 day filters.
+- Stock-count detail page with blind counted-qty entry + post.
+- Inventory overview: floor replenishment suggestions → transfer draft.
+- Bulk CSV import at `/products/import` (preview then commit).
+
+### Not yet (known gaps)
+- Count accuracy history / cycle-count scheduling (Phase 8).
+- Product merge tool; variants / packs / bundles (Section 0 undecided).
+- Playwright critical flows.
+
+## Phase 2 - design system
+
+### Added
+- **Semantic token system.** `globals.css` registers colour tokens (`bg`, `surface`, `primary`,
+  `accent`, `text`, `border`, etc.) via Tailwind 4 `@theme`. A `.dark` class flips every token;
+  `next-themes` handles the switching (attribute="class", defaultTheme="dark").
+- **Light and dark themes.** Primary: deep teal `#0F6B5F`; accent: saffron `#D9922E`; warm
+  neutrals. Users cycle dark → light → system from the top-bar icon.
+- **i18n with `next-intl`.** All shell chrome and the most-used pages are translated (English
+  complete, Amharic for shell/POS/common actions). Locale stored in `User.locale` on the API and
+  a `NEXT_LOCALE` cookie; no locale prefix in URLs.
+- **Fonts.** Inter (Latin) and Noto Sans Ethiopic (Amharic) loaded via `next/font/google`.
+- **App shell.** Collapsible sidebar (240 → 72 px) with grouped navigation, permission-filtered
+  links, and tooltips when collapsed. Mobile: hamburger → sheet overlay + fixed bottom tab bar
+  (Dashboard, Sell, Scan placeholder, Products, More). Top bar: command-palette trigger (`⌘K`),
+  theme toggle, language toggle, user avatar, logout.
+- **Command palette** (cmdk + Radix Dialog). `Ctrl+K / ⌘K` opens a searchable list of all
+  permission-visible pages grouped by category.
+- **Component library** (all `components/ui/`): `Button` (cva, 6 variants × 7 sizes, `asChild`),
+  `Input`, `Select`, `Badge`, `Card` + `StatCard`, `Dialog`, `Sheet`, `Skeleton`/`SkeletonCard`,
+  `EmptyState`, `Kbd`, `Tooltip`, `IconButton`, `PageHeader`, `ActionGroup`.
+- **`formatMoney()`** — single money formatter (`lib/format-money.ts`): handles `string | number
+  | null`, outputs `Br 1,250.00` with non-breaking space. `formatBirr` re-exports for backward
+  compatibility.
+- **Date helpers** (`lib/date-helpers.ts`): `formatDate`, `formatDateShort`, `toDateInput`,
+  `formatEthiopianDate` (Ge'ez calendar via `Intl.DateTimeFormat`, feature-detected).
+- **`cn()` upgraded** from simple filter+join to `clsx` + `tailwind-merge`.
+- **`/design` page** — owner-only component showcase showing every token, component variant,
+  formatter, and loading state.
+- **TanStack Query** provider (`QueryProvider.tsx`, staleTime 30 s, retry 1) — wired in layout
+  but not yet used by pages (ready for Phase 3 data-fetching refactor).
+
+### Changed
+- **Every page and component** migrated from hardcoded Tailwind colours (`text-white/50`,
+  `bg-black/30`, `border-white/10`, `text-[var(--accent)]`, etc.) to semantic tokens
+  (`text-text-muted`, `bg-surface-muted`, `border-border`, `text-accent`, etc.).
+- All `formatBirr` / `format-price` imports replaced with `formatMoney` / `format-money`.
+- Old CSS utility classes (`section-card`, `card-surface`, `btn-primary`) removed; pages use
+  `Card` component or inline token classes instead.
+- `ConfirmDialog` rewritten on Radix Dialog. Hand-rolled modal wrappers in modals replaced with
+  semantic token classes (old `rounded-[var(--radius-lg)]` → `rounded-xl`, etc.).
+- Products / new and / edit pages: raw `<input>` elements replaced with `Input` component.
+- Product types page: fully rewritten with `Input`, `IconButton`, `ActionGroup`.
+- Settings / account: fully rewritten with `Card`, `Input`, `Button`, translations.
+- Settings / emails: rewritten with `PageHeader`, `Input`, `Button`.
+
+### API (additive)
+- `User.locale` column (`ALTER TABLE "User" ADD COLUMN "locale" TEXT`).
+- `PATCH /auth/me` accepts `locale` field; `GET /auth/me` returns `locale`.
+- JWT payload includes `locale`.
+
+### New dependencies (client)
+- `next-intl` — i18n without locale-prefix routing
+- `next-themes` — dark / light / system theme switching
+- `@tanstack/react-query` — data-fetching cache (wired, not yet used)
+- `cmdk` — command palette
+- `@radix-ui/react-dialog` — Dialog + Sheet
+- `@radix-ui/react-tooltip` — Tooltip
+- `@radix-ui/react-slot` — `asChild` pattern in Button
+- `class-variance-authority` — type-safe component variants
+- `clsx` + `tailwind-merge` — utility for merging Tailwind classes
+- `lucide-react` — icons (tree-shaken)
+
+### Known gaps
+- Ethiopian calendar display requires a browser that supports `Intl` with `calendar: 'ethiopic'`.
+- Amharic translations are machine-generated; a native speaker review is recommended.
+- No automated client tests yet (Playwright setup deferred to Phase 3 since no behaviour changed).
+- Brand logo image does not load locally (pre-existing; not investigated).
+
+## Phase 1 - one permission model
+
+### Added
+- `usePermission()` (`can`, `canAny`, `meets`, `canSeeCost`): one place answers "can this person do X?",
+  fed by `/auth/me` through the app shell.
+- **"You don't have access to this"** page, naming the permission that is missing, instead of a blank or
+  broken page. Navigation links and page access come from one table (`ROUTE_REQUIREMENTS` in
+  `lib/permissions.ts`), so a link shows exactly when its page would open. A 403 from any call shows a
+  clear message.
+- **Roles screen is a permission matrix**: permissions grouped by area with a one-line description,
+  one column per role, "Sensitive" flags, a warning when switching sensitive ones on, and a Save bar.
+  The owner column is locked.
+- **Approval PIN** form on My account (set, change, remove).
+- Dashboard start page for roles without report access.
+
+### Changed
+- **Cost and profit are hidden** when the API does not send them: sales ledger and period details,
+  dashboard, product forms (cost field and what is sent), Stocks page cost column.
+- Selling needs "Record sales" (not "Sell products"); adding stock needs "Receive stock". Edit and
+  History buttons on the Stocks page show only for people who may use them.
+- The web proxy forwards `X-Approval-Token` and supports `PUT`.
+- Sales page loads its filter lists only for people who can view products.
+
+### Removed
+- The old per-role permission editor (replaced by the matrix) and the per-page `/auth/me` fetches.
+
+## Phase 0 - correct and safe
+
+### Fixed
+- **Build.** `next build` failed on Tailwind 4.3 (`@apply` of the plain classes `focus-ring` and
+  `card-surface` in `globals.css`). The two compositions are now spelled out; styling is unchanged.
+  The latest commit before this phase did not build on a clean install.
+- **Login form** no longer pre-fills the owner e-mail and password.
+- **Sessions.** The cookie lifetime now comes from the API (`expiresInSeconds`), not a separate
+  12 h constant. When the API answers 401 the proxy clears the cookie and the app goes to
+  `/login?next=...`; a 403 `PASSWORD_CHANGE_REQUIRED` goes to the account page.
+- **Forced password change** after the first sign-in of seeded / admin-created accounts.
+- **Double-selling on retry.** Sell flows send an `Idempotency-Key`. After a dropped connection
+  the same key is kept, so pressing the button again cannot sell twice; after a definite refusal
+  (e.g. not enough stock) a new key is used.
+- The API proxy forwards `Idempotency-Key` and answers 502 JSON when the API is unreachable.
+
+### Added
+- Payment method (cash, Telebirr, CBE Birr, M-Pesa, bank transfer, card) and optional transaction
+  ID on both sell flows; the sales ledger shows how each sale was paid.
+- Optional `NEXT_PUBLIC_IMAGE_BASE_URL` for product photos served from an S3-compatible bucket.
+- Sales ledger "Payment" column.
+
+### Known gaps
+- No automated client tests yet (Playwright arrives with the design-system phase).
+- Brand logo image does not load locally (pre-existing; not investigated).

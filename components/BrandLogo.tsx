@@ -4,8 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 
 type Props = {
-  /** Yellow-bg logo on dark UI; light-bg logo on pale surfaces */
-  variant?: "on-dark" | "on-light";
   size?: "sm" | "md" | "lg";
   linked?: boolean;
   className?: string;
@@ -18,17 +16,14 @@ const sizes = {
 } as const;
 
 export const BrandLogo = ({
-  variant = "on-dark",
   size = "md",
   linked = false,
   className = "",
 }: Props) => {
-  const src = variant === "on-dark" ? "/logo.png" : "/logo-light.png";
   const dim = sizes[size];
-
   const image = (
     <Image
-      src={src}
+      src="/logo.png"
       alt="Edi's Collection"
       width={dim.w}
       height={dim.h}
@@ -39,7 +34,7 @@ export const BrandLogo = ({
 
   if (linked) {
     return (
-      <Link href="/dashboard" className="inline-flex shrink-0 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
+      <Link href="/dashboard" className="inline-flex shrink-0 rounded-lg focus-ring">
         {image}
       </Link>
     );
@@ -49,7 +44,7 @@ export const BrandLogo = ({
 };
 
 export const BrandName = ({ className = "" }: { className?: string }) => (
-  <span className={`font-semibold tracking-tight text-white ${className}`}>
+  <span className={`font-semibold tracking-tight text-text ${className}`}>
     Edi&apos;s Collection
   </span>
 );

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionGroup } from "@/components/ui/ActionGroup";
 import { IconButton } from "@/components/ui/IconButton";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -25,17 +25,6 @@ const MOVEMENT_TYPES = [
   "RELEASE_RESERVE",
   "DAMAGE",
 ] as const;
-
-const MOVEMENT_LABELS: Record<string, string> = {
-  RECEIPT: "RECEIVED",
-  SALE: "SOLD",
-  RETURN: "RETURNED",
-  ADJUSTMENT: "ADJUSTED",
-  TRANSFER: "TRANSFERRED",
-  RESERVE: "RESERVED",
-  RELEASE_RESERVE: "RESERVE RELEASED",
-  DAMAGE: "DAMAGED",
-};
 
 type ReservationMeta = {
   reservedQty?: string;
@@ -61,18 +50,12 @@ type Movement = {
 
 type Product = { id: string; name: string };
 
-const toNumber = (value: string | null | undefined) => {
-  if (value == null) return 0;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+const formatOnHand = (m: Movement) => {
+  if (m.beforeOnHand != null && m.afterOnHand != null) {
+    return `${m.beforeOnHand} → ${m.afterOnHand}`;
+  }
+  return "— → —";
 };
-
-const formatNumber = (value: string | number | null | undefined) =>
-  toNumber(typeof value === "number" ? String(value) : value).toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  });
-
-const movementLabel = (type: string) => MOVEMENT_LABELS[type] ?? type;
 
 const formatReserveContext = (m: Movement): string | null => {
   const meta = m.reservationMeta;
@@ -104,6 +87,11 @@ export default function StockHistoryPage() {
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  const qtyDeltaSubtotal = useMemo(
+    () => movements.reduce((sum, m) => sum + Number(m.qtyDelta), 0),
+    [movements],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -145,8 +133,8 @@ export default function StockHistoryPage() {
       header: "Product",
       render: (m) => (
         <div>
-          <p className="font-medium text-white">{m.inventoryItem.product.name}</p>
-          <p className="text-xs text-white/45">{m.inventoryItem.product.category.name}</p>
+          <p className="font-medium text-text">{m.inventoryItem.product.name}</p>
+          <p className="text-xs text-text-muted">{m.inventoryItem.product.category.name}</p>
         </div>
       ),
     },
@@ -158,56 +146,12 @@ export default function StockHistoryPage() {
     {
       key: "type",
       header: "Type",
-      render: (m) => movementLabel(m.type),
+      render: (m) => m.type,
     },
     {
       key: "onHand",
       header: "On hand",
-      className: "tabular-nums",
-      render: (m) => formatNumber(m.afterOnHand ?? m.beforeOnHand),
-    },
-    {
-      key: "sold",
-      header: "Sold",
-      className: "tabular-nums",
-      render: (m) => (m.type === "SALE" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"),
-    },
-    {
-      key: "reserved",
-      header: "Reserved",
-      className: "tabular-nums",
-      render: (m) =>
-        m.type === "RESERVE" || m.type === "RELEASE_RESERVE"
-          ? formatNumber(Math.abs(toNumber(m.qtyDelta)))
-          : "0",
-    },
-    {
-      key: "restocked",
-      header: "Restocked",
-      className: "tabular-nums",
-      render: (m) => (m.type === "RECEIPT" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"),
-    },
-    {
-      key: "detail",
-      header: "Movement detail",
-      render: (m) => {
-        const positive = toNumber(m.qtyDelta) >= 0;
-        const qty = formatNumber(m.qtyDelta);
-        if (m.type === "RESERVE" || m.type === "RELEASE_RESERVE") {
-          const ctx = formatReserveContext(m);
-          return (
-            <span className={`text-xs ${ctx ? "text-white/70" : positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
-              {ctx ?? `${positive ? "+" : "-"}${qty}`}
-            </span>
-          );
-        }
-        return (
-          <span className={`tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
-            {positive ? "+" : "-"}
-            {qty}
-          </span>
-        );
-      },
+      render: (m) => formatOnHand(m),
     },
     {
       key: "reserve",
@@ -215,18 +159,24 @@ export default function StockHistoryPage() {
       render: (m) => {
         const ctx = formatReserveContext(m);
         if (ctx) {
-          return <span className="text-xs text-white/70">{ctx}</span>;
+          return <span className="text-xs text-text-muted">{ctx}</span>;
         }
         if (m.type === "RESERVE" || m.type === "RELEASE_RESERVE") {
           const positive = Number(m.qtyDelta) >= 0;
           return (
-            <span className={`text-xs tabular-nums ${positive ? "text-[var(--accent)]" : "text-rose-300"}`}>
+            <span className={`text-xs tabular-nums ${positive ? "text-accent" : "text-danger"}`}>
               Qty {positive ? "+" : ""}
-              {formatNumber(m.qtyDelta)}
+              {m.qtyDelta}
             </span>
           );
         }
-        return <span className="text-xs text-white/40">—</span>;
+        const positive = Number(m.qtyDelta) >= 0;
+        return (
+          <span className={`tabular-nums ${positive ? "text-accent" : "text-danger"}`}>
+            {positive ? "+" : ""}
+            {m.qtyDelta}
+          </span>
+        );
       },
     },
     {
@@ -242,8 +192,6 @@ export default function StockHistoryPage() {
       ),
     },
   ];
-
-  const movementDetailSubtotal = movements.reduce((sum, m) => sum + toNumber(m.qtyDelta), 0);
 
   return (
     <section className="space-y-6">
@@ -268,7 +216,7 @@ export default function StockHistoryPage() {
           setPage(1);
         }}
       />
-      {dateError ? <p className="text-sm text-rose-200">{dateError}</p> : null}
+      {dateError ? <p className="text-sm text-danger">{dateError}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Select
@@ -296,7 +244,7 @@ export default function StockHistoryPage() {
         >
           {MOVEMENT_TYPES.map((t) => (
             <option key={t || "all"} value={t}>
-              {t ? movementLabel(t) : "All types"}
+              {t || "All types"}
             </option>
           ))}
         </Select>
@@ -312,7 +260,7 @@ export default function StockHistoryPage() {
         }}
       />
 
-      {loading ? <p className="text-sm text-white/50">Loading…</p> : null}
+      {loading ? <p className="text-sm text-text-muted">Loading…</p> : null}
 
       <DataTable
         columns={columns}
@@ -321,10 +269,10 @@ export default function StockHistoryPage() {
         footer={{
           label: "Page subtotal",
           cells: {
-            detail: (
+            reserve: (
               <span className="tabular-nums">
-                {movementDetailSubtotal >= 0 ? "+" : ""}
-                {formatNumber(movementDetailSubtotal)}
+                {qtyDeltaSubtotal >= 0 ? "+" : ""}
+                {qtyDeltaSubtotal}
               </span>
             ),
           },
@@ -335,19 +283,14 @@ export default function StockHistoryPage() {
           return (
             <Link
               href={`/stock-history/${m.id}`}
-              className="block rounded-xl border border-white/10 bg-[color:var(--surface)]/70 p-4 text-sm"
+              className="block rounded-xl border border-border bg-surface p-4 text-sm"
             >
-              <p className="font-medium text-white">{m.inventoryItem.product.name}</p>
-              <p className="text-xs text-white/50">
-                {new Date(m.createdAt).toLocaleString()} · {movementLabel(m.type)}
+              <p className="font-medium text-text">{m.inventoryItem.product.name}</p>
+              <p className="text-xs text-text-muted">
+                {new Date(m.createdAt).toLocaleString()} · {m.type}
               </p>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-white/70">
-                <p>On hand: <span className="tabular-nums">{formatNumber(m.afterOnHand ?? m.beforeOnHand)}</span></p>
-                <p>Sold: <span className="tabular-nums">{m.type === "SALE" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"}</span></p>
-                <p>Reserved: <span className="tabular-nums">{m.type === "RESERVE" || m.type === "RELEASE_RESERVE" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"}</span></p>
-                <p>Restocked: <span className="tabular-nums">{m.type === "RECEIPT" ? formatNumber(Math.abs(toNumber(m.qtyDelta))) : "0"}</span></p>
-              </div>
-              {ctx ? <p className="mt-1 text-xs text-white/55">{ctx}</p> : null}
+              <p className="mt-1 tabular-nums text-text-muted">{formatOnHand(m)}</p>
+              {ctx ? <p className="mt-1 text-xs text-text-muted">{ctx}</p> : null}
             </Link>
           );
         }}

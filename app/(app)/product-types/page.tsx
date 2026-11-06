@@ -7,6 +7,13 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { PageSizeSelect } from "@/components/PageSizeSelect";
 import { Pagination } from "@/components/Pagination";
+import { ActionGroup } from "@/components/ui/ActionGroup";
+import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Check, Eye, Pencil, Trash2, X } from "@/lib/icons";
+import { parseApiMessage, toastError } from "@/lib/toast";
 
 type ProductType = {
   id: string;
@@ -50,7 +57,7 @@ export default function ProductTypesPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(typeof data.message === "string" ? data.message : "Could not create");
+      setError(parseApiMessage(data, "Could not create"));
       return;
     }
     setName("");
@@ -72,10 +79,12 @@ export default function ProductTypesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const res = await fetch(`/api/proxy/product-types/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/proxy/product-types/${id}`, {
+      method: "DELETE",
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setError(typeof data.message === "string" ? data.message : "Could not delete");
+      setError(parseApiMessage(data, "Could not delete"));
       return;
     }
     await load();
@@ -87,13 +96,14 @@ export default function ProductTypesPage() {
       header: "Name",
       render: (t) =>
         editingId === t.id ? (
-          <input
+          <Input
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            className="w-full max-w-xs rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-white"
+            containerClassName="max-w-xs"
+            aria-label="Type name"
           />
         ) : (
-          <span className="font-medium text-white">{t.name}</span>
+          <span className="font-medium text-text">{t.name}</span>
         ),
     },
     {
@@ -104,7 +114,7 @@ export default function ProductTypesPage() {
         <button
           type="button"
           onClick={() => setViewType(t)}
-          className="tap text-[var(--accent-2)] underline-offset-2 hover:underline"
+          className="tap text-primary underline-offset-2 hover:underline"
           disabled={t._count.products === 0}
         >
           {t._count.products}
@@ -113,54 +123,58 @@ export default function ProductTypesPage() {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: "",
       className: "text-right",
       render: (t) => (
-        <div className="flex justify-end gap-2">
+        <ActionGroup>
           {t._count.products > 0 ? (
-            <button
-              type="button"
+            <IconButton
+              variant="secondary"
+              aria-label="View products"
+              title="View"
+              icon={<Eye />}
               onClick={() => setViewType(t)}
-              className="text-xs font-semibold text-[var(--accent-2)]"
-            >
-              View
-            </button>
+            />
           ) : null}
           {editingId === t.id ? (
             <>
-              <button
-                type="button"
+              <IconButton
+                variant="primary"
+                aria-label="Save"
+                title="Save"
+                icon={<Check />}
                 onClick={() => void handleUpdate(t.id)}
-                className="text-xs font-semibold text-[var(--accent)]"
-              >
-                Save
-              </button>
-              <button type="button" onClick={() => setEditingId(null)} className="text-xs text-white/50">
-                Cancel
-              </button>
+              />
+              <IconButton
+                variant="ghost"
+                aria-label="Cancel edit"
+                title="Cancel"
+                icon={<X />}
+                onClick={() => setEditingId(null)}
+              />
             </>
           ) : (
             <>
-              <button
-                type="button"
+              <IconButton
+                variant="secondary"
+                aria-label="Edit type"
+                title="Edit"
+                icon={<Pencil />}
                 onClick={() => {
                   setEditingId(t.id);
                   setEditName(t.name);
                 }}
-                className="text-xs font-semibold text-[var(--accent-2)]"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
+              />
+              <IconButton
+                variant="danger"
+                aria-label="Delete type"
+                title="Delete"
+                icon={<Trash2 />}
                 onClick={() => setDeleteType(t)}
-                className="text-xs font-semibold text-rose-300"
-              >
-                Delete
-              </button>
+              />
             </>
           )}
-        </div>
+        </ActionGroup>
       ),
     },
   ];
@@ -168,27 +182,32 @@ export default function ProductTypesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/categories" className="text-sm text-[var(--accent-2)]">
+        <Link href="/categories" className="text-sm text-primary">
           Categories
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-white">Product types</h1>
-        <p className="mt-2 text-sm text-white/60">Food, Beverage, Merchandise, etc.</p>
+        <PageHeader title="Product types" description="Food, Beverage, Merchandise, etc." />
       </div>
 
-      <form onSubmit={(e) => void handleCreate(e)} className="flex gap-2">
-        <input
+      <form
+        onSubmit={(e) => void handleCreate(e)}
+        className="flex gap-3 rounded-xl border border-border bg-surface p-4 shadow-sm"
+      >
+        <Input
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="New type name"
-          className="flex-1 rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
+          label="New type"
+          containerClassName="flex-1"
         />
-        <button type="submit" className="btn-primary px-4 py-2 text-sm">
-          Add
-        </button>
+        <div className="flex items-end">
+          <Button type="submit" size="sm">
+            Add
+          </Button>
+        </div>
       </form>
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <DataTable columns={columns} rows={pagedItems} rowKey={(t) => t.id} />
 
@@ -201,7 +220,12 @@ export default function ProductTypesPage() {
             setPage(1);
           }}
         />
-        <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+        />
       </div>
 
       <CategoryProductsModal
@@ -215,7 +239,9 @@ export default function ProductTypesPage() {
         open={Boolean(deleteType)}
         title="Delete product type"
         message={
-          deleteType ? `Delete "${deleteType.name}"? Products using this type will need updating.` : ""
+          deleteType
+            ? `Delete "${deleteType.name}"? Products using this type will need updating.`
+            : ""
         }
         confirmLabel="Delete"
         variant="danger"
@@ -229,4 +255,4 @@ export default function ProductTypesPage() {
       />
     </div>
   );
-};
+}

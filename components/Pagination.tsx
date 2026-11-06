@@ -11,7 +11,10 @@ type Props = {
   onPageChange: (page: number) => void;
 };
 
-const getPageItems = (page: number, totalPages: number): (number | "ellipsis")[] => {
+const getPageItems = (
+  page: number,
+  totalPages: number,
+): (number | "ellipsis")[] => {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
@@ -33,11 +36,14 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: Props) => {
 
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-      <p className="text-xs text-white/50">
+      <p className="text-xs text-text-muted">
         {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
       </p>
       {totalPages > 1 ? (
-        <nav className="flex flex-wrap items-center justify-center gap-1" aria-label="Pagination">
+        <nav
+          className="flex flex-wrap items-center justify-center gap-1"
+          aria-label="Pagination"
+        >
           <IconButton
             variant="secondary"
             aria-label="Previous page"
@@ -47,7 +53,10 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: Props) => {
           />
           {pageItems.map((item, idx) =>
             item === "ellipsis" ? (
-              <span key={`e-${idx}`} className="px-1 text-xs text-white/40">
+              <span
+                key={`e-${idx}`}
+                className="px-1 text-xs text-text-muted"
+              >
                 …
               </span>
             ) : (
@@ -56,10 +65,10 @@ export const Pagination = ({ page, pageSize, total, onPageChange }: Props) => {
                 type="button"
                 onClick={() => onPageChange(item)}
                 className={cn(
-                  "inline-flex h-9 min-w-9 items-center justify-center rounded-[var(--radius-md)] border px-2 text-xs font-semibold tabular-nums transition focus-ring",
+                  "inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-xs font-semibold tabular-nums transition focus-ring",
                   item === page
-                    ? "border-[var(--brand-yellow)]/40 bg-[var(--brand-yellow)]/15 text-[var(--accent)]"
-                    : "border-white/15 text-white/70 hover:bg-white/5",
+                    ? "border-accent/40 bg-accent/15 text-accent"
+                    : "border-border text-text-muted hover:bg-surface-muted",
                 )}
                 aria-label={`Page ${item}`}
                 aria-current={item === page ? "page" : undefined}

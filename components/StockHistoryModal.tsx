@@ -14,35 +14,17 @@ type Movement = {
   notes: string | null;
 };
 
-const MOVEMENT_LABELS: Record<string, string> = {
-  RECEIPT: "RECEIVED",
-  SALE: "SOLD",
-  RETURN: "RETURNED",
-  ADJUSTMENT: "ADJUSTED",
-  TRANSFER: "TRANSFERRED",
-  RESERVE: "RESERVED",
-  RELEASE_RESERVE: "RESERVE RELEASED",
-  DAMAGE: "DAMAGED",
-};
-
-const toNumber = (value: string | null | undefined) => {
-  if (value == null) return 0;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const formatNumber = (value: string | number | null | undefined) =>
-  toNumber(typeof value === "number" ? String(value) : value).toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  });
-
 type Props = {
   productId: string | null;
   productName: string;
   onClose: () => void;
 };
 
-export const StockHistoryModal = ({ productId, productName, onClose }: Props) => {
+export const StockHistoryModal = ({
+  productId,
+  productName,
+  onClose,
+}: Props) => {
   const [items, setItems] = useState<Movement[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
@@ -57,9 +39,14 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
       take: String(pageSize),
       skip: String((page - 1) * pageSize),
     });
-    const res = await fetch(`/api/proxy/stock/history?${params}`, { cache: "no-store" });
+    const res = await fetch(`/api/proxy/stock/history?${params}`, {
+      cache: "no-store",
+    });
     if (res.ok) {
-      const data = (await res.json()) as { items: Movement[]; total: number };
+      const data = (await res.json()) as {
+        items: Movement[];
+        total: number;
+      };
       setItems(data.items);
       setTotal(data.total);
     }
@@ -85,20 +72,23 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-start justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 id="stock-history-title" className="text-lg font-semibold text-white">
+            <h2
+              id="stock-history-title"
+              className="text-lg font-semibold text-text"
+            >
               Stock history
             </h2>
-            <p className="mt-0.5 text-sm text-white/50">{productName}</p>
+            <p className="mt-0.5 text-sm text-text-muted">{productName}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-white/15 px-3 py-1 text-sm text-white/70"
+            className="rounded-lg border border-border px-3 py-1 text-sm text-text-muted"
             aria-label="Close"
           >
             Close
@@ -107,13 +97,17 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
           {loading ? (
-            <p className="py-8 text-center text-sm text-white/50">Loading…</p>
+            <p className="py-8 text-center text-sm text-text-muted">
+              Loading…
+            </p>
           ) : items.length === 0 ? (
-            <p className="py-8 text-center text-sm text-white/50">No movements yet.</p>
+            <p className="py-8 text-center text-sm text-text-muted">
+              No movements yet.
+            </p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-xs text-white/45">
+                <tr className="border-b border-border text-xs text-text-muted">
                   <th className="pb-2 pr-2">Date</th>
                   <th className="pb-2 pr-2">Type</th>
                   <th className="pb-2 pr-2 text-right">Qty</th>
@@ -124,20 +118,24 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
                 {items.map((m) => {
                   const qty = Number(m.qtyDelta);
                   return (
-                    <tr key={m.id} className="border-b border-white/5">
-                      <td className="py-2 pr-2 text-white/80">
+                    <tr key={m.id} className="border-b border-border/50">
+                      <td className="py-2 pr-2 text-text">
                         {new Date(m.createdAt).toLocaleString()}
                       </td>
-                      <td className="py-2 pr-2 text-white/70">{MOVEMENT_LABELS[m.type] ?? m.type}</td>
+                      <td className="py-2 pr-2 text-text-muted">{m.type}</td>
                       <td
                         className={`py-2 pr-2 text-right tabular-nums font-medium ${
-                          qty < 0 ? "text-rose-200" : qty > 0 ? "text-emerald-200" : "text-white/60"
+                          qty < 0
+                            ? "text-danger"
+                            : qty > 0
+                              ? "text-success"
+                              : "text-text-muted"
                         }`}
                       >
-                        {qty > 0 ? `+${formatNumber(m.qtyDelta)}` : formatNumber(m.qtyDelta)}
+                        {qty > 0 ? `+${m.qtyDelta}` : m.qtyDelta}
                       </td>
-                      <td className="py-2 text-right tabular-nums text-white/60">
-                        {formatNumber(m.afterOnHand ?? m.beforeOnHand)}
+                      <td className="py-2 text-right tabular-nums text-text-muted">
+                        {m.beforeOnHand ?? "—"} → {m.afterOnHand ?? "—"}
                       </td>
                     </tr>
                   );
@@ -147,7 +145,7 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
           )}
         </div>
 
-        <div className="border-t border-white/10 px-5 py-4">
+        <div className="border-t border-border px-5 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <PageSizeSelect
               value={pageSize}
@@ -157,7 +155,12 @@ export const StockHistoryModal = ({ productId, productName, onClose }: Props) =>
                 setPage(1);
               }}
             />
-            <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+            />
           </div>
         </div>
       </div>

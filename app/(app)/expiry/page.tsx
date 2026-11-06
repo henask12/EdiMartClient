@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { usePermission } from "@/components/PermissionProvider";
 import { Pencil } from "@/lib/icons";
-import { toastError } from "@/lib/toast";
+import { parseApiMessage, toastError, toastSuccess } from "@/lib/toast";
 
 type ExpiryRow = {
   id: string;
@@ -26,9 +27,12 @@ type ExpiryRow = {
 type StatusFilter = "expiring" | "expired" | "all";
 
 export default function ExpiryPage() {
+  const { can } = usePermission();
   const [status, setStatus] = useState<StatusFilter>("expiring");
+  const [days, setDays] = useState(30);
   const [items, setItems] = useState<ExpiryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const qtySubtotal = useMemo(
     () => items.reduce((sum, r) => sum + Number(r.qtyRemaining), 0),
     [items],
@@ -37,7 +41,7 @@ export default function ExpiryPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ status, days: "7" });
+      const params = new URLSearchParams({ status, days: String(days) });
       const res = await fetch(`/api/proxy/inventory/expiry?${params}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load expiry data");
       const data = (await res.json()) as { items: ExpiryRow[] };
@@ -47,11 +51,66 @@ export default function ExpiryPage() {
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, days]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleWriteOff = async (row: ExpiryRow) => {
+    if (!confirm(`Write off ${row.qtyRemaining} of "${row.productName}" as expired?`)) return;
+    setBusyId(row.id);
+    try {
+      const res = await fetch("/api/proxy/inventory/write-off", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          productId: row.productId,
+          quantity: row.qtyRemaining,
+          reasonCode: "EXPIRED",
+          notes: `Expiry centre write-off (${row.expiryDate})`,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(parseApiMessage(data, "Write-off failed"));
+        return;
+      }
+      toastSuccess("Written off");
+      await load();
+    } catch {
+      toastError("Network error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleQuarantine = async (row: ExpiryRow) => {
+    if (!confirm(`Move ${row.qtyRemaining} of "${row.productName}" to Quarantine?`)) return;
+    setBusyId(row.id);
+    try {
+      const res = await fetch("/api/proxy/inventory/quarantine", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          productId: row.productId,
+          quantity: row.qtyRemaining,
+          notes: `Expiry centre quarantine (${row.expiryDate})`,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(parseApiMessage(data, "Quarantine failed"));
+        return;
+      }
+      toastSuccess("Moved to quarantine");
+      await load();
+    } catch {
+      toastError("Network error");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const statusBadge = (row: ExpiryRow) => {
     if (row.status === "expired") return <Badge variant="danger">Expired</Badge>;
@@ -65,8 +124,8 @@ export default function ExpiryPage() {
       header: "Product",
       render: (r) => (
         <div>
-          <p className="font-medium text-white">{r.productName}</p>
-          <p className="text-xs text-white/45">{r.categoryName}</p>
+          <p className="font-medium text-text">{r.productName}</p>
+          <p className="text-xs text-text-muted">{r.categoryName}</p>
         </div>
       ),
     },
@@ -88,18 +147,47 @@ export default function ExpiryPage() {
       key: "source",
       header: "Source",
       render: (r) => (
-        <span className="text-xs text-white/45">{r.source === "batch" ? "Batch" : "Product"}</span>
+        <span className="text-xs text-text-muted">{r.source === "batch" ? "Batch" : "Product"}</span>
       ),
     },
     {
       key: "actions",
       header: "",
-      className: "text-right w-12",
+      className: "text-right",
       render: (r) => (
         <ActionGroup>
           <Link href={`/products/${r.productId}/edit`}>
             <IconButton variant="secondary" aria-label="Edit product" title="Edit" icon={<Pencil />} />
           </Link>
+          {can("STOCK_ADJUST") ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busyId === r.id}
+              onClick={() => void handleQuarantine(r)}
+            >
+              Quarantine
+            </Button>
+          ) : null}
+          {can("STOCK_WRITE_OFF") ? (
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={busyId === r.id}
+              onClick={() => void handleWriteOff(r)}
+            >
+              Write off
+            </Button>
+          ) : null}
+          {can("PURCHASING_MANAGE") ? (
+            <Link
+              href={`/supplier-returns?productId=${encodeURIComponent(r.productId)}&qty=${encodeURIComponent(r.qtyRemaining)}`}
+            >
+              <Button size="sm" variant="secondary">
+                Return to supplier
+              </Button>
+            </Link>
+          ) : null}
         </ActionGroup>
       ),
     },
@@ -115,7 +203,7 @@ export default function ExpiryPage() {
     <section className="space-y-6">
       <PageHeader
         title="Expiry alerts"
-        description="On-hand stock with batch or product expiry dates."
+        description="Batches expiring in 30/60/90 days — quarantine or write off from here."
       />
 
       <div className="flex flex-wrap gap-2">
@@ -130,9 +218,20 @@ export default function ExpiryPage() {
             {f.label}
           </Button>
         ))}
+        {[30, 60, 90].map((d) => (
+          <Button
+            key={d}
+            type="button"
+            size="sm"
+            variant={days === d ? "primary" : "ghost"}
+            onClick={() => setDays(d)}
+          >
+            {d}d
+          </Button>
+        ))}
       </div>
 
-      {loading ? <p className="text-sm text-white/50">Loading…</p> : null}
+      {loading ? <p className="text-sm text-text-muted">Loading…</p> : null}
 
       {!loading ? (
         <DataTable
@@ -145,20 +244,41 @@ export default function ExpiryPage() {
           }}
           emptyMessage="No items match this filter."
           mobileCard={(r) => (
-            <div className="card-surface space-y-3 p-4 text-sm">
+            <div className="space-y-3 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-medium text-white">{r.productName}</p>
-                  <p className="text-xs text-white/45">{r.categoryName}</p>
+                  <p className="font-medium text-text">{r.productName}</p>
+                  <p className="text-xs text-text-muted">{r.categoryName}</p>
                 </div>
                 {statusBadge(r)}
               </div>
-              <p className="text-white/70">
+              <p className="text-text-muted">
                 {r.qtyRemaining} on hand · expires {r.expiryDate}
               </p>
-              <Link href={`/products/${r.productId}/edit`}>
-                <IconButton variant="secondary" aria-label="Edit product" icon={<Pencil />} />
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link href={`/products/${r.productId}/edit`}>
+                  <IconButton variant="secondary" aria-label="Edit product" icon={<Pencil />} />
+                </Link>
+                {can("STOCK_ADJUST") ? (
+                  <Button size="sm" variant="secondary" onClick={() => void handleQuarantine(r)}>
+                    Quarantine
+                  </Button>
+                ) : null}
+                {can("STOCK_WRITE_OFF") ? (
+                  <Button size="sm" variant="danger" onClick={() => void handleWriteOff(r)}>
+                    Write off
+                  </Button>
+                ) : null}
+                {can("PURCHASING_MANAGE") ? (
+                  <Link
+                    href={`/supplier-returns?productId=${encodeURIComponent(r.productId)}&qty=${encodeURIComponent(r.qtyRemaining)}`}
+                  >
+                    <Button size="sm" variant="secondary">
+                      Return to supplier
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
             </div>
           )}
         />

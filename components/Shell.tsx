@@ -2,144 +2,183 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ComponentType } from "react";
-import { BrandLogo } from "./BrandLogo";
-import { IconButton } from "@/components/ui/IconButton";
-import { Button } from "@/components/ui/Button";
+import { useEffect, useState, useCallback } from "react";
+import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import {
-  Calendar,
-  ClipboardList,
   LayoutDashboard,
   LogOut,
-  Mail,
-  MoreVertical,
+  Menu,
+  Moon,
   Package,
-  Receipt,
-  Shield,
+  Search,
   ShoppingCart,
-  Users,
-  Warehouse,
-} from "@/lib/icons";
-import { hasPermission, type Permission } from "@/lib/permissions";
+  Sun,
+  Monitor,
+  X,
+  ScanLine,
+  MoreHorizontal,
+} from "lucide-react";
+import { AccessDenied } from "@/components/AccessDenied";
+import { CommandPalette } from "@/components/CommandPalette";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { PermissionProvider, type Me } from "@/components/PermissionProvider";
+import { Sidebar } from "@/components/Sidebar";
+import { Kbd } from "@/components/ui/Kbd";
+import { formatDate } from "@/lib/date-helpers";
+import {
+  meetsRequirement,
+  missingFrom,
+  permissionName,
+  requirementForPath,
+  isOwnerRole,
+} from "@/lib/permissions";
+import { useOutboxStatus } from "@/lib/offline/use-outbox-status";
+import { isTillRegistered } from "@/lib/register-device";
+import { fetchCurrentShift, openerName, type Shift } from "@/lib/shifts";
+import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 
-type Me = {
-  id: string;
-  email: string;
-  displayName: string | null;
-  role: string;
-  permissions: string[];
-};
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon?: ComponentType<{ className?: string }>;
-  permission?: Permission;
-};
-
-const primaryNav: NavItem[] = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package, permission: "PRODUCTS_VIEW" },
-  { href: "/sell", label: "Sell", icon: ShoppingCart, permission: "SALES_CREATE" },
-  { href: "/sales", label: "Sales", icon: Receipt, permission: "SALES_VIEW" },
-];
-
-const moreNav: NavItem[] = [
-  { href: "/add-stock", label: "Stocks", icon: Warehouse, permission: "STOCK_RECEIVE" },
-  { href: "/expiry", label: "Expiry", icon: Calendar, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/reservations", label: "Reservations", icon: ClipboardList, permission: "RESERVATIONS_MANAGE" },
-  { href: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSES_MANAGE" },
-  { href: "/stock-history", label: "History", icon: ClipboardList, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
-  { href: "/settings/users", label: "Users", icon: Users, permission: "USERS_MANAGE" },
-  { href: "/settings/roles", label: "Roles", icon: Shield, permission: "ROLES_MANAGE" },
-  { href: "/settings/emails", label: "Alert emails", icon: Mail, permission: "SETTINGS_EMAILS" },
-];
-
-const desktopNav: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package, permission: "PRODUCTS_VIEW" },
-  { href: "/add-stock", label: "Stocks", icon: Warehouse, permission: "STOCK_RECEIVE" },
-  { href: "/expiry", label: "Expiry", icon: Calendar, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/sell", label: "Sell", icon: ShoppingCart, permission: "SALES_CREATE" },
-  { href: "/sales", label: "Sales", icon: Receipt, permission: "SALES_VIEW" },
-  { href: "/reservations", label: "Reservations", icon: ClipboardList, permission: "RESERVATIONS_MANAGE" },
-  { href: "/expenses", label: "Expenses", icon: Receipt, permission: "EXPENSES_MANAGE" },
-  { href: "/stock-history", label: "History", icon: ClipboardList, permission: "STOCK_HISTORY_VIEW" },
-  { href: "/categories", label: "Categories", permission: "CATEGORIES_MANAGE" },
-  { href: "/settings/users", label: "Users", icon: Users, permission: "USERS_MANAGE" },
-  { href: "/settings/roles", label: "Roles", icon: Shield, permission: "ROLES_MANAGE" },
-  { href: "/settings/emails", label: "Emails", icon: Mail, permission: "SETTINGS_EMAILS" },
-];
-
-const canSeeNavItem = (item: NavItem, me: Me | null) => {
-  if (!item.permission) return true;
-  if (!me) return false;
-  return hasPermission(me.permissions, item.permission);
-};
-
-const filterNav = (items: NavItem[], me: Me | null) =>
-  items.filter((item) => canSeeNavItem(item, me));
-
-const NavLink = ({
-  item,
-  active,
-  compact,
-  onClick,
-}: {
-  item: NavItem;
-  active: boolean;
-  compact?: boolean;
-  onClick?: () => void;
-}) => {
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 rounded-[var(--radius-md)] font-medium transition focus-ring",
-        compact
-          ? "flex-1 flex-col gap-0.5 py-2 text-[10px]"
-          : "px-3 py-2 text-sm",
-        active
-          ? "bg-[var(--brand-yellow)]/15 text-[var(--accent)]"
-          : "text-white/70 hover:bg-white/5 hover:text-white",
-      )}
-    >
-      {Icon ? <Icon className={compact ? "size-5" : "size-4 shrink-0"} /> : null}
-      <span>{item.label}</span>
-    </Link>
-  );
-};
+const SIDEBAR_KEY = "edimart-sidebar-collapsed";
 
 export const Shell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const tShell = useTranslations("Shell");
+  const tAuth = useTranslations("Auth");
   const [me, setMe] = useState<Me | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [online, setOnline] = useState(true);
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [tillRegistered, setTillRegistered] = useState(false);
+  const outbox = useOutboxStatus();
 
+  // Restore sidebar state
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_KEY);
+      if (saved === "true") setCollapsed(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    setOnline(navigator.onLine);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+
+  useEffect(() => {
+    setTillRegistered(isTillRegistered());
+    let cancelled = false;
+    const loadShift = async () => {
+      const shift = await fetchCurrentShift();
+      if (!cancelled) setCurrentShift(shift);
+    };
+    void loadShift();
+    const onFocus = () => void loadShift();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [pathname]);
+
+  const handleToggleCollapse = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_KEY, String(next));
+      } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  // Intercept 401/403 from proxy calls
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    let redirecting = false;
+    let lastDeniedToast = 0;
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const res = await originalFetch(...args);
+      const input = args[0];
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.pathname
+            : input.url;
+      if (!redirecting && url.includes("/api/proxy/")) {
+        if (res.status === 401) {
+          redirecting = true;
+          const here = window.location.pathname + window.location.search;
+          window.location.assign(`/login?next=${encodeURIComponent(here)}`);
+        } else if (res.status === 403) {
+          const body = await res.clone().json().catch(() => null);
+          if (body?.code === "PASSWORD_CHANGE_REQUIRED") {
+            redirecting = true;
+            window.location.assign("/settings/account");
+          } else if (!String(body?.code ?? "").startsWith("APPROVAL_")) {
+            const now = Date.now();
+            if (now - lastDeniedToast > 4000) {
+              lastDeniedToast = now;
+              toastError(tAuth("noAccess"));
+            }
+          }
+        }
+      }
+      return res;
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [tAuth]);
+
+  // Load session
   useEffect(() => {
     const load = async () => {
       try {
         const res = await fetch("/api/proxy/auth/me", { cache: "no-store" });
         if (!res.ok) {
-          router.replace("/login");
+          const here = window.location.pathname + window.location.search;
+          router.replace(`/login?next=${encodeURIComponent(here)}`);
           return;
         }
         const data = (await res.json()) as Me;
+        if (
+          data.mustChangePassword &&
+          window.location.pathname !== "/settings/account"
+        ) {
+          router.replace("/settings/account");
+        }
         setMe({
           ...data,
           permissions: Array.isArray(data.permissions) ? data.permissions : [],
         });
+        // Default language is English; Amharic only when the user saved that preference.
+        const locale = data.locale === "am" ? "am" : "en";
+        const existing = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("NEXT_LOCALE="))
+          ?.split("=")[1];
+        document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
+        if (existing && existing !== locale) {
+          window.location.reload();
+          return;
+        }
       } catch {
-        const { toastError } = await import("@/lib/toast");
-        toastError("Could not load session");
+        toastError(tAuth("networkError"));
       }
     };
     void load();
-  }, [router]);
+  }, [router, tAuth]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -147,112 +186,323 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     router.refresh();
   };
 
+  const handleSwitchUser = async () => {
+    const next = pathname.startsWith("/pos") ? "/pos" : pathname;
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace(`/login?next=${encodeURIComponent(next)}`);
+    router.refresh();
+  };
+
+  const shiftPill = (
+    <Link
+      href="/shifts"
+      className={cn(
+        "hidden max-w-[14rem] truncate rounded-full px-2.5 py-1 text-xs font-medium md:inline-flex",
+        currentShift?.status === "OPEN"
+          ? "bg-success-soft text-success"
+          : "bg-surface-muted text-text-muted",
+      )}
+      title={
+        currentShift?.status === "OPEN"
+          ? `${tShell("shiftOpen")} · ${openerName(currentShift)} · ${formatDate(currentShift.openedAt)}`
+          : tShell("noShift")
+      }
+    >
+      {currentShift?.status === "OPEN"
+        ? `${tShell("shiftOpen")} · ${openerName(currentShift)}`
+        : tShell("noShift")}
+    </Link>
+  );
+
+  const handleSetLocale = async (locale: string) => {
+    document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
+    await fetch("/api/proxy/auth/me", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale }),
+    });
+    window.location.reload();
+  };
+
+  // Loading state
   if (!me) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-        <p className="text-sm text-white/70">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-sm text-text-muted">{tShell("commandPaletteHint") ? "Loading…" : "Loading…"}</div>
       </div>
     );
   }
 
-  const visibleDesktop = filterNav(desktopNav, me);
-  const visibleMore = filterNav(moreNav, me);
+  const pageRequirement = requirementForPath(pathname);
+  const pageAllowed = meetsRequirement(me.permissions, pageRequirement);
   const initials = (me.displayName ?? me.email).slice(0, 1).toUpperCase();
+  const isPosFocus = pathname === "/pos" || pathname.startsWith("/pos/");
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  const cycleTheme = () => {
+    if (theme === "dark") setTheme("light");
+    else if (theme === "light") setTheme("system");
+    else setTheme("dark");
+  };
+  const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
 
-  return (
-    <div className="app-bg flex min-h-screen flex-col pb-20 lg:pb-0">
-      <header className="sticky top-0 z-30 border-b border-[var(--brand-yellow)]/15 bg-[color:var(--brand-charcoal-deep)]/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <BrandLogo size="sm" linked />
-          <nav className="hidden flex-1 flex-wrap items-center justify-center gap-0.5 lg:flex" aria-label="Primary">
-            {visibleDesktop.map((item) => (
-              <NavLink key={item.href} item={item} active={isActive(item.href)} />
-            ))}
-          </nav>
-          <div className="flex items-center gap-2">
+  const pageBody = (
+    <PermissionProvider me={me}>
+      {pageRequirement && !pageAllowed ? (
+        <AccessDenied
+          needs={missingFrom(me.permissions, pageRequirement).map(permissionName)}
+        />
+      ) : (
+        children
+      )}
+    </PermissionProvider>
+  );
+
+  if (isPosFocus) {
+    return (
+      <div className="flex min-h-screen flex-col bg-bg">
+        <OfflineBanner compact />
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-3 sm:px-4">
+          <Link
+            href="/dashboard"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-text hover:bg-surface-muted focus-ring"
+          >
+            {tShell("exitPos")}
+          </Link>
+          {shiftPill}
+          {tillRegistered ? (
+            <span className="hidden rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary sm:inline">
+              {tShell("tillRegistered")}
+            </span>
+          ) : null}
+          <div className="flex-1" />
+          {outbox.pendingSales > 0 || outbox.needsAttention > 0 ? (
             <Link
-              href="/settings/account"
-              className="inline-flex size-10 items-center justify-center rounded-[var(--radius-md)] border border-white/15 bg-white/5 text-sm font-bold text-[var(--accent)] focus-ring"
-              aria-label="Account settings"
+              href="/sync-review"
+              className="hidden rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning sm:inline-flex"
             >
-              {initials}
+              {tShell("offlineWaiting", { count: outbox.pendingSales || outbox.needsAttention })}
             </Link>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="hidden lg:inline-flex"
-              icon={<LogOut className="size-4" />}
-              onClick={() => void handleLogout()}
-            >
-              Log out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-6 sm:px-6">{children}</main>
-
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[color:var(--brand-charcoal-deep)]/95 backdrop-blur-md lg:hidden"
-        aria-label="Mobile"
-      >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
-          {filterNav(primaryNav, me).map((item) => (
-            <NavLink key={item.href} item={item} active={isActive(item.href)} compact />
-          ))}
+          ) : null}
+          <span
+            className={cn(
+              "hidden items-center gap-1.5 text-xs font-medium sm:inline-flex",
+              online ? "text-success" : "text-danger",
+            )}
+            aria-live="polite"
+          >
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                online ? "bg-success" : "bg-danger",
+              )}
+            />
+            {online ? tShell("online") : tShell("offline")}
+          </span>
           <button
             type="button"
-            onClick={() => setMoreOpen((o) => !o)}
-            className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold focus-ring",
-              moreOpen ? "text-[var(--accent)]" : "text-white/55",
-            )}
-            aria-expanded={moreOpen}
-            aria-label="More menu"
+            onClick={cycleTheme}
+            className="rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            aria-label={tShell("theme")}
           >
-            <MoreVertical className="size-5" aria-hidden />
-            More
+            <ThemeIcon className="size-4" />
           </button>
-        </div>
-      </nav>
-
-      {moreOpen ? (
-        <div
-          className="fixed inset-0 z-40 lg:hidden"
-          role="presentation"
-          onClick={() => setMoreOpen(false)}
-        >
-          <div className="absolute inset-0 bg-black/50" />
-          <div
-            className="absolute bottom-16 left-0 right-0 mx-4 max-h-[60vh] overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-2 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {visibleMore.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={isActive(item.href)}
-                onClick={() => setMoreOpen(false)}
-              />
-            ))}
+          {tillRegistered ? (
             <button
               type="button"
-              onClick={() => {
-                setMoreOpen(false);
-                void handleLogout();
-              }}
-              className="mt-1 flex w-full items-center gap-2 rounded-[var(--radius-md)] px-4 py-3 text-sm font-medium text-rose-200 hover:bg-white/5"
+              onClick={() => void handleSwitchUser()}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-text hover:bg-surface-muted focus-ring"
+              aria-label={tShell("switchUser")}
             >
-              <LogOut className="size-4" />
-              Log out
+              {tShell("switchUser")}
             </button>
+          ) : null}
+          <span className="truncate text-sm font-medium text-text">
+            {me.displayName ?? me.email}
+          </span>
+          <Link
+            href="/settings/account"
+            className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring"
+            aria-label={me.displayName ?? me.email}
+          >
+            {initials}
+          </Link>
+        </header>
+        <main className="min-h-0 flex-1 overflow-hidden">{pageBody}</main>
+        <CommandPalette me={me} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      {/* Desktop sidebar */}
+      <Sidebar
+        me={me}
+        collapsed={collapsed}
+        onToggleCollapse={handleToggleCollapse}
+      />
+
+      {/* Mobile sidebar overlay */}
+      {mobileMenuOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-72 bg-surface shadow-xl">
+            <div className="flex h-16 items-center justify-between border-b border-border px-4">
+              <span className="text-lg font-bold text-text">Edi&apos;s</span>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-md p-1 text-text-muted hover:text-text"
+                aria-label="Close menu"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-3">
+              <Sidebar
+                me={me}
+                collapsed={false}
+                onToggleCollapse={() => setMobileMenuOpen(false)}
+              />
+            </div>
           </div>
         </div>
       ) : null}
+
+      {/* Main area */}
+      <div className="flex flex-1 flex-col">
+        <OfflineBanner />
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="rounded-md p-1.5 text-text-muted hover:text-text lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="size-5" />
+          </button>
+
+          {/* Command palette trigger */}
+          <button
+            type="button"
+            onClick={() =>
+              document.dispatchEvent(
+                new KeyboardEvent("keydown", {
+                  key: "k",
+                  metaKey: true,
+                  bubbles: true,
+                }),
+              )
+            }
+            className="hidden flex-1 items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text-muted transition hover:border-border-strong sm:flex"
+          >
+            <Search className="size-4" />
+            <span className="flex-1 text-left">{tShell("commandPalette")}</span>
+            <Kbd>⌘K</Kbd>
+          </button>
+          <div className="flex-1 sm:hidden" />
+
+          {shiftPill}
+
+          {/* Theme toggle */}
+          <button
+            type="button"
+            onClick={cycleTheme}
+            className="rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            aria-label={tShell("theme")}
+            title={tShell("theme")}
+          >
+            <ThemeIcon className="size-4" />
+          </button>
+
+          {/* Language toggle */}
+          <button
+            type="button"
+            onClick={() => handleSetLocale(me.locale === "am" ? "en" : "am")}
+            className="rounded-md px-2 py-1 text-xs font-medium text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            aria-label={tShell("language")}
+          >
+            {(me as Me & { locale?: string }).locale === "am" ? "EN" : "አማ"}
+          </button>
+
+          {/* User */}
+          <Link
+            href="/settings/account"
+            className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring"
+            aria-label={me.displayName ?? me.email}
+          >
+            {initials}
+          </Link>
+
+          {/* Logout */}
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className="hidden rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring lg:block"
+            aria-label={tShell("logOut")}
+            title={tShell("logOut")}
+          >
+            <LogOut className="size-4" />
+          </button>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 sm:p-6">
+          <div className="mx-auto max-w-7xl">{pageBody}</div>
+        </main>
+      </div>
+
+      {/* Mobile bottom nav */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 backdrop-blur-md lg:hidden"
+        aria-label="Mobile"
+      >
+        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-safe">
+          {[
+            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/pos", label: "POS", icon: ShoppingCart },
+            { href: "#scan", label: tShell("scan"), icon: ScanLine, center: true },
+            { href: "/products", label: "Products", icon: Package },
+            { href: "#more", label: "More", icon: MoreHorizontal },
+          ].map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isMore = item.href === "#more";
+            const isScan = item.href === "#scan";
+            return (
+              <Link
+                key={item.href}
+                href={isMore || isScan ? "#" : item.href}
+                onClick={(e) => {
+                  if (isMore) {
+                    e.preventDefault();
+                    setMobileMenuOpen(true);
+                  }
+                }}
+                className={cn(
+                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition",
+                  isScan
+                    ? "text-primary"
+                    : active
+                      ? "text-primary"
+                      : "text-text-muted hover:text-text",
+                )}
+              >
+                <item.icon className={cn("size-5", isScan && "size-6")} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+      <div className="h-16 lg:hidden" />
+
+      {/* Command palette */}
+      <CommandPalette me={me} />
     </div>
   );
 };

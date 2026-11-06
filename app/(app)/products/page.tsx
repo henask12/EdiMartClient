@@ -12,15 +12,14 @@ import { RestockModal } from "@/components/RestockModal";
 import { dedupeCategories } from "@/lib/dedupe-categories";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { usePermission } from "@/components/PermissionProvider";
 import { canCreateProduct, canDeactivateProduct, canReceiveStock } from "@/lib/product-permissions";
 
 type Category = { id: string; name: string };
-type Me = { role: string; permissions: string[] };
 
 export default function ProductsPage() {
   const [items, setItems] = useState<MartProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [me, setMe] = useState<Me | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [stockStatus, setStockStatus] = useState("");
   const [q, setQ] = useState("");
@@ -35,7 +34,7 @@ export default function ProductsPage() {
   const [restockProduct, setRestockProduct] = useState<MartProduct | null>(null);
   const [detailProduct, setDetailProduct] = useState<MartProduct | null>(null);
 
-  const permissions = me?.permissions ?? [];
+  const { permissions } = usePermission();
   const canStock = canReceiveStock(permissions);
   const canAddProduct = canCreateProduct(permissions);
   const canDeactivate = canDeactivateProduct(permissions);
@@ -44,12 +43,6 @@ export default function ProductsPage() {
     const t = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(t);
   }, [q]);
-
-  useEffect(() => {
-    void fetch("/api/proxy/auth/me", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setMe(data as Me | null));
-  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -150,9 +143,9 @@ export default function ProductsPage() {
         exportParams={exportParams}
       />
 
-      {error ? <p className="text-sm text-rose-200">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <p className="text-xs text-white/45">
+      <p className="text-xs text-text-muted">
         {total} product{total === 1 ? "" : "s"}
       </p>
 
@@ -172,7 +165,7 @@ export default function ProductsPage() {
       </div>
 
       {items.length === 0 && !error ? (
-        <p className="text-center text-sm text-white/50">No products match your filters.</p>
+        <p className="text-center text-sm text-text-muted">No products match your filters.</p>
       ) : null}
 
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">

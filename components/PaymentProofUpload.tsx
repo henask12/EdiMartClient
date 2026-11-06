@@ -18,8 +18,8 @@ export const PaymentProofUpload = ({
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-semibold text-white/80">Payment proof</p>
-        <p className="mt-0.5 text-xs text-white/50">
+        <p className="text-sm font-semibold text-text">Payment proof</p>
+        <p className="mt-0.5 text-xs text-text-muted">
           Attach a screenshot of mobile payment (Telebirr, bank transfer, etc.)
         </p>
       </div>
@@ -30,18 +30,26 @@ export const PaymentProofUpload = ({
         multiple
         disabled={uploading}
         onChange={(e) => onUpload(e.target.files)}
-        className="w-full text-sm text-white/70 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--brand-yellow)]/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[var(--accent)]"
+        className="w-full text-sm text-text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-accent/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-accent"
         aria-label="Upload payment proof"
       />
-      {uploading ? <p className="text-xs text-white/50">Uploading…</p> : null}
+      {uploading ? (
+        <p className="text-xs text-text-muted">Uploading…</p>
+      ) : null}
       {proofPreviews.length > 0 ? (
         <ul className="flex flex-wrap gap-2">
           {proofPreviews.map((url, index) => (
             <li
               key={url}
-              className="group relative h-16 w-16 overflow-hidden rounded-lg border border-white/10"
+              className="group relative h-16 w-16 overflow-hidden rounded-lg border border-border"
             >
-              <Image src={url} alt="Payment proof" fill className="object-cover" unoptimized />
+              <Image
+                src={url}
+                alt="Payment proof"
+                fill
+                className="object-cover"
+                unoptimized
+              />
               <button
                 type="button"
                 onClick={() => onRemove(index)}

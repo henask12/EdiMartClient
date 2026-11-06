@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { useTranslations } from "next-intl";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -9,9 +10,12 @@ import { Input } from "@/components/ui/Input";
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("Auth");
   const next = searchParams.get("next") ?? "/dashboard";
-  const [email, setEmail] = useState("owner@edisims.local");
-  const [password, setPassword] = useState("Owner123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [totpRequired, setTotpRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -23,62 +27,122 @@ export default function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          ...(totpRequired && totpCode.trim()
+            ? { totpCode: totpCode.trim() }
+            : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(typeof data.message === "string" ? data.message : "Login failed");
+
+      if (data?.code === "TOTP_REQUIRED") {
+        setTotpRequired(true);
+        setError(null);
         return;
       }
-      router.replace(next.startsWith("/") ? next : "/dashboard");
+
+      if (!res.ok) {
+        setError(
+          typeof data.message === "string" ? data.message : t("loginFailed"),
+        );
+        return;
+      }
+      if (data.user?.mustChangePassword) {
+        router.replace("/settings/account");
+        router.refresh();
+        return;
+      }
+      router.replace(
+        next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard",
+      );
       router.refresh();
     } catch {
-      setError("Network error");
+      setError(t("networkError"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
-      <div className="card-surface border-[var(--brand-yellow)]/25 p-8 shadow-[0_30px_120px_-50px_oklch(0.2_0.02_260_/_0.95)]">
-        <div className="flex flex-col items-center text-center">
-          <BrandLogo size="lg" variant="on-dark" />
-          <p className="mt-4 text-sm text-white/55">Inventory &amp; sales for your mart</p>
+    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-16">
+      <div className="w-full max-w-sm">
+        <div className="rounded-2xl border border-border bg-surface p-8 shadow-lg">
+          <div className="flex flex-col items-center text-center">
+            <BrandLogo size="lg" />
+            <p className="mt-4 text-sm text-text-muted">{t("tagline")}</p>
+          </div>
+
+          <h1 className="mt-8 text-center text-xl font-semibold text-text">
+            {t("signIn")}
+          </h1>
+
+          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+            <Input
+              type="email"
+              label={t("email")}
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={totpRequired}
+            />
+            <Input
+              type="password"
+              label={t("password")}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={totpRequired}
+            />
+            {totpRequired ? (
+              <Input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                label={t("totpCode")}
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                required
+                autoFocus
+                aria-label={t("totpCode")}
+              />
+            ) : null}
+            {error ? (
+              <p className="text-sm text-danger" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {totpRequired && !error ? (
+              <p className="text-sm text-text-muted" role="status">
+                {t("totpHint")}
+              </p>
+            ) : null}
+            <Button type="submit" disabled={loading} fullWidth>
+              {loading
+                ? t("signingIn")
+                : totpRequired
+                  ? t("verifyTotp")
+                  : t("signIn")}
+            </Button>
+            {totpRequired ? (
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                onClick={() => {
+                  setTotpRequired(false);
+                  setTotpCode("");
+                  setError(null);
+                }}
+              >
+                {t("backToLogin")}
+              </Button>
+            ) : null}
+          </form>
         </div>
-        <h1 className="mt-8 text-center text-xl font-semibold text-white">Sign in</h1>
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <Input
-            type="email"
-            label="Email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            data-gramm="false"
-            data-gramm_editor="false"
-            data-enable-grammarly="false"
-            required
-          />
-          <Input
-            type="password"
-            label="Password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            data-gramm="false"
-            data-gramm_editor="false"
-            data-enable-grammarly="false"
-            required
-          />
-          {error ? (
-            <p className="text-sm text-rose-200" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button type="submit" disabled={loading} fullWidth>
-            {loading ? "Signing in…" : "Continue"}
-          </Button>
-        </form>
       </div>
     </div>
   );

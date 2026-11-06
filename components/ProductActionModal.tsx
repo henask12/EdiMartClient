@@ -1,10 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { PaymentMethodField } from "@/components/PaymentMethodField";
 import { PaymentProofUpload } from "@/components/PaymentProofUpload";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { formatBirr } from "@/lib/format-price";
+import { formatMoney } from "@/lib/format-money";
+import { newIdempotencyKey, shouldRotateKey } from "@/lib/idempotency";
+import type { PaymentMethod } from "@/lib/payment-methods";
 import type { MartProduct } from "./ProductCard";
 
 type Mode = "sell" | "reserve";
@@ -19,21 +22,25 @@ type Props = {
 export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props) => {
   const [quantity, setQuantity] = useState("1");
   const [customerName, setCustomerName] = useState("");
-  const [reservationEndDate, setReservationEndDate] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [proofPaths, setProofPaths] = useState<string[]>([]);
   const [proofPreviews, setProofPreviews] = useState<string[]>([]);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [paymentReference, setPaymentReference] = useState("");
+  const attemptKey = useRef(newIdempotencyKey());
 
   useEffect(() => {
     if (!product) return;
     setQuantity("1");
     setCustomerName("");
-    setReservationEndDate("");
     setStatus(null);
     setProofPaths([]);
     setProofPreviews([]);
+    setPaymentMethod("CASH");
+    setPaymentReference("");
+    attemptKey.current = newIdempotencyKey();
   }, [product?.id, mode]);
 
   if (!product) {
@@ -77,17 +84,24 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
       if (mode === "sell") {
         const res = await fetch("/api/proxy/sales/checkout", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            "idempotency-key": attemptKey.current,
+          },
           body: JSON.stringify({
             lines: [{ productId: product.id, quantity }],
             proofImagePaths: proofPaths.length ? proofPaths : undefined,
+            paymentMethod,
+            paymentReference: paymentReference.trim() || undefined,
           }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
+          if (shouldRotateKey(res.status)) attemptKey.current = newIdempotencyKey();
           setStatus(typeof data.message === "string" ? data.message : "Sale failed");
           return;
         }
+        attemptKey.current = newIdempotencyKey();
       } else {
         const res = await fetch("/api/proxy/reservations", {
           method: "POST",
@@ -96,7 +110,6 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
             productId: product.id,
             quantity,
             customerName: customerName.trim() || undefined,
-            expiresAt: reservationEndDate || undefined,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -108,7 +121,8 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
       onSuccess();
       onClose();
     } catch {
-      setStatus("Network error");
+      // Outcome unknown: the same Idempotency-Key is kept, so pressing again cannot double-sell.
+      setStatus("Network error - press confirm again to retry");
     } finally {
       setLoading(false);
     }
@@ -130,16 +144,16 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
       }}
     >
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-surface p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="action-title" className="text-lg font-semibold text-white">
+        <h2 id="action-title" className="text-lg font-semibold text-text">
           {mode === "sell" ? "Sell" : "Reserve"} — {product.name}
         </h2>
-        <p className="mt-1 text-sm text-white/55">
-          {product.available} available · {formatBirr(product.sellingPrice)} each
+        <p className="mt-1 text-sm text-text-muted">
+          {product.available} available · {formatMoney(product.sellingPrice)} each
           {mode === "sell" && Number(quantity) > 0 ? (
-            <span className="text-white/70"> · Total {formatBirr(String(lineTotal))}</span>
+            <span className="text-text"> · Total {formatMoney(String(lineTotal))}</span>
           ) : null}
         </p>
 
@@ -156,29 +170,29 @@ export const ProductActionModal = ({ mode, product, onClose, onSuccess }: Props)
           />
 
           {mode === "sell" ? (
-            <PaymentProofUpload
-              proofPreviews={proofPreviews}
-              uploading={uploadingProof}
-              onUpload={(files) => void handleProofUpload(files)}
-              onRemove={handleRemoveProof}
-            />
-          ) : (
             <>
-              <Input
-                label="Customer name (optional)"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
+              <PaymentMethodField
+                method={paymentMethod}
+                onMethodChange={setPaymentMethod}
+                reference={paymentReference}
+                onReferenceChange={setPaymentReference}
               />
-              <Input
-                label="Reservation end date (optional)"
-                type="date"
-                value={reservationEndDate}
-                onChange={(e) => setReservationEndDate(e.target.value)}
+              <PaymentProofUpload
+                proofPreviews={proofPreviews}
+                uploading={uploadingProof}
+                onUpload={(files) => void handleProofUpload(files)}
+                onRemove={handleRemoveProof}
               />
             </>
+          ) : (
+            <Input
+              label="Customer name (optional)"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
           )}
 
-          {status ? <p className="text-sm text-rose-200">{status}</p> : null}
+          {status ? <p className="text-sm text-danger">{status}</p> : null}
 
           <div className="flex gap-3">
             <Button type="button" variant="secondary" fullWidth onClick={onClose}>

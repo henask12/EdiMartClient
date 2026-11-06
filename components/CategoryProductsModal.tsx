@@ -62,20 +62,20 @@ export const CategoryProductsModal = ({ title, filterParam, filterId, onClose }:
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[color:var(--surface)] shadow-xl"
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-start justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 id="category-products-title" className="text-lg font-semibold text-white">
+            <h2 id="category-products-title" className="text-lg font-semibold text-text">
               Products
             </h2>
-            <p className="mt-0.5 text-sm text-white/50">{title}</p>
+            <p className="mt-0.5 text-sm text-text-muted">{title}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-white/15 px-3 py-1 text-sm text-white/70"
+            className="rounded-lg border border-border px-3 py-1 text-sm text-text-muted"
             aria-label="Close"
           >
             Close
@@ -84,13 +84,13 @@ export const CategoryProductsModal = ({ title, filterParam, filterId, onClose }:
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
           {loading ? (
-            <p className="py-8 text-center text-sm text-white/50">Loading…</p>
+            <p className="py-8 text-center text-sm text-text-muted">Loading…</p>
           ) : items.length === 0 ? (
-            <p className="py-8 text-center text-sm text-white/50">No products.</p>
+            <p className="py-8 text-center text-sm text-text-muted">No products.</p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-xs text-white/45">
+                <tr className="border-b border-border text-xs text-text-muted">
                   <th className="pb-2 pr-2">Name</th>
                   <th className="pb-2 pr-2 text-right">On hand</th>
                   <th className="pb-2 text-right">Status</th>
@@ -106,12 +106,12 @@ export const CategoryProductsModal = ({ title, filterParam, filterId, onClose }:
                         ? "Out"
                         : "Active";
                   return (
-                    <tr key={p.id} className="border-b border-white/5">
-                      <td className="py-2 pr-2 text-white/80">{p.name}</td>
-                      <td className="py-2 pr-2 text-right tabular-nums text-white/70">
+                    <tr key={p.id} className="border-b border-border/50">
+                      <td className="py-2 pr-2 text-text">{p.name}</td>
+                      <td className="py-2 pr-2 text-right tabular-nums text-text-muted">
                         {p.onHand}
                       </td>
-                      <td className="py-2 text-right text-xs font-medium text-white/60">
+                      <td className="py-2 text-right text-xs font-medium text-text-muted">
                         {status}
                       </td>
                     </tr>
@@ -122,7 +122,7 @@ export const CategoryProductsModal = ({ title, filterParam, filterId, onClose }:
           )}
         </div>
 
-        <div className="border-t border-white/10 px-5 py-4">
+        <div className="border-t border-border px-5 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <PageSizeSelect
               value={pageSize}

@@ -1,10 +1,24 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 
-type Me = { id: string; email: string; displayName: string | null; role: string };
+type Me = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: string;
+  mustChangePassword?: boolean;
+  hasPin?: boolean;
+  locale?: string;
+};
 
 export default function AccountSettingsPage() {
+  const t = useTranslations("Account");
   const [me, setMe] = useState<Me | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -12,6 +26,9 @@ export default function AccountSettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
+  const [pin, setPin] = useState("");
+  const [pinPassword, setPinPassword] = useState("");
+  const [pinStatus, setPinStatus] = useState<string | null>(null);
 
   useEffect(() => {
     void fetch("/api/proxy/auth/me", { cache: "no-store" })
@@ -35,11 +52,13 @@ export default function AccountSettingsPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setProfileStatus(typeof data.message === "string" ? data.message : "Update failed");
+      setProfileStatus(
+        typeof data.message === "string" ? data.message : t("updateFailed"),
+      );
       return;
     }
     setMe(data as Me);
-    setProfileStatus("Profile updated");
+    setProfileStatus(t("profileUpdated"));
   };
 
   const handlePassword = async (e: FormEvent) => {
@@ -52,87 +71,193 @@ export default function AccountSettingsPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setPasswordStatus(typeof data.message === "string" ? data.message : "Could not change password");
+      setPasswordStatus(
+        typeof data.message === "string"
+          ? data.message
+          : t("couldNotChangePassword"),
+      );
       return;
     }
     setCurrentPassword("");
     setNewPassword("");
-    setPasswordStatus("Password updated");
+    setPasswordStatus(t("passwordUpdated"));
+    if (me?.mustChangePassword) {
+      window.location.assign("/dashboard");
+    }
+  };
+
+  const savePin = async (remove: boolean) => {
+    setPinStatus(null);
+    const res = await fetch("/api/proxy/auth/pin", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(
+        remove
+          ? { currentPassword: pinPassword, remove: true }
+          : { currentPassword: pinPassword, pin },
+      ),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const message = Array.isArray(data.message)
+        ? data.message.join(", ")
+        : data.message;
+      setPinStatus(
+        typeof message === "string" ? message : t("couldNotSavePin"),
+      );
+      return;
+    }
+    setPin("");
+    setPinPassword("");
+    setMe((prev) =>
+      prev ? { ...prev, hasPin: Boolean(data.hasPin) } : prev,
+    );
+    setPinStatus(data.hasPin ? t("pinSaved") : t("pinRemoved"));
   };
 
   if (!me) {
-    return <p className="text-sm text-white/60">Loading…</p>;
+    return <p className="text-sm text-text-muted">{t("loading")}</p>;
   }
 
   return (
     <div className="mx-auto max-w-lg space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">My account</h1>
-        <p className="mt-2 text-sm text-white/60">Role: {me.role}</p>
-      </div>
+      <PageHeader
+        title={t("title")}
+        description={`${t("role")}: ${me.role}`}
+      />
 
-      <form onSubmit={handleProfile} className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
-        <h2 className="text-sm font-semibold text-white/80">Profile</h2>
-        <label className="block text-sm text-white/70">
-          Display name
-          <input
+      {me.mustChangePassword ? (
+        <p
+          className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning"
+          role="alert"
+        >
+          {t("mustChangePassword")}
+        </p>
+      ) : null}
+
+      <Card>
+        <form onSubmit={handleProfile} className="space-y-4">
+          <h2 className="text-sm font-semibold text-text">{t("profile")}</h2>
+          <Input
+            label={t("displayName")}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
           />
-        </label>
-        <label className="block text-sm text-white/70">
-          Email
-          <input
+          <Input
             type="email"
             required
+            label={t("email")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
           />
-        </label>
-        {profileStatus ? (
-          <p className={`text-sm ${profileStatus.includes("updated") ? "text-[var(--accent)]" : "text-rose-200"}`}>
-            {profileStatus}
-          </p>
-        ) : null}
-        <button type="submit" className="tap btn-primary w-full py-3 text-sm">
-          Save profile
-        </button>
-      </form>
+          {profileStatus ? (
+            <p
+              className={`text-sm ${profileStatus === t("profileUpdated") ? "text-success" : "text-danger"}`}
+            >
+              {profileStatus}
+            </p>
+          ) : null}
+          <Button type="submit" fullWidth>
+            {t("saveProfile")}
+          </Button>
+        </form>
+      </Card>
 
-      <form onSubmit={handlePassword} className="space-y-4 rounded-2xl border border-white/10 bg-[color:var(--surface)]/80 p-5">
-        <h2 className="text-sm font-semibold text-white/80">Change password</h2>
-        <label className="block text-sm text-white/70">
-          Current password
-          <input
+      <Card>
+        <form onSubmit={handlePassword} className="space-y-4">
+          <h2 className="text-sm font-semibold text-text">
+            {t("changePassword")}
+          </h2>
+          <Input
             type="password"
             required
+            label={t("currentPassword")}
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
           />
-        </label>
-        <label className="block text-sm text-white/70">
-          New password
-          <input
+          <Input
             type="password"
             required
-            minLength={6}
+            minLength={8}
+            label={t("newPassword")}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-white"
           />
-        </label>
-        {passwordStatus ? (
-          <p className={`text-sm ${passwordStatus.includes("updated") ? "text-[var(--accent)]" : "text-rose-200"}`}>
-            {passwordStatus}
+          {passwordStatus ? (
+            <p
+              className={`text-sm ${passwordStatus === t("passwordUpdated") ? "text-success" : "text-danger"}`}
+            >
+              {passwordStatus}
+            </p>
+          ) : null}
+          <Button type="submit" variant="secondary" fullWidth>
+            {t("updatePassword")}
+          </Button>
+        </form>
+      </Card>
+
+      <Card>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void savePin(false);
+          }}
+          className="space-y-4"
+        >
+          <h2 className="text-sm font-semibold text-text">
+            {t("approvalPin")}
+          </h2>
+          <p className="text-xs text-text-muted">
+            {t("approvalPinDesc")}
+            {me.hasPin ? ` ${t("pinSet")}` : ` ${t("noPinYet")}`}
           </p>
-        ) : null}
-        <button type="submit" className="tap w-full rounded-full border border-white/15 py-3 text-sm font-semibold text-white">
-          Update password
-        </button>
-      </form>
+          <Input
+            type="password"
+            required
+            label={t("currentPassword")}
+            value={pinPassword}
+            onChange={(e) => setPinPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+          <Input
+            inputMode="numeric"
+            pattern="[0-9]{4,6}"
+            maxLength={6}
+            label={me.hasPin ? t("newPin") : t("pin")}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            autoComplete="off"
+          />
+          {pinStatus ? (
+            <p
+              className={`text-sm ${pinStatus === t("pinSaved") || pinStatus === t("pinRemoved") ? "text-success" : "text-danger"}`}
+              role="status"
+            >
+              {pinStatus}
+            </p>
+          ) : null}
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              disabled={pin.length < 4 || !pinPassword}
+              fullWidth
+            >
+              {me.hasPin ? t("changePin") : t("setPin")}
+            </Button>
+            {me.hasPin ? (
+              <Button
+                type="button"
+                variant="danger"
+                disabled={!pinPassword}
+                onClick={() => void savePin(true)}
+                fullWidth
+              >
+                {t("removePin")}
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }
