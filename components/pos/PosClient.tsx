@@ -12,6 +12,8 @@ import {
 import MiniSearch from "minisearch";
 import { useTranslations } from "next-intl";
 import {
+  Archive,
+  BookmarkPlus,
   Camera,
   Grid2X2,
   HelpCircle,
@@ -149,6 +151,11 @@ export const PosClient = () => {
   const [holdLabel, setHoldLabel] = useState("");
   const [parkedOpen, setParkedOpen] = useState(false);
   const [parked, setParked] = useState<ParkedSale[]>([]);
+  const [reserveOpen, setReserveOpen] = useState(false);
+  const [reserveLineId, setReserveLineId] = useState("");
+  const [reserveQty, setReserveQty] = useState("1");
+  const [reserveCustomerName, setReserveCustomerName] = useState("");
+  const [reserveSubmitting, setReserveSubmitting] = useState(false);
   const [cheatOpen, setCheatOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [pendingApproval, setPendingApproval] = useState<PendingApproval | null>(null);
@@ -500,7 +507,85 @@ export const PosClient = () => {
     persist(emptyCart());
     setHoldOpen(false);
     setHoldLabel("");
-    toastSuccess(t("parked"));
+    toastSuccess(t("saleParked"));
+  };
+
+  const openParkedSales = () => {
+    setParkedOpen(true);
+    void loadParkedList();
+  };
+
+  const canReserve = can("PRODUCTS_RESERVE") || isOwner;
+
+  const openReserveDialog = () => {
+    if (!canReserve) {
+      toastError(t("reserveNoPermission"));
+      return;
+    }
+    const selected =
+      cart.lines.find((l) => l.id === selectedLineId) ??
+      (cart.lines.length === 1 ? cart.lines[0] : null);
+    if (!selected && cart.lines.length === 0) {
+      toastError(t("reserveNeedLine"));
+      return;
+    }
+    const line = selected ?? cart.lines[0];
+    setReserveLineId(line.id);
+    setReserveQty(String(line.qty));
+    setReserveCustomerName(customer?.name?.trim() || customer?.phone?.trim() || "");
+    setReserveOpen(true);
+  };
+
+  const handleReserveStock = async () => {
+    if (!canReserve) {
+      toastError(t("reserveNoPermission"));
+      return;
+    }
+    const line = cart.lines.find((l) => l.id === reserveLineId);
+    if (!line || !(Number(reserveQty) > 0)) {
+      toastError(t("reserveNeedLine"));
+      return;
+    }
+    setReserveSubmitting(true);
+    try {
+      const res = await fetch("/api/proxy/reservations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          productId: line.productId,
+          quantity: String(reserveQty),
+          customerName: reserveCustomerName.trim() || undefined,
+          customerId: customer?.id || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toastError(parseApiMessage(data, t("reserveFailed")));
+        return;
+      }
+      toastSuccess(t("reserveSuccess"));
+      setReserveOpen(false);
+      const qtyReserved = Number(reserveQty);
+      const lineIdReserved = line.id;
+      setCart((prev) => {
+        const nextLines = prev.lines
+          .map((row) => {
+            if (row.id !== lineIdReserved) return row;
+            const left = row.qty - qtyReserved;
+            if (left <= 0) return null;
+            return { ...row, qty: left, flashedAt: Date.now() };
+          })
+          .filter((row): row is PosCartLine => !!row);
+        const next = { ...prev, lines: nextLines, updatedAt: Date.now() };
+        persist(next);
+        return next;
+      });
+      void loadCatalog();
+    } catch {
+      toastError(t("reserveFailed"));
+    } finally {
+      setReserveSubmitting(false);
+    }
   };
 
   const mapApiParked = (row: {
@@ -829,13 +914,17 @@ export const PosClient = () => {
       }
       if (e.key === "F7") {
         e.preventDefault();
-        setParkedOpen(true);
-        void loadParkedList();
+        openParkedSales();
         return;
       }
       if (e.key === "F8" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
         e.preventDefault();
         if (cart.lines.length && ensureCanCharge()) setPaymentOpen(true);
+        return;
+      }
+      if (e.key === "F9") {
+        e.preventDefault();
+        openReserveDialog();
         return;
       }
       if (e.key === "Escape") {
@@ -960,27 +1049,107 @@ export const PosClient = () => {
 
   const cartPanel = (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="min-w-0">
-          <PosCustomerChip
-            customer={customer}
-            onOpen={() => setCustomerPickerOpen(true)}
-            onClear={() => setCustomer(null)}
-          />
-          <p className="mt-1 text-xs text-text-muted">
-            {t("linesCount", { count: cart.lines.length })}
-          </p>
+      <div className="space-y-2 border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <PosCustomerChip
+              customer={customer}
+              onOpen={() => setCustomerPickerOpen(true)}
+              onClear={() => setCustomer(null)}
+            />
+            <p className="mt-1 text-xs text-text-muted">
+              {t("linesCount", { count: cart.lines.length })}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="relative gap-1.5"
+              onClick={openParkedSales}
+              aria-label={t("openParked")}
+              title={`${t("parkedSales")} (F7)`}
+            >
+              <Archive className="size-3.5" />
+              <span className="hidden sm:inline">
+                {parked.length > 0
+                  ? t("parkedWithCount", { count: parked.length })
+                  : t("parked")}
+              </span>
+              {parked.length > 0 ? (
+                <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-fg sm:static sm:ml-0.5 sm:size-auto sm:rounded-md sm:bg-primary-soft sm:px-1.5 sm:py-0 sm:text-[10px] sm:text-primary">
+                  {parked.length}
+                </span>
+              ) : null}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="lg:hidden"
+              onClick={() => setMobileCartOpen(false)}
+              aria-label={t("close")}
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="lg:hidden"
-          onClick={() => setMobileCartOpen(false)}
-          aria-label={t("close")}
-        >
-          <X className="size-4" />
-        </Button>
+        <div className="flex flex-wrap gap-1.5">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setHoldOpen(true)}
+            title={`${t("holdSale")} (F6)`}
+          >
+            {t("hold")}
+            <Kbd className="ml-1 hidden opacity-70 xl:inline">F6</Kbd>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setDiscountOpen(true)}
+            title={`${t("discount")} (F4)`}
+          >
+            {t("discount")}
+            <Kbd className="ml-1 hidden opacity-70 xl:inline">F4</Kbd>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setNoteOpen(true)}
+            title={t("note")}
+          >
+            {t("note")}
+          </Button>
+          {canReserve ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="gap-1"
+              onClick={openReserveDialog}
+              title={`${t("reserveSale")} (F9)`}
+            >
+              <BookmarkPlus className="size-3.5" />
+              {t("reserve")}
+              <Kbd className="ml-1 hidden opacity-70 xl:inline">F9</Kbd>
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setCheatOpen(true)}
+            aria-label={t("shortcuts")}
+            title={`${t("shortcuts")} (?)`}
+          >
+            <HelpCircle className="size-3.5" />
+          </Button>
+        </div>
       </div>
 
       <ul className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -1090,16 +1259,25 @@ export const PosClient = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 pt-2">
+        <div className="grid grid-cols-2 gap-2 pt-2 sm:grid-cols-4">
           <Button type="button" variant="secondary" size="sm" onClick={() => setHoldOpen(true)}>
             {t("hold")}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={openParkedSales}>
+            {t("parked")}
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => setDiscountOpen(true)}>
             {t("discount")}
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setNoteOpen(true)}>
-            {t("note")}
-          </Button>
+          {canReserve ? (
+            <Button type="button" variant="secondary" size="sm" onClick={openReserveDialog}>
+              {t("reserve")}
+            </Button>
+          ) : (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setNoteOpen(true)}>
+              {t("note")}
+            </Button>
+          )}
         </div>
         {requireOpenShift && (!currentShift || currentShift.status !== "OPEN") ? (
           <p className="rounded-lg bg-warning-soft px-3 py-2 text-center text-sm text-warning">
@@ -1503,6 +1681,63 @@ export const PosClient = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Reserve from POS */}
+      <Dialog open={reserveOpen} onOpenChange={setReserveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("reserveSale")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-text-muted">{t("reserveHint")}</p>
+          <div className="space-y-3">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-text">{t("reserveProduct")}</span>
+              <select
+                className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text focus-ring"
+                value={reserveLineId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setReserveLineId(id);
+                  const row = cart.lines.find((l) => l.id === id);
+                  if (row) setReserveQty(String(row.qty));
+                }}
+                aria-label={t("reserveProduct")}
+              >
+                {cart.lines.map((line) => (
+                  <option key={line.id} value={line.id}>
+                    {line.name} · {formatMoney(line.unitPrice)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Input
+              label={t("reserveQty")}
+              type="number"
+              min={0.01}
+              step="any"
+              value={reserveQty}
+              onChange={(e) => setReserveQty(e.target.value)}
+            />
+            <Input
+              label={t("reserveCustomerName")}
+              value={reserveCustomerName}
+              onChange={(e) => setReserveCustomerName(e.target.value)}
+              placeholder={t("reserveCustomerHint")}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setReserveOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={() => void handleReserveStock()}
+              disabled={reserveSubmitting}
+            >
+              {reserveSubmitting ? "…" : t("reserveSubmit")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Shortcuts */}
       <Dialog open={cheatOpen} onOpenChange={setCheatOpen}>
         <DialogContent>
@@ -1517,6 +1752,7 @@ export const PosClient = () => {
               ["F6", "", t("shortcutHold")],
               ["F7", "", t("shortcutParked")],
               ["F8", "Ctrl+Enter", t("shortcutCharge")],
+              ["F9", "", t("shortcutReserve")],
               ["+", "−", t("shortcutQty")],
               ["Delete", "", t("shortcutRemove")],
               ["Esc", "", t("shortcutEsc")],

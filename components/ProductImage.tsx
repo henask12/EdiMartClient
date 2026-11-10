@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { Package } from "lucide-react";
 import { productImageSrc } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -15,7 +16,7 @@ type Props = {
   priority?: boolean;
 };
 
-/** Always reserves an image slot; shows a calm placeholder when none is set. */
+/** Always reserves an image slot; shows a calm placeholder when none is set or load fails. */
 export const ProductImage = ({
   imageUrl,
   alt,
@@ -25,10 +26,15 @@ export const ProductImage = ({
   priority,
 }: Props) => {
   const src = productImageSrc(imageUrl);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+  const showImage = !!src && !failed;
 
   return (
     <div className={cn("relative overflow-hidden bg-surface-muted", className)}>
-      {src ? (
+      {showImage ? (
         <Image
           src={src}
           alt={alt}
@@ -37,6 +43,7 @@ export const ProductImage = ({
           sizes={sizes}
           unoptimized
           priority={priority}
+          onError={() => setFailed(true)}
         />
       ) : (
         <div

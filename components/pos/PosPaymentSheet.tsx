@@ -169,7 +169,9 @@ export const PosPaymentSheet = ({
       toastError(t("customerRequiredForCredit"));
       return;
     }
-    let payAmount = moneyString(Number(amount));
+    // Normalize Birr strings via cent math — never moneyString(Number(birr)),
+    // which treats 1200.00 as 1200 cents (= Br 12.00) and breaks Exact / Complete.
+    let payAmount = clampMoney(amount, "0");
     const cap = maxForMethod(method, remaining);
     if (method !== "CASH" && compareMoney(payAmount, cap) > 0) {
       payAmount = cap;
@@ -219,7 +221,7 @@ export const PosPaymentSheet = ({
       const cap = maxForMethod(method, remaining);
       const payAmount =
         method === "CASH"
-          ? moneyString(Number(amount))
+          ? clampMoney(amount, "0")
           : clampMoney(cashInput || remaining, "0", cap);
       if (compareMoney(payAmount, "0") <= 0) {
         toastError(t("enterAmount"));
