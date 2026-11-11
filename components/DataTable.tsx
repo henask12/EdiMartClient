@@ -24,6 +24,35 @@ type Props<T> = {
   footer?: DataTableFooter;
 };
 
+const defaultMobileCard = <T,>(
+  row: T,
+  columns: DataTableColumn<T>[],
+): ReactNode => {
+  const primary = columns[0];
+  const rest = columns.slice(1);
+  return (
+    <div className="space-y-3">
+      {primary ? (
+        <div className="min-w-0 text-base font-semibold text-text">
+          {primary.render(row)}
+        </div>
+      ) : null}
+      {rest.length > 0 ? (
+        <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {rest.map((col) => (
+            <div key={col.key} className="min-w-0">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                {col.header}
+              </dt>
+              <dd className="mt-0.5 break-words text-sm text-text">{col.render(row)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </div>
+  );
+};
+
 export const DataTable = <T,>({
   columns,
   rows,
@@ -41,11 +70,12 @@ export const DataTable = <T,>({
   }
 
   const footerCells = footer?.cells ?? {};
+  const renderMobile = mobileCard ?? ((row: T) => defaultMobileCard(row, columns));
 
   return (
     <>
-      {footer && mobileCard ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm lg:hidden">
+      {footer ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm lg:hidden">
           <span className="font-semibold text-text-muted">{footer.label}</span>
           <div className="flex flex-wrap gap-3 text-text">
             {columns
@@ -60,25 +90,18 @@ export const DataTable = <T,>({
         </div>
       ) : null}
 
-      {mobileCard ? (
-        <ul className="space-y-3 lg:hidden">
-          {rows.map((row) => (
-            <li
-              key={rowKey(row)}
-              className="rounded-xl border border-border bg-surface p-4 shadow-sm"
-            >
-              {mobileCard(row)}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <ul className="space-y-3 lg:hidden">
+        {rows.map((row) => (
+          <li
+            key={rowKey(row)}
+            className="rounded-xl border border-border bg-surface p-4 shadow-sm"
+          >
+            {renderMobile(row)}
+          </li>
+        ))}
+      </ul>
 
-      <div
-        className={cn(
-          "overflow-x-auto rounded-lg border border-border shadow-sm",
-          mobileCard && "hidden lg:block",
-        )}
-      >
+      <div className="hidden overflow-x-auto rounded-xl border border-border shadow-sm lg:block">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="sticky top-0 z-10 border-b border-border bg-surface-muted">
             <tr>

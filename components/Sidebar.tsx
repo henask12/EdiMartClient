@@ -117,14 +117,22 @@ type SidebarProps = {
   me: Me;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  /** Render inside the mobile drawer (visible below lg). */
+  forceMobile?: boolean;
 };
 
-export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
+export const Sidebar = ({
+  me,
+  collapsed,
+  onToggleCollapse,
+  forceMobile = false,
+}: SidebarProps) => {
   const pathname = usePathname();
   const t = useTranslations("Nav");
   const outbox = useOutboxStatus();
   const syncBadge = outbox.pendingSales + outbox.needsAttention;
   const [settingsOpen, setSettingsOpen] = useState(() => isSettingsPath(pathname));
+  const compact = collapsed && !forceMobile;
 
   useEffect(() => {
     if (isSettingsPath(pathname)) {
@@ -154,18 +162,23 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
     const link = (
       <Link
         href={item.href}
+        onClick={() => {
+          if (forceMobile) onToggleCollapse();
+        }}
         className={cn(
-          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition focus-ring",
+          "group flex items-center gap-3 rounded-lg px-3 text-sm font-medium transition focus-ring",
+          forceMobile ? "min-h-12 py-3" : "py-2",
           active
             ? "bg-primary-soft text-primary"
             : "text-text-muted hover:bg-surface-muted hover:text-text",
-          collapsed && "justify-center px-2",
-          nested && !collapsed && "py-1.5 pl-9 text-[13px]",
+          compact && "justify-center px-2",
+          nested && !compact && "py-1.5 pl-9 text-[13px]",
+          nested && forceMobile && "min-h-11 py-2.5",
         )}
         aria-current={active ? "page" : undefined}
       >
-        <Icon className={cn("shrink-0", nested && !collapsed ? "size-4" : "size-5")} />
-        {!collapsed ? (
+        <Icon className={cn("shrink-0", nested && !compact ? "size-4" : "size-5")} />
+        {!compact ? (
           <>
             <span className="truncate flex-1">{label}</span>
             {badge && badge > 0 ? (
@@ -179,7 +192,7 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
     );
 
     // Avoid TooltipTrigger asChild + Next Link (Radix Slot 1.5 breaks under React 19).
-    if (collapsed) {
+    if (compact) {
       return (
         <div key={item.href} title={label}>
           {link}
@@ -193,41 +206,49 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "sticky top-0 z-20 hidden h-screen min-h-0 flex-col border-r border-border bg-surface transition-[width] duration-200 lg:flex",
-        collapsed ? "w-[72px]" : "w-60",
+        "min-h-0 flex-col border-border bg-surface",
+        forceMobile
+          ? "flex h-full w-full border-0"
+          : cn(
+              "sticky top-0 z-20 hidden h-screen transition-[width] duration-200 lg:flex border-r",
+              compact ? "w-[72px]" : "w-60",
+            ),
       )}
     >
-      {/* Logo + collapse */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
-        {!collapsed ? (
-          <Link
-            href="/dashboard"
-            className="text-lg font-bold tracking-tight text-text focus-ring"
-          >
-            Edi&apos;s
-          </Link>
-        ) : null}
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className={cn(
-            "rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring",
-            collapsed && "mx-auto",
-          )}
-          aria-label={collapsed ? t("expand") : t("collapse")}
-        >
-          <ChevronLeft
+      {!forceMobile ? (
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+          {!compact ? (
+            <Link
+              href="/dashboard"
+              className="text-lg font-bold tracking-tight text-text focus-ring"
+            >
+              Edi&apos;s
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            onClick={onToggleCollapse}
             className={cn(
-              "size-4 transition-transform",
-              collapsed && "rotate-180",
+              "rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring",
+              compact && "mx-auto",
             )}
-          />
-        </button>
-      </div>
+            aria-label={compact ? t("expand") : t("collapse")}
+          >
+            <ChevronLeft
+              className={cn(
+                "size-4 transition-transform",
+                compact && "rotate-180",
+              )}
+            />
+          </button>
+        </div>
+      ) : null}
 
-      {/* Full-height scroll: Dashboard → Design → Settings submenu */}
       <nav
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3"
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3",
+          forceMobile && "px-1",
+        )}
         aria-label="Main"
       >
         <div className="space-y-1">
@@ -256,7 +277,7 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
           if (visibleItems.length === 0) return null;
           return (
             <div key={group.labelKey} className="mt-5">
-              {!collapsed ? (
+              {!compact ? (
                 <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-widest text-text-muted/60">
                   {t(group.labelKey)}
                 </p>
@@ -268,7 +289,6 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
           );
         })}
 
-        {/* Design (owner) — still in the long scroll, above Settings */}
         {isOwnerRole(me.role) ? (
           <div className="mt-5 space-y-0.5">
             {renderItem({
@@ -279,10 +299,9 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
           </div>
         ) : null}
 
-        {/* Settings submenu: POS settings → Alert emails */}
         {visibleSettings.length > 0 ? (
           <div className="mt-5">
-            {collapsed ? (
+            {compact ? (
               <>
                 <div className="mx-auto mb-2 h-px w-8 bg-border" />
                 <div className="space-y-0.5" title={t("settings")}>
@@ -295,7 +314,8 @@ export const Sidebar = ({ me, collapsed, onToggleCollapse }: SidebarProps) => {
                   type="button"
                   onClick={() => setSettingsOpen((open) => !open)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition focus-ring",
+                    "flex w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition focus-ring",
+                    forceMobile ? "min-h-12 py-3" : "py-2",
                     settingsActive
                       ? "bg-primary-soft/60 text-primary"
                       : "text-text-muted hover:bg-surface-muted hover:text-text",

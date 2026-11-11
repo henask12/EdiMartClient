@@ -11,12 +11,12 @@ type Props = {
 export const PageHeader = ({ title, description, actions, className }: Props) => (
   <header
     className={cn(
-      "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
+      "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4",
       className,
     )}
   >
-    <div className="space-y-1">
-      <h1 className="text-2xl font-semibold tracking-tight text-text">
+    <div className="min-w-0 space-y-1">
+      <h1 className="text-xl font-semibold tracking-tight text-text sm:text-2xl">
         {title}
       </h1>
       {description ? (
@@ -24,7 +24,9 @@ export const PageHeader = ({ title, description, actions, className }: Props) =>
       ) : null}
     </div>
     {actions ? (
-      <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>
+      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 sm:justify-end [&>*]:min-h-11 [&>a]:inline-flex [&>a]:items-center">
+        {actions}
+      </div>
     ) : null}
   </header>
 );

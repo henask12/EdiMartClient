@@ -1,26 +1,54 @@
 {
+  "id": "/",
   "name": "EdiMart — Edi's Collection",
   "short_name": "EdiMart",
   "description": "Point of sale and inventory for Edi's Collection",
   "start_url": "/pos",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "any",
   "background_color": "#F7F6F3",
   "theme_color": "#0F6B5F",
+  "lang": "en",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/logo.png",
-      "sizes": "512x512",
+      "sizes": "640x640",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/logo.png",
-      "sizes": "512x512",
+      "sizes": "640x640",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "categories": ["business", "finance"]
+  "shortcuts": [
+    {
+      "name": "Open POS",
+      "short_name": "POS",
+      "description": "Sell at the till",
+      "url": "/pos",
+      "icons": [{ "src": "/logo.png", "sizes": "640x640", "type": "image/png" }]
+    },
+    {
+      "name": "Products",
+      "short_name": "Products",
+      "description": "Browse inventory",
+      "url": "/products",
+      "icons": [{ "src": "/logo.png", "sizes": "640x640", "type": "image/png" }]
+    },
+    {
+      "name": "Shifts",
+      "short_name": "Shifts",
+      "description": "Open or close the till",
+      "url": "/shifts",
+      "icons": [{ "src": "/logo.png", "sizes": "640x640", "type": "image/png" }]
+    }
+  ],
+  "categories": ["business", "finance"],
+  "prefer_related_applications": false
 }

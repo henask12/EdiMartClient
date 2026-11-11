@@ -23,6 +23,7 @@ import { AccessDenied } from "@/components/AccessDenied";
 import { CommandPalette } from "@/components/CommandPalette";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PermissionProvider, type Me } from "@/components/PermissionProvider";
+import { PwaInstall } from "@/components/PwaInstall";
 import { Sidebar } from "@/components/Sidebar";
 import { Kbd } from "@/components/ui/Kbd";
 import { formatDate } from "@/lib/date-helpers";
@@ -46,6 +47,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const tShell = useTranslations("Shell");
+  const tNav = useTranslations("Nav");
   const tAuth = useTranslations("Auth");
   const [me, setMe] = useState<Me | null>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -259,16 +261,17 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
 
   if (isPosFocus) {
     return (
-      <div className="flex min-h-screen flex-col bg-bg">
+      <div className="flex min-h-dvh flex-col bg-bg">
         <OfflineBanner compact />
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-surface px-3 sm:px-4">
+        <PwaInstall mode="banner" />
+        <header className="sticky top-0 z-30 flex min-h-14 items-center gap-2 border-b border-border bg-surface px-2 sm:gap-3 sm:px-4 pt-[env(safe-area-inset-top)]">
           <Link
             href="/dashboard"
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-text hover:bg-surface-muted focus-ring"
+            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border px-2.5 text-sm font-semibold text-text hover:bg-surface-muted focus-ring sm:px-3"
           >
             {tShell("exitPos")}
           </Link>
-          {shiftPill}
+          <div className="min-w-0">{shiftPill}</div>
           {tillRegistered ? (
             <span className="hidden rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary sm:inline">
               {tShell("tillRegistered")}
@@ -298,10 +301,11 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
             />
             {online ? tShell("online") : tShell("offline")}
           </span>
+          <PwaInstall mode="button" force />
           <button
             type="button"
             onClick={cycleTheme}
-            className="rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            className="inline-flex size-9 items-center justify-center rounded-lg border border-border text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
             aria-label={tShell("theme")}
           >
             <ThemeIcon className="size-4" />
@@ -310,18 +314,18 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
             <button
               type="button"
               onClick={() => void handleSwitchUser()}
-              className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-text hover:bg-surface-muted focus-ring"
+              className="hidden rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-text hover:bg-surface-muted focus-ring sm:inline-flex"
               aria-label={tShell("switchUser")}
             >
               {tShell("switchUser")}
             </button>
           ) : null}
-          <span className="truncate text-sm font-medium text-text">
+          <span className="hidden max-w-[8rem] truncate text-sm font-medium text-text sm:inline">
             {me.displayName ?? me.email}
           </span>
           <Link
             href="/settings/account"
-            className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring"
+            className="inline-flex size-10 items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring sm:size-9"
             aria-label={me.displayName ?? me.email}
           >
             {initials}
@@ -333,8 +337,18 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  const openCommandPalette = () => {
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        metaKey: true,
+        bubbles: true,
+      }),
+    );
+  };
+
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh overflow-x-hidden">
       {/* Desktop sidebar */}
       <Sidebar
         me={me}
@@ -349,23 +363,24 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
             className="absolute inset-0 bg-black/50"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-72 bg-surface shadow-xl">
-            <div className="flex h-16 items-center justify-between border-b border-border px-4">
+          <div className="absolute left-0 top-0 flex h-full w-[min(20rem,88vw)] flex-col bg-surface shadow-xl pt-[env(safe-area-inset-top)]">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
               <span className="text-lg font-bold text-text">Edi&apos;s</span>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="rounded-md p-1 text-text-muted hover:text-text"
-                aria-label="Close menu"
+                className="tap inline-flex items-center justify-center rounded-md text-text-muted hover:text-text focus-ring"
+                aria-label={tShell("closeMenu")}
               >
                 <X className="size-5" />
               </button>
             </div>
-            <div className="p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Sidebar
                 me={me}
                 collapsed={false}
                 onToggleCollapse={() => setMobileMenuOpen(false)}
+                forceMobile
               />
             </div>
           </div>
@@ -373,77 +388,73 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
       ) : null}
 
       {/* Main area */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <OfflineBanner />
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
-          {/* Mobile hamburger */}
+        <header className="sticky top-0 z-30 flex min-h-14 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur-md sm:min-h-16 sm:gap-3 sm:px-6 pt-[env(safe-area-inset-top)]">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
-            className="rounded-md p-1.5 text-text-muted hover:text-text lg:hidden"
-            aria-label="Open menu"
+            className="tap inline-flex items-center justify-center rounded-md text-text-muted hover:text-text focus-ring lg:hidden"
+            aria-label={tShell("openMenu")}
           >
             <Menu className="size-5" />
           </button>
 
-          {/* Command palette trigger */}
           <button
             type="button"
-            onClick={() =>
-              document.dispatchEvent(
-                new KeyboardEvent("keydown", {
-                  key: "k",
-                  metaKey: true,
-                  bubbles: true,
-                }),
-              )
-            }
-            className="hidden flex-1 items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text-muted transition hover:border-border-strong sm:flex"
+            onClick={openCommandPalette}
+            className="hidden min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text-muted transition hover:border-border-strong sm:flex"
           >
-            <Search className="size-4" />
-            <span className="flex-1 text-left">{tShell("commandPalette")}</span>
+            <Search className="size-4 shrink-0" />
+            <span className="flex-1 truncate text-left">{tShell("commandPalette")}</span>
             <Kbd>⌘K</Kbd>
           </button>
-          <div className="flex-1 sm:hidden" />
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            className="tap inline-flex items-center justify-center rounded-md text-text-muted hover:bg-surface-muted hover:text-text focus-ring sm:hidden"
+            aria-label={tShell("commandPalette")}
+          >
+            <Search className="size-5" />
+          </button>
+          <div className="min-w-0 flex-1 sm:hidden" />
 
           {shiftPill}
 
-          {/* Theme toggle */}
+          <PwaInstall mode="button" force />
+
           <button
             type="button"
             onClick={cycleTheme}
-            className="rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            className="tap inline-flex items-center justify-center rounded-md text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
             aria-label={tShell("theme")}
             title={tShell("theme")}
           >
             <ThemeIcon className="size-4" />
           </button>
 
-          {/* Language toggle */}
           <button
             type="button"
             onClick={() => handleSetLocale(me.locale === "am" ? "en" : "am")}
-            className="rounded-md px-2 py-1 text-xs font-medium text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
+            className="tap inline-flex items-center justify-center rounded-md px-2 text-xs font-medium text-text-muted hover:bg-surface-muted hover:text-text focus-ring"
             aria-label={tShell("language")}
           >
             {(me as Me & { locale?: string }).locale === "am" ? "EN" : "አማ"}
           </button>
 
-          {/* User */}
           <Link
             href="/settings/account"
-            className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring"
+            className="tap inline-flex items-center justify-center rounded-lg border border-border bg-surface-muted text-sm font-bold text-primary focus-ring"
             aria-label={me.displayName ?? me.email}
           >
             {initials}
           </Link>
 
-          {/* Logout */}
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="hidden rounded-md p-1.5 text-text-muted hover:bg-surface-muted hover:text-text focus-ring lg:block"
+            className="tap hidden items-center justify-center rounded-md text-text-muted hover:bg-surface-muted hover:text-text focus-ring lg:inline-flex"
             aria-label={tShell("logOut")}
             title={tShell("logOut")}
           >
@@ -451,32 +462,34 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
           </button>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 sm:p-6">
-          <div className="mx-auto max-w-7xl">{pageBody}</div>
+        <main className="flex-1 px-3 py-4 sm:p-6">
+          <div className="mx-auto max-w-7xl pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+            {pageBody}
+          </div>
         </main>
       </div>
 
       {/* Mobile bottom nav */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 backdrop-blur-md lg:hidden"
-        aria-label="Mobile"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 backdrop-blur-md lg:hidden pb-safe"
+        aria-label={tShell("mobileNav")}
       >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-safe">
+        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1">
           {[
-            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-            { href: "/pos", label: "POS", icon: ShoppingCart },
-            { href: "#scan", label: tShell("scan"), icon: ScanLine, center: true },
-            { href: "/products", label: "Products", icon: Package },
-            { href: "#more", label: "More", icon: MoreHorizontal },
+            { href: "/dashboard", label: tNav("dashboard"), icon: LayoutDashboard },
+            { href: "/pos", label: tNav("sell"), icon: ShoppingCart },
+            { href: "/stock-lookup", label: tShell("scan"), icon: ScanLine, emphasize: true },
+            { href: "/products", label: tNav("products"), icon: Package },
+            { href: "#more", label: tShell("more"), icon: MoreHorizontal },
           ].map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active =
+              item.href !== "#more" &&
+              (pathname === item.href || pathname.startsWith(`${item.href}/`));
             const isMore = item.href === "#more";
-            const isScan = item.href === "#scan";
             return (
               <Link
                 key={item.href}
-                href={isMore || isScan ? "#" : item.href}
+                href={isMore ? "#" : item.href}
                 onClick={(e) => {
                   if (isMore) {
                     e.preventDefault();
@@ -484,24 +497,20 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
                   }
                 }}
                 className={cn(
-                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition",
-                  isScan
+                  "tap flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition",
+                  item.emphasize || active
                     ? "text-primary"
-                    : active
-                      ? "text-primary"
-                      : "text-text-muted hover:text-text",
+                    : "text-text-muted hover:text-text",
                 )}
               >
-                <item.icon className={cn("size-5", isScan && "size-6")} />
-                <span>{item.label}</span>
+                <item.icon className={cn("size-5", item.emphasize && "size-6")} />
+                <span className="max-w-full truncate px-0.5">{item.label}</span>
               </Link>
             );
           })}
         </div>
       </nav>
-      <div className="h-16 lg:hidden" />
 
-      {/* Command palette */}
       <CommandPalette me={me} />
     </div>
   );

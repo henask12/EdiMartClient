@@ -103,8 +103,12 @@
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "moreMenu": "More menu",
+    "more": "More",
     "scan": "Scan",
-    "exitPos": "Exit POS"
+    "exitPos": "Exit POS",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "mobileNav": "Main navigation"
   },
   "Offline": {
     "offline": "Offline",
@@ -441,7 +445,9 @@
     "reserveNoPermission": "You cannot reserve stock",
     "note": "Note",
     "charge": "Charge {amount}",
+    "chargeShort": "Charge",
     "cart": "Cart",
+    "openCart": "Open cart, {count} lines",
     "close": "Close",
     "cancel": "Cancel",
     "apply": "Apply",
@@ -582,6 +588,24 @@
     "saveSettings": "Save settings",
     "shiftRequired": "Open a shift before charging",
     "openShiftLink": "Open shifts"
+  },
+  "Pwa": {
+    "title": "Install EdiMart",
+    "description": "Add EdiMart to your Home Screen for a full-screen till that opens straight to POS — works on iPhone, iPad, and Android.",
+    "install": "Install app",
+    "installing": "Installing…",
+    "addToHomeIos": "Add to Home Screen",
+    "howTo": "How to",
+    "gotIt": "Got it",
+    "notNow": "Not now",
+    "dismiss": "Dismiss",
+    "bannerTitle": "Use EdiMart like an app",
+    "bannerHint": "Install for a Home Screen icon and full-screen POS.",
+    "iosShortHint": "On iPhone/iPad: Safari → Share → Add to Home Screen.",
+    "iosStepSafari": "Open this site in Safari (not an in-app browser).",
+    "iosStepShare": "Tap the Share button <icon></icon> at the bottom (iPhone) or top (iPad).",
+    "iosStepAdd": "Scroll and tap “Add to Home Screen”, then Add. The EdiMart icon opens POS full screen.",
+    "manualHint": "In your browser menu, look for “Install app” or “Add to Home Screen”. On iPhone/iPad use Safari → Share → Add to Home Screen."
   },
   "Shifts": {
     "title": "Shifts",

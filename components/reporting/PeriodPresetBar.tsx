@@ -45,7 +45,7 @@ export const PeriodPresetBar = ({
             type="button"
             onClick={() => onPresetChange(p.value)}
             className={cn(
-              "rounded-lg border px-3 py-1.5 text-xs font-semibold transition focus-ring",
+              "min-h-11 rounded-lg border px-3 py-2 text-xs font-semibold transition focus-ring sm:min-h-0 sm:py-1.5",
               preset === p.value
                 ? "border-primary bg-primary-soft text-primary"
                 : "border-border bg-surface text-text-muted hover:border-border-strong hover:text-text",

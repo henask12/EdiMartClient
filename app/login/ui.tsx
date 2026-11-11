@@ -66,9 +66,9 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-16">
+    <div className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10 sm:py-16 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div className="w-full max-w-sm">
-        <div className="rounded-2xl border border-border bg-surface p-8 shadow-lg">
+        <div className="rounded-2xl border border-border bg-surface p-6 shadow-lg sm:p-8">
           <div className="flex flex-col items-center text-center">
             <BrandLogo size="lg" />
             <p className="mt-4 text-sm text-text-muted">{t("tagline")}</p>

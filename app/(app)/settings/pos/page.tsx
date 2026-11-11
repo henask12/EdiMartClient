@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { PwaInstall } from "@/components/PwaInstall";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -121,6 +122,8 @@ export default function PosSettingsPage() {
   return (
     <section className="mx-auto max-w-2xl space-y-6">
       <PageHeader title={t("settingsTitle")} description={t("settingsDescription")} />
+
+      <PwaInstall mode="card" force />
 
       <div className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6">
         <Input

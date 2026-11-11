@@ -100,9 +100,25 @@
     @apply border-border;
   }
 
+  html {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-bg text-text antialiased;
     font-variant-numeric: normal;
+    overflow-x: hidden;
+    min-height: 100dvh;
+  }
+
+  /* Avoid iOS Safari zoom-on-focus for form fields */
+  @media (max-width: 639px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 
   a {

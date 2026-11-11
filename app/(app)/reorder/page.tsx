@@ -102,7 +102,7 @@ export default function ReorderPlannerPage() {
       .reduce((sum, r) => sum + Number(r.qty) * Number(r.unitCost ?? 0), 0);
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:pb-24">
       <PageHeader
         title={t("reorder")}
         description={t("reorderDescription")}
@@ -199,9 +199,9 @@ export default function ReorderPlannerPage() {
         </Card>
       ))}
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 p-3 backdrop-blur lg:left-60">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-surface/95 p-3 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:left-60 mb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:mb-0">
         <div className="mx-auto flex max-w-6xl justify-end">
-          <Button type="button" onClick={() => void handleCreate()} disabled={creating}>
+          <Button type="button" className="min-h-11 w-full sm:w-auto" onClick={() => void handleCreate()} disabled={creating}>
             {creating ? "Creating…" : t("createDraftPos")}
           </Button>
         </div>

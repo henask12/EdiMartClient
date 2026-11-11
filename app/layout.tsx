@@ -23,12 +23,24 @@ const notoEthiopic = Noto_Sans_Ethiopic({
 export const metadata: Metadata = {
   title: "Edi's Collection",
   description: "Inventory, stock, and sales for Edi's Collection",
-  icons: { icon: "/logo.png", apple: "/logo.png" },
+  applicationName: "EdiMart",
+  icons: {
+    icon: [{ url: "/logo.png", sizes: "640x640", type: "image/png" }],
+    apple: [{ url: "/logo.png", sizes: "640x640", type: "image/png" }],
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     title: "EdiMart",
     statusBarStyle: "default",
+    startupImage: ["/logo.png"],
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
   },
 };
 
@@ -36,7 +48,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // theme_color lives in public/manifest.webmanifest (keep hex out of app/ components)
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0F6B5F" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E1110" },
+  ],
 };
 
 export default async function RootLayout({

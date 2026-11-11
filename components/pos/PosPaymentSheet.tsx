@@ -281,7 +281,7 @@ export const PosPaymentSheet = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && handleClose()}>
-      <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("payment")}</DialogTitle>
         </DialogHeader>
@@ -439,10 +439,11 @@ export const PosPaymentSheet = ({
             </ul>
           ) : null}
 
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="sticky bottom-0 flex flex-col gap-2 bg-surface pt-2 sm:static sm:flex-row sm:bg-transparent sm:pt-0">
             <Button
               type="button"
               variant="secondary"
+              size="pos"
               fullWidth
               onClick={handleAddSplit}
               disabled={submitting || isZeroMoney(remaining)}

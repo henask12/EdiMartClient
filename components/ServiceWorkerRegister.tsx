@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ensureInstallPromptListener } from "@/lib/pwa-install";
 
 /**
  * Registers the PWA service worker in production.
@@ -9,7 +10,11 @@ import { useEffect } from "react";
  */
 export const ServiceWorkerRegister = () => {
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    if (typeof window === "undefined") return;
+
+    ensureInstallPromptListener();
+
+    if (!("serviceWorker" in navigator)) return;
 
     const isLocal =
       window.location.hostname === "localhost" ||

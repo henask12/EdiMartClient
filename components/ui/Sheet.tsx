@@ -2,7 +2,11 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { forwardRef, type ComponentPropsWithoutRef } from "react";
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type HTMLAttributes,
+} from "react";
 import { cn } from "@/lib/cn";
 
 export const Sheet = DialogPrimitive.Root;
@@ -27,7 +31,7 @@ SheetOverlay.displayName = "SheetOverlay";
 export const SheetContent = forwardRef<
   HTMLDivElement,
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
-    side?: "left" | "right";
+    side?: "left" | "right" | "bottom";
   }
 >(({ className, children, side = "right", ...props }, ref) => (
   <DialogPrimitive.Portal>
@@ -35,18 +39,25 @@ export const SheetContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 flex h-full w-full max-w-md flex-col border-border bg-surface shadow-xl",
+        "fixed z-50 flex w-full flex-col border-border bg-surface shadow-xl",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-300 data-[state=closed]:duration-200",
         side === "right" &&
-          "right-0 top-0 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
+          "right-0 top-0 h-full max-w-md border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
         side === "left" &&
-          "left-0 top-0 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+          "left-0 top-0 h-full max-w-md border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+        side === "bottom" &&
+          "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-2xl border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom pb-[env(safe-area-inset-bottom)]",
         className,
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-text-muted hover:text-text focus-ring">
+      <DialogPrimitive.Close
+        className={cn(
+          "absolute right-4 top-4 rounded-md p-1 text-text-muted hover:text-text focus-ring",
+          side === "bottom" && "top-3",
+        )}
+      >
         <X className="size-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -58,8 +69,8 @@ SheetContent.displayName = "SheetContent";
 export const SheetHeader = ({
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("space-y-1.5 p-6 pb-0", className)} {...props} />
+}: HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("space-y-1.5 p-4 pb-0 sm:p-6 sm:pb-0", className)} {...props} />
 );
 
 export const SheetTitle = forwardRef<

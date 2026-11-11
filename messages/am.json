@@ -103,8 +103,12 @@
     "collapse": "ጎን ማሳያውን ሰብስብ",
     "expand": "ጎን ማሳያውን ዘርጋ",
     "moreMenu": "ተጨማሪ ምናሌ",
+    "more": "ተጨማሪ",
     "scan": "ቃኝ",
-    "exitPos": "ከPOS ውጣ"
+    "exitPos": "ከPOS ውጣ",
+    "openMenu": "ምናሌ ክፈት",
+    "closeMenu": "ምናሌ ዝጋ",
+    "mobileNav": "ዋና አሰሳ"
   },
   "Offline": {
     "offline": "ኦፍላይን",
@@ -441,7 +445,9 @@
     "reserveNoPermission": "ክምችት ማስያዝ አይችሉም",
     "note": "ማስታወሻ",
     "charge": "ክፈል {amount}",
+    "chargeShort": "ክፈል",
     "cart": "ጋሪ",
+    "openCart": "ጋሪ ክፈት፣ {count} መስመሮች",
     "close": "ዝጋ",
     "cancel": "ሰርዝ",
     "apply": "ተግብር",
@@ -582,6 +588,24 @@
     "saveSettings": "ቅንብሮች አስቀምጥ",
     "shiftRequired": "ከመክፈል በፊት ሺፍት ይክፈቱ",
     "openShiftLink": "ሺፍቶችን ክፈት"
+  },
+  "Pwa": {
+    "title": "EdiMart ጫን",
+    "description": "EdiMartን ወደ መነሻ ማያ ጨምሩ — ሙሉ ማያ POS በቀጥታ ይከፈታል። በiPhone፣ iPad እና Android ይሰራል።",
+    "install": "መተግበሪያ ጫን",
+    "installing": "በመጫን ላይ…",
+    "addToHomeIos": "ወደ መነሻ ማያ ጨምር",
+    "howTo": "እንዴት",
+    "gotIt": "ገባኝ",
+    "notNow": "አሁን አይደለም",
+    "dismiss": "ደብቅ",
+    "bannerTitle": "EdiMartን እንደ መተግበሪያ ተጠቀም",
+    "bannerHint": "ለመነሻ አዶ እና ሙሉ ማያ POS ይጫኑ።",
+    "iosShortHint": "በiPhone/iPad፦ Safari → አጋራ → ወደ መነሻ ማያ ጨምር።",
+    "iosStepSafari": "ይህን ጣቢያ በSafari ይክፈቱ (ከመተግበሪያ ውስጥ አሳሽ አይደለም)።",
+    "iosStepShare": "የአጋራ አዝራር <icon></icon> ነካ (ከታች በiPhone ወይም ከላይ በiPad)።",
+    "iosStepAdd": "ወደ ታች ይሸብልሉ እና “Add to Home Screen” / “ወደ መነሻ ማያ ጨምር” ነካ፣ ከዚያ Add። የEdiMart አዶ POSን ሙሉ ማያ ይከፍታል።",
+    "manualHint": "በአሳሽ ምናሌ “Install app” ወይም “Add to Home Screen” ይፈልጉ። በiPhone/iPad Safari → አጋራ → ወደ መነሻ ማያ ጨምር ይጠቀሙ።"
   },
   "Shifts": {
     "title": "ሺፍቶች",

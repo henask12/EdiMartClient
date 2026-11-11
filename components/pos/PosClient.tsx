@@ -1191,42 +1191,44 @@ export const PosClient = () => {
                   <Button
                     type="button"
                     variant="secondary"
-                    size="icon-sm"
+                    size="icon"
+                    className="size-11 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       updateQty(line.id, -1);
                     }}
                     aria-label={t("decreaseQty")}
                   >
-                    <Minus className="size-3.5" />
+                    <Minus className="size-4" />
                   </Button>
-                  <span className="min-w-8 text-center text-sm font-semibold tabular-nums">
+                  <span className="min-w-10 text-center text-base font-semibold tabular-nums">
                     {line.qty}
                   </span>
                   <Button
                     type="button"
                     variant="secondary"
-                    size="icon-sm"
+                    size="icon"
+                    className="size-11 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       updateQty(line.id, 1);
                     }}
                     aria-label={t("increaseQty")}
                   >
-                    <Plus className="size-3.5" />
+                    <Plus className="size-4" />
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-sm"
-                    className="ml-auto text-danger"
+                    size="icon"
+                    className="ml-auto size-11 shrink-0 text-danger"
                     onClick={(e) => {
                       e.stopPropagation();
                       removeLine(line.id);
                     }}
                     aria-label={t("removeLine")}
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-4" />
                   </Button>
                 </div>
               </li>
@@ -1293,7 +1295,10 @@ export const PosClient = () => {
           fullWidth
           disabled={!cart.lines.length}
           onClick={() => {
-            if (ensureCanCharge()) setPaymentOpen(true);
+            if (ensureCanCharge()) {
+              setMobileCartOpen(false);
+              setPaymentOpen(true);
+            }
           }}
         >
           {t("charge", { amount: formatMoney(totals.total) })}
@@ -1301,6 +1306,17 @@ export const PosClient = () => {
       </div>
     </div>
   );
+
+  const handleMobileCharge = () => {
+    if (!cart.lines.length) {
+      setMobileCartOpen(true);
+      return;
+    }
+    if (ensureCanCharge()) {
+      setMobileCartOpen(false);
+      setPaymentOpen(true);
+    }
+  };
 
   if (success) {
     return (
@@ -1317,12 +1333,12 @@ export const PosClient = () => {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] flex-col lg:flex-row">
-      {/* Catalog */}
-      <section className="flex min-h-0 flex-1 flex-col border-b border-border lg:w-[60%] lg:border-b-0 lg:border-r">
+    <div className="flex h-full min-h-0 flex-col lg:flex-row">
+      {/* Catalog — phone-first full width; cart beside on lg+ */}
+      <section className="flex min-h-0 flex-1 flex-col lg:w-[60%] lg:border-r lg:border-border">
         <div className="space-y-3 border-b border-border p-3 sm:p-4">
           <div className="flex gap-2">
-            <div className="relative flex-1">
+            <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
               <input
                 ref={searchRef}
@@ -1330,8 +1346,11 @@ export const PosClient = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("searchPlaceholder")}
-                className="h-12 w-full rounded-xl border border-border bg-surface-muted pl-10 pr-3 text-base text-text outline-none focus-ring"
+                className="h-14 w-full rounded-xl border border-border bg-surface-muted pl-10 pr-3 text-base text-text outline-none focus-ring"
                 aria-label={t("search")}
+                enterKeyHint="search"
+                autoCapitalize="off"
+                autoCorrect="off"
               />
             </div>
             <Button
@@ -1347,6 +1366,7 @@ export const PosClient = () => {
               type="button"
               variant="secondary"
               size="pos"
+              className="hidden sm:inline-flex"
               onClick={toggleBeep}
               aria-label={t("toggleBeep")}
             >
@@ -1365,6 +1385,7 @@ export const PosClient = () => {
               type="button"
               variant="ghost"
               size="pos"
+              className="hidden md:inline-flex"
               onClick={() => setCheatOpen(true)}
               aria-label={t("shortcuts")}
             >
@@ -1377,7 +1398,7 @@ export const PosClient = () => {
               type="button"
               onClick={() => setCategoryId("")}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium focus-ring",
+                "min-h-11 shrink-0 rounded-full border px-4 py-2 text-sm font-medium focus-ring",
                 !categoryId
                   ? "border-primary bg-primary-soft text-primary"
                   : "border-border text-text-muted hover:bg-surface-muted",
@@ -1391,7 +1412,7 @@ export const PosClient = () => {
                 type="button"
                 onClick={() => setCategoryId(c.id)}
                 className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium focus-ring",
+                  "min-h-11 shrink-0 rounded-full border px-4 py-2 text-sm font-medium focus-ring",
                   categoryId === c.id
                     ? "border-primary bg-primary-soft text-primary"
                     : "border-border text-text-muted hover:bg-surface-muted",
@@ -1426,15 +1447,15 @@ export const PosClient = () => {
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-28 sm:p-4 lg:pb-4">
           {viewMode === "grid" ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4">
               {filtered.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => void addProduct(p)}
-                  className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition hover:border-primary/40 focus-ring"
+                  className="flex min-h-[7.5rem] flex-col overflow-hidden rounded-xl border border-border bg-surface text-left transition active:scale-[0.98] hover:border-primary/40 focus-ring"
                 >
                   <div className="relative aspect-square">
                     <ProductImage
@@ -1465,7 +1486,7 @@ export const PosClient = () => {
                   <button
                     type="button"
                     onClick={() => void addProduct(p)}
-                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-muted focus-ring"
+                    className="flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left active:bg-surface-muted hover:bg-surface-muted focus-ring"
                   >
                     <ProductImage
                       imageUrl={p.imageUrl}
@@ -1497,29 +1518,54 @@ export const PosClient = () => {
           ) : null}
         </div>
 
-        {/* Mobile cart trigger */}
-        <div className="border-t border-border p-3 lg:hidden">
-          <Button
-            type="button"
-            size="pos"
-            fullWidth
-            onClick={() => setMobileCartOpen(true)}
-          >
-            {t("cart")} · {formatMoney(totals.total)} · {t("charge", { amount: formatMoney(totals.total) })}
-          </Button>
+        {/* Mobile sticky till bar — thumb reach */}
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 px-3 pt-2.5 backdrop-blur-md lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mx-auto flex max-w-lg items-stretch gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="pos"
+              className="relative min-w-0 flex-1"
+              onClick={() => setMobileCartOpen(true)}
+              aria-label={t("openCart", { count: cart.lines.length })}
+            >
+              <span className="truncate">
+                {t("cart")}
+                {cart.lines.length > 0 ? ` · ${cart.lines.length}` : ""}
+              </span>
+              {cart.lines.length > 0 ? (
+                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-fg">
+                  {cart.lines.length > 9 ? "9+" : cart.lines.length}
+                </span>
+              ) : null}
+            </Button>
+            <Button
+              type="button"
+              size="pos"
+              className="min-w-0 flex-[1.35] px-3"
+              disabled={!cart.lines.length}
+              onClick={handleMobileCharge}
+              aria-label={t("charge", { amount: formatMoney(totals.total) })}
+            >
+              <span className="flex min-w-0 flex-col items-center leading-tight">
+                <span className="truncate text-xs font-medium opacity-90">{t("chargeShort")}</span>
+                <span className="truncate text-base tabular-nums">{formatMoney(totals.total)}</span>
+              </span>
+            </Button>
+          </div>
         </div>
       </section>
 
       {/* Desktop cart */}
       <aside className="hidden min-h-0 w-[40%] flex-col bg-surface lg:flex">{cartPanel}</aside>
 
-      {/* Mobile cart sheet */}
+      {/* Mobile cart sheet — bottom sheet for thumb reach */}
       <Sheet open={mobileCartOpen} onOpenChange={setMobileCartOpen}>
-        <SheetContent side="right" className="max-w-full p-0 sm:max-w-md">
+        <SheetContent side="bottom" className="max-w-full p-0 sm:max-w-none lg:hidden">
           <SheetHeader className="sr-only">
             <SheetTitle>{t("cart")}</SheetTitle>
           </SheetHeader>
-          {cartPanel}
+          <div className="flex max-h-[92dvh] min-h-[70dvh] flex-col">{cartPanel}</div>
         </SheetContent>
       </Sheet>
 
