@@ -162,7 +162,7 @@ export const PosClient = () => {
   const [online, setOnline] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
-  const [requireOpenShift, setRequireOpenShift] = useState(true);
+  const [requireOpenShift, setRequireOpenShift] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
   const [couponCode, setCouponCode] = useState("");

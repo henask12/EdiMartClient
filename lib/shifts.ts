@@ -72,7 +72,7 @@ export type ShiftSettings = {
 };
 
 export const DEFAULT_SHIFT_SETTINGS: ShiftSettings = {
-  requireOpenShift: true,
+  requireOpenShift: false,
   varianceApprovalThreshold: "100",
   eodEmailEnabled: true,
 };
@@ -150,7 +150,8 @@ export const parseShiftSettings = (
   const eodRaw =
     api?.["shifts.eodEmailEnabled"] ?? api?.eodEmailEnabled ?? DEFAULT_SHIFT_SETTINGS.eodEmailEnabled;
   return {
-    requireOpenShift: String(reqRaw) !== "false" && String(reqRaw) !== "0",
+    // Opt-in: only require a shift when the store setting is explicitly true.
+    requireOpenShift: String(reqRaw) === "true" || String(reqRaw) === "1",
     varianceApprovalThreshold: String(
       api?.["shifts.varianceApprovalThreshold"] ??
         api?.varianceApprovalThreshold ??
